@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Marble Race Picker — Prototype</title>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --panel: #12161d;
+    --panel-2: #171c25;
+    --line: #232a36;
+    --text: #e7ecf3;
+    --muted: #8b95a6;
+    --accent: #5ad1ff;
+    --accent-2: #ffcf5a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+    overflow: hidden;
+  }
+  canvas { display: block; }
+
+  #stage { position: fixed; inset: 0; }
+
+  /* ---------- generic panel chrome ---------- */
+  .panel {
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+  }
+  h1 { font-size: 19px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 18px; }
+  label.fld { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0 0 6px; }
+  textarea, input[type=text] {
+    width: 100%; background: #0b0e13; color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px;
+    font: inherit; resize: vertical; outline: none;
+  }
+  textarea:focus, input[type=text]:focus { border-color: #33506b; }
+  textarea { min-height: 132px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); padding: 9px 14px;
+  }
+  button:hover { border-color: #3a475b; }
+  button.primary {
+    background: linear-gradient(180deg, #6fd8ff, #35b7e8);
+    color: #04222e; border: none; font-weight: 640; padding: 11px 18px;
+  }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  button.ghost { background: transparent; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .spread { justify-content: space-between; }
+  .mt { margin-top: 14px; }
+
+  /* ---------- setup ---------- */
+  #setup {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    background: radial-gradient(1100px 700px at 50% -12%, #16202c 0%, #0a0c10 62%);
+    z-index: 40;
+  }
+  #setupCard { width: 460px; max-height: 92vh; overflow: auto; padding: 24px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .count { color: var(--muted); font-size: 12px; }
+  .warn { color: var(--accent-2); font-size: 12px; min-height: 18px; }
+
+  /* ---------- sidebar leaderboard ---------- */
+  #board {
+    position: fixed; top: 18px; right: 18px; width: 232px; padding: 12px; z-index: 20;
+    display: none;
+  }
+  #board h2 { font-size: 10.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 2px 2px 10px; font-weight: 600; }
+  .lane { display: flex; align-items: center; gap: 9px; padding: 5px 6px; border-radius: 8px; transition: background .18s; }
+  .lane .pos { width: 17px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .lane .dot { width: 13px; height: 13px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.16) inset; }
+  .lane .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .lane.done { background: rgba(90,209,255,.10); }
+  .lane.done .pos { color: var(--accent); }
+
+  /* ---------- lineup / countdown ---------- */
+  #lineup {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    place-items: center; background: rgba(6,8,11,.74); backdrop-filter: blur(6px);
+  }
+  #lineupCard { padding: 26px 30px; text-align: center; max-width: 640px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin: 16px 0 4px; }
+  .chip { display: flex; align-items: center; gap: 8px; padding: 7px 13px 7px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 13.5px; }
+  .chip .dot { width: 15px; height: 15px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset; }
+  #count { font-size: 60px; font-weight: 700; letter-spacing: -.03em; margin-top: 14px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- result ---------- */
+  #result {
+    position: fixed; inset: 0; z-index: 35; display: none; place-items: center;
+    background: rgba(6,8,11,.7); backdrop-filter: blur(8px);
+  }
+  #resultCard { padding: 28px 32px; width: 430px; text-align: center; }
+  #resLabel { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); }
+  #resName { font-size: 40px; font-weight: 700; letter-spacing: -.025em; margin: 6px 0 4px; }
+  #resSwatch { width: 40px; height: 40px; border-radius: 50%; margin: 12px auto 0; box-shadow: 0 0 0 1px rgba(255,255,255,.2) inset, 0 0 34px currentColor; }
+  .order { text-align: left; margin: 20px 0 0; border-top: 1px solid var(--line); padding-top: 14px; }
+  .seed { color: var(--muted); font-size: 11px; font-family: ui-monospace, Menlo, monospace; margin-top: 14px; }
+
+  #hud {
+    position: fixed; left: 18px; top: 18px; z-index: 20; display: none;
+    padding: 9px 13px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12.5px;
+  }
+  #hud b { color: var(--text); font-weight: 600; }
+  #boot { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); z-index: 60; background: var(--bg); }
+</style>
+</head>
+<body>
+
+<div id="boot">loading physics engine…</div>
+<div id="stage"></div>
+
+<div id="hud" class="panel"><b id="hudT">0.0</b>s / 30.0s &nbsp;·&nbsp; <span id="hudS">1.00×</span></div>
+
+<aside id="board" class="panel">
+  <h2>Position</h2>
+  <div id="lanes"></div>
+</aside>
+
+<div id="setup">
+  <div id="setupCard" class="panel">
+    <h1>Marble Race Picker</h1>
+    <p class="sub">Paste one name per line. The first marble to the basin is selected.</p>
+
+    <label class="fld" for="names">Roster</label>
+    <textarea id="names" spellcheck="false" placeholder="Alice&#10;Bob&#10;Chandra&#10;Dee&#10;Eli"></textarea>
+    <div class="row spread mt">
+      <span class="count" id="count2">0 names</span>
+      <button class="ghost" id="copy">Copy list</button>
+    </div>
+    <div class="warn" id="warn"></div>
+
+    <div class="opts mt">
+      <div>
+        <label class="fld" for="label">Result label</label>
+        <input type="text" id="label" value="Winner" />
+      </div>
+      <div>
+        <label class="fld">Sound</label>
+        <button id="mute" style="width:100%">Muted</button>
+      </div>
+    </div>
+
+    <div class="mt"><button class="primary" id="go" style="width:100%">Race</button></div>
+  </div>
+</div>
+
+<div id="lineup">
+  <div id="lineupCard" class="panel">
+    <div id="resLabel">On the line</div>
+    <div class="chips" id="chips"></div>
+    <div id="count">3</div>
+  </div>
+</div>
+
+<div id="result">
+  <div id="resultCard" class="panel">
+    <div id="resLabel2" style="font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted)">Winner</div>
+    <div id="resName">—</div>
+    <div id="resSwatch"></div>
+    <div class="order" id="resOrder"></div>
+    <div class="seed" id="resSeed"></div>
+    <div class="mt"><button class="primary" id="again" style="width:100%">New race</button></div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://esm.sh/three@0.170.0",
+  "rapier": "https://esm.sh/@dimforge/rapier3d-compat@0.14.0"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import RAPIER from 'rapier';
+
+await RAPIER.init();
+document.getElementById('boot').remove();
+
+/* ============================================================
+   Constants — the parametric track definition lives here.
+   Every dimension below is a knob. Tuning these is the real
+   work of the project; the code around them does not change.
+   ============================================================ */
+const T = {
+  containR: 6.0,          // outer containment radius (invisible walls)
+  towerTop: 44,
+
+  helixTop: 40, helixBot: 22, helixTurns: 4,
+  rampR: 4.8, rampHalfW: 1.2, railR: 3.6, railH: 1.0,
+  helixSeg: 32,           // segments per turn
+
+  pegTop: 22, pegBot: 10.5, pegLayerGap: 1.45, pegR: 0.42, pegFieldR: 5.0,
+
+  funTop: 10.5, funBot: 3.4, funMouthR: 6.0, funThroatR: 1.35, funPanels: 32,
+  tubeBot: 1.6, tubeR: 1.5,
+
+  finishY: 1.1, basinY: 0.0,
+
+  marbleR: 0.35,
+  gravity: -9.81,
+  maxSimSeconds: 60,
+  targetSeconds: 30,
+  dt: 1 / 60
+};
+
+const PALETTE = [
+  '#ff4d5e','#4dd2ff','#ffd24d','#7cf07c','#c07bff',
+  '#ff9c4d','#4d7cff','#42e5c8','#ff6fd0','#b6ff3d',
+  '#ff7a7a','#9aa7ff','#e8e0c0','#5fb8a0','#d4763a'
+];
+
+/* ============================================================
+   Seeded RNG. The seed is the only source of variation between
+   races: it drives slot shuffling and spawn jitter. Rapier is
+   deterministic given identical inputs, so seed -> outcome.
+   ============================================================ */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ============================================================
+   Geometry helpers
+   ============================================================ */
+const _m4 = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+
+function basisQuat(x, y, z) {              // orthonormal basis -> quaternion
+  _m4.makeBasis(x, y, z);
+  return _q.setFromRotationMatrix(_m4).clone();
+}
+
+function helixPoint(t) {                    // t in [0,1] along the helix
+  const th = t * T.helixTurns * Math.PI * 2;
+  const y = T.helixTop - t * (T.helixTop - T.helixBot);
+  return { th, y, x: T.rampR * Math.cos(th), z: T.rampR * Math.sin(th) };
+}
+
+/* ============================================================
+   Track construction. Emits both Rapier colliders and a plain
+   description list that the renderer turns into InstancedMeshes.
+   Called twice per race: once headless (sim), once for display.
+   ============================================================ */
+function buildTrack(world) {
+  const parts = { ramp: [], rail: [], peg: [], funnel: [], tube: [] };
+
+  const addBox = (bucket, pos, quat, half, restitution = 0.18, friction = 0.45) => {
+    const rb = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z)
+        .setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w })
+    );
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(half.x, half.y, half.z)
+        .setRestitution(restitution).setFriction(friction), rb
+    );
+    if (bucket) parts[bucket].push({ pos: pos.clone(), quat: quat.clone(), half: half.clone() });
+  };
+
+  /* --- invisible containment cylinder: nothing can ever leave --- */
+  const N = 48, panelW = (2 * Math.PI * T.containR) / N * 0.62;
+  for (let i = 0; i < N; i++) {
+    const th = (i / N) * Math.PI * 2;
+    addBox(null,
+      new THREE.Vector3(T.containR * Math.cos(th), T.towerTop / 2, T.containR * Math.sin(th)),
+      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -th),
+      new THREE.Vector3(0.15, T.towerTop / 2, panelW), 0.1, 0.3);
+  }
+
+  /* --- module 1: helix ramp + inner rail --- */
+  const steps = T.helixTurns * T.helixSeg;
+  for (let i = 0; i < steps; i++) {
+    const a = helixPoint(i / steps), b = helixPoint((i + 1) / steps);
+    const p = new THREE.Vector3((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    const tg = new THREE.Vector3(b.x - a.x, b.y - a.y, b.z - a.z);
+    const len = tg.length(); tg.normalize();
+    const radial = new THREE.Vector3(Math.cos(a.th), 0, Math.sin(a.th));
+    const up = new THREE.Vector3().crossVectors(tg, radial).normalize();
+    const side = new THREE.Vector3().crossVectors(up, tg).normalize();
+    const q = basisQuat(side, up, tg);
+
+    addBox('ramp', p, q, new THREE.Vector3(T.rampHalfW, 0.11, len / 2 + 0.06));
+
+    const rp = p.clone().addScaledVector(side, -(T.rampR - T.railR)).addScaledVector(up, T.railH / 2);
+    addBox('rail', rp, q, new THREE.Vector3(0.1, T.railH / 2, len / 2 + 0.06), 0.12, 0.3);
+  }
+
+  /* --- module 2: peg field. Where the race is actually decided. --- */
+  const layers = Math.floor((T.pegTop - T.pegBot) / T.pegLayerGap);
+  for (let L = 0; L < layers; L++) {
+    const y = T.pegTop - L * T.pegLayerGap;
+    const rings = [1.7, 3.1, 4.4];
+    rings.forEach((r, ri) => {
+      const cnt = 4 + ri * 4;
+      for (let i = 0; i < cnt; i++) {
+        const th = (i / cnt) * Math.PI * 2 + (L % 2 ? Math.PI / cnt : 0) + ri * 0.31;
+        const p = new THREE.Vector3(r * Math.cos(th), y, r * Math.sin(th));
+        const rb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(p.x, p.y, p.z));
+        world.createCollider(
+          RAPIER.ColliderDesc.ball(T.pegR).setRestitution(0.42).setFriction(0.2), rb);
+        parts.peg.push({ pos: p });
+      }
+    });
+  }
+
+  /* --- module 3: funnel pinch. Bunches the field for the finish. --- */
+  const dr = T.funMouthR - T.funThroatR, dy = T.funTop - T.funBot;
+  const slant = Math.hypot(dr, dy), tilt = Math.atan2(dr, dy);
+  const rMid = (T.funMouthR + T.funThroatR) / 2, yMid = (T.funTop + T.funBot) / 2;
+  for (let i = 0; i < T.funPanels; i++) {
+    const th = (i / T.funPanels) * Math.PI * 2;
+    const ct = Math.cos(th), st = Math.sin(th);
+    const up = new THREE.Vector3(Math.sin(tilt) * ct, Math.cos(tilt), Math.sin(tilt) * st).normalize();
+    const tang = new THREE.Vector3(-st, 0, ct);
+    const nrm = new THREE.Vector3().crossVectors(tang, up).normalize();
+    const q = basisQuat(tang, up, nrm);
+    const w = (2 * Math.PI * rMid) / T.funPanels * 0.85;
+    addBox('funnel', new THREE.Vector3(rMid * ct, yMid, rMid * st), q,
+      new THREE.Vector3(w, slant / 2, 0.1), 0.12, 0.28);
+  }
+
+  /* --- drop tube + basin floor --- */
+  const TN = 20, tw = (2 * Math.PI * T.tubeR) / TN * 0.72;
+  for (let i = 0; i < TN; i++) {
+    const th = (i / TN) * Math.PI * 2;
+    addBox('tube',
+      new THREE.Vector3(T.tubeR * Math.cos(th), (T.funBot + T.tubeBot) / 2, T.tubeR * Math.sin(th)),
+      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -th),
+      new THREE.Vector3(0.12, (T.funBot - T.tubeBot) / 2, tw), 0.1, 0.3);
+  }
+  const floor = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, T.basinY - 0.3, 0));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(T.containR, 0.3, T.containR).setFriction(0.7), floor);
+
+  return parts;
+}
+
+/* Starting grid: rows of three across the ramp, stepping back up
+   the helix. Slot assignment is shuffled per race so track bias
+   never attaches to the same person twice. */
+function startSlots(n, rng) {
+  const slots = [];
+  const perRow = 3;
+  for (let i = 0; i < n; i++) {
+    const row = Math.floor(i / perRow), col = i % perRow;
+    const t = -(0.0022 + row * 0.0075);
+    const a = helixPoint(t), b = helixPoint(t + 0.001);
+    const tg = new THREE.Vector3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
+    const radial = new THREE.Vector3(Math.cos(a.th), 0, Math.sin(a.th));
+    const up = new THREE.Vector3().crossVectors(tg, radial).normalize();
+    const side = new THREE.Vector3().crossVectors(up, tg).normalize();
+    const lateral = (col - (perRow - 1) / 2) * (T.rampHalfW * 1.05);
+    slots.push(new THREE.Vector3(a.x, a.y, a.z)
+      .addScaledVector(side, lateral)
+      .addScaledVector(up, 0.55 + (rng() - 0.5) * 0.05));
+  }
+  return slots;
+}
+
+/* ============================================================
+   Stage 1 — headless simulation.
+   No renderer, no rAF. Produces the full recording; the winner
+   is known before a single frame is drawn.
+   ============================================================ */
+function simulate(names, seed) {
+  const rng = mulberry32(seed);
+  const n = names.length;
+
+  const world = new RAPIER.World({ x: 0, y: T.gravity, z: 0 });
+  world.timestep = T.dt;
+  buildTrack(world);
+
+  const slots = startSlots(n, rng);
+  const order = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {                  // Fisher-Yates on the seed
+    const j = Math.floor(rng() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  const bodies = [];
+  for (let p = 0; p < n; p++) {
+    const s = slots[order[p]];
+    const rb = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(s.x, s.y, s.z)
+        .setLinearDamping(0.06).setAngularDamping(0.06).setCcdEnabled(true));
+    world.createCollider(
+      RAPIER.ColliderDesc.ball(T.marbleR).setRestitution(0.34)
+        .setFriction(0.28).setDensity(2.4)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), rb);
+    bodies.push(rb);
+  }
+
+  const q = new RAPIER.EventQueue(true);
+  const maxF = Math.ceil(T.maxSimSeconds / T.dt);
+  const frames = [];                                 // Float32Array per frame: x,y,z per marble
+  const hits = [];                                   // collision starts per frame -> audio
+  const finish = new Array(n).fill(-1);
+  let finished = 0, winnerFrame = -1;
+
+  for (let f = 0; f < maxF; f++) {
+    world.step(q);
+    let h = 0;
+    q.drainCollisionEvents((_a, _b, started) => { if (started) h++; });
+    hits.push(h);
+
+    const buf = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const t = bodies[i].translation();
+      buf[i * 3] = t.x; buf[i * 3 + 1] = t.y; buf[i * 3 + 2] = t.z;
+      if (finish[i] < 0 && t.y < T.finishY) {
+        finish[i] = f; finished++;
+        if (winnerFrame < 0) winnerFrame = f;
+      }
+    }
+    frames.push(buf);
+    if (finished === n) break;
+    if (winnerFrame >= 0 && f > winnerFrame + 60 * 6) break;   // don't wait on stragglers forever
+  }
+
+  world.free(); q.free();
+  if (winnerFrame < 0) return null;                  // stuck race -> caller reseeds
+
+  const ranking = [...Array(n).keys()].sort((a, b) => {
+    const fa = finish[a] < 0 ? Infinity : finish[a], fb = finish[b] < 0 ? Infinity : finish[b];
+    if (fa !== fb) return fa - fb;
+    return frames[frames.length - 1][a * 3 + 1] - frames[frames.length - 1][b * 3 + 1];
+  });
+
+  return { frames, hits, finish, ranking, winnerFrame, n, seed, slotOf: order };
+}
+
+/* Reseed on a stuck race. The audience never sees a failed run.
+   Noted honestly: rejecting stuck outcomes is a small bias, since
+   wedging correlates with start position. Negligible at n=5. */
+function simulateWithRetry(names) {
+  for (let k = 0; k < 6; k++) {
+    const seed = (Math.random() * 0xffffffff) >>> 0;
+    const r = simulate(names, seed);
+    if (r) return r;
+  }
+  return null;
+}
+
+/* ============================================================
+   Stage 2 — renderer. Replays recorded transforms. Nothing
+   re-simulates here, so cross-machine physics determinism is
+   simply not a requirement.
+   ============================================================ */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0c10);
+scene.fog = new THREE.Fog(0x0a0c10, 26, 70);
+
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 400);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+scene.add(new THREE.HemisphereLight(0x9fd0ff, 0x101418, 1.05));
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(12, 34, 14); scene.add(key);
+const rim = new THREE.DirectionalLight(0x5ad1ff, 0.6);
+rim.position.set(-14, 10, -10); scene.add(rim);
+
+let trackGroup = null, marbleMeshes = [];
+
+function instanced(geo, mat, list, place) {
+  const m = new THREE.InstancedMesh(geo, mat, list.length);
+  const mx = new THREE.Matrix4();
+  list.forEach((it, i) => { place(mx, it); m.setMatrixAt(i, mx); });
+  m.instanceMatrix.needsUpdate = true;
+  return m;
+}
+
+function renderTrack(parts) {
+  if (trackGroup) scene.remove(trackGroup);
+  trackGroup = new THREE.Group();
+
+  const boxAt = (mx, it) => mx.compose(it.pos, it.quat,
+    new THREE.Vector3(it.half.x * 2, it.half.y * 2, it.half.z * 2));
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+
+  const rampMat = new THREE.MeshStandardMaterial({ color: 0x2a3442, roughness: .82, metalness: .1 });
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x3d4d61, roughness: .6, metalness: .25 });
+  const pegMat  = new THREE.MeshStandardMaterial({ color: 0x6d7f96, roughness: .35, metalness: .55 });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x4e6d86, roughness: .28, metalness: .3,
+    transparent: true, opacity: .34, side: THREE.DoubleSide });
+
+  trackGroup.add(instanced(unit, rampMat, parts.ramp, boxAt));
+  trackGroup.add(instanced(unit, railMat, parts.rail, boxAt));
+  trackGroup.add(instanced(unit, glassMat, parts.funnel, boxAt));
+  trackGroup.add(instanced(unit, glassMat, parts.tube, boxAt));
+  trackGroup.add(instanced(new THREE.SphereGeometry(T.pegR, 14, 10), pegMat, parts.peg,
+    (mx, it) => mx.setPosition(it.pos)));
+
+  const basin = new THREE.Mesh(
+    new THREE.CylinderGeometry(T.containR, T.containR, .3, 56),
+    new THREE.MeshStandardMaterial({ color: 0x161d27, roughness: .9 }));
+  basin.position.y = T.basinY - .15; trackGroup.add(basin);
+
+  scene.add(trackGroup);
+}
+
+function buildMarbles(colors) {
+  marbleMeshes.forEach(m => scene.remove(m));
+  marbleMeshes = colors.map(c => {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(T.marbleR, 22, 16),
+      new THREE.MeshStandardMaterial({
+        color: c, roughness: .16, metalness: .35,
+        emissive: new THREE.Color(c).multiplyScalar(.22) }));
+    scene.add(m); return m;
+  });
+}
+
+/* ============================================================
+   Audio — contact events recorded during simulation, replayed
+   in sync. Muted by default; screen-share audio is easy to forget.
+   ============================================================ */
+let actx = null, muted = true, lastClick = -1;
+function click(intensity) {
+  if (muted) return;
+  actx ||= new (window.AudioContext || window.webkitAudioContext)();
+  const now = actx.currentTime;
+  if (now - lastClick < 0.045) return;
+  lastClick = now;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(760 + Math.random() * 900, now);
+  o.frequency.exponentialRampToValueAtTime(180, now + 0.05);
+  const v = Math.min(0.22, 0.035 + intensity * 0.02);
+  g.gain.setValueAtTime(v, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+  o.connect(g).connect(actx.destination); o.start(now); o.stop(now + 0.08);
+}
+
+/* ============================================================
+   UI state
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const LS = 'marble-race-picker';
+
+let roster = [], colors = [], run = null, playing = false;
+
+const saved = JSON.parse(localStorage.getItem(LS) || '{}');
+$('names').value = saved.roster || 'Alice\nBob\nChandra\nDee\nEli';
+$('label').value = saved.label || 'Winner';
+muted = saved.muted !== false;
+$('mute').textContent = muted ? 'Muted' : 'On';
+
+function parseNames() {
+  return $('names').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 15);
+}
+function refresh() {
+  const n = parseNames().length;
+  $('count2').textContent = `${n} name${n === 1 ? '' : 's'}`;
+  const raw = $('names').value.split('\n').filter(s => s.trim()).length;
+  $('warn').textContent = raw > 15 ? `Only the first 15 of ${raw} names will race.`
+    : n < 2 ? 'Need at least two names.' : '';
+  $('go').disabled = n < 2;
+}
+$('names').addEventListener('input', refresh); refresh();
+
+$('copy').onclick = () => navigator.clipboard.writeText(parseNames().join('\n'));
+$('mute').onclick = () => { muted = !muted; $('mute').textContent = muted ? 'Muted' : 'On'; persist(); };
+function persist() {
+  localStorage.setItem(LS, JSON.stringify({
+    roster: $('names').value, label: $('label').value, muted,
+    history: saved.history || []
+  }));
+}
+
+$('go').onclick = () => { persist(); startRace(); };
+$('again').onclick = () => {
+  // Result is committed; returning requires re-confirming the roster.
+  // A reroll stays possible, but it is visible to the room.
+  $('result').style.display = 'none';
+  $('board').style.display = 'none';
+  $('hud').style.display = 'none';
+  $('setup').style.display = 'grid';
+};
+
+/* ============================================================
+   Race flow: simulate -> lineup -> countdown -> replay -> reveal
+   ============================================================ */
+function startRace() {
+  roster = parseNames();
+  colors = roster.map((_, i) => PALETTE[i % PALETTE.length]);
+
+  run = simulateWithRetry(roster);
+  if (!run) { $('warn').textContent = 'Simulation failed to resolve. Try again.'; return; }
+
+  // Rebuild display track from an identical (throwaway) world.
+  const w = new RAPIER.World({ x: 0, y: T.gravity, z: 0 });
+  renderTrack(buildTrack(w)); w.free();
+  buildMarbles(colors);
+
+  $('setup').style.display = 'none';
+  showLineup();
+}
+
+function showLineup() {
+  $('chips').innerHTML = roster.map((nm, i) =>
+    `<div class="chip"><span class="dot" style="background:${colors[i]}"></span>${escapeHtml(nm)}</div>`
+  ).join('');
+  $('lineup').style.display = 'grid';
+
+  // Park marbles on the grid for the intro shot.
+  const f0 = run.frames[0];
+  marbleMeshes.forEach((m, i) => m.position.set(f0[i * 3], f0[i * 3 + 1], f0[i * 3 + 2]));
+  camera.position.set(0, T.helixTop + 7, 15);
+  camera.lookAt(0, T.helixTop - 1, 0);
+  renderer.render(scene, camera);
+
+  let c = 3;
+  $('count').textContent = c;
+  const iv = setInterval(() => {
+    c--;
+    $('count').textContent = c > 0 ? c : 'GO';
+    if (c < 0) { clearInterval(iv); $('lineup').style.display = 'none'; beginReplay(); }
+  }, 800);
+}
+
+let playFrame = 0, lastT = 0, speed = 1;
+
+function beginReplay() {
+  // Render only as far as the winner plus a short tail.
+  run.renderFrames = Math.min(run.frames.length, run.winnerFrame + 50);
+  const natural = run.renderFrames * T.dt;
+  // Exact 30s wall time via playback scale, clamped so it never reads
+  // as fast-forward or heavy slow-mo. Track tuning does the rest.
+  speed = Math.max(0.5, Math.min(2, natural / T.targetSeconds));
+
+  $('hudS').textContent = speed.toFixed(2) + '×';
+  $('hud').style.display = 'block';
+  $('board').style.display = 'block';
+  buildBoard();
+
+  playFrame = 0; lastT = performance.now(); playing = true;
+}
+
+function buildBoard() {
+  $('lanes').innerHTML = roster.map((nm, i) =>
+    `<div class="lane" data-i="${i}"><span class="pos">${i + 1}</span>
+     <span class="dot" style="background:${colors[i]}"></span>
+     <span class="nm">${escapeHtml(nm)}</span></div>`).join('');
+}
+
+function updateBoard(buf, frameIdx) {
+  const rank = [...Array(run.n).keys()].sort((a, b) => {
+    const fa = run.finish[a] >= 0 && run.finish[a] <= frameIdx ? run.finish[a] : Infinity;
+    const fb = run.finish[b] >= 0 && run.finish[b] <= frameIdx ? run.finish[b] : Infinity;
+    if (fa !== fb) return fa - fb;
+    return buf[a * 3 + 1] - buf[b * 3 + 1];
+  });
+  const box = $('lanes');
+  rank.forEach((mi, pos) => {
+    const el = box.querySelector(`.lane[data-i="${mi}"]`);
+    el.style.order = pos;
+    el.querySelector('.pos').textContent = pos + 1;
+    el.classList.toggle('done', run.finish[mi] >= 0 && run.finish[mi] <= frameIdx);
+  });
+  box.style.display = 'flex'; box.style.flexDirection = 'column';
+}
+
+let camY = T.helixTop, camAng = 0;
+
+function tick(now) {
+  requestAnimationFrame(tick);
+  if (!run) { return; }
+
+  if (playing) {
+    const dtReal = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+
+    // Slow-motion into the finish — the single biggest drama-per-line item.
+    const toWin = (run.winnerFrame - playFrame) * T.dt;
+    const slowmo = (toWin < 1.4 && toWin > -0.5) ? 0.42 : 1;
+
+    playFrame += dtReal * 60 * speed * slowmo;
+    if (playFrame >= run.renderFrames - 1) { playFrame = run.renderFrames - 1; finishRace(); }
+
+    const fi = Math.floor(playFrame);
+    const buf = run.frames[fi];
+    let lead = Infinity;
+    for (let i = 0; i < run.n; i++) {
+      marbleMeshes[i].position.set(buf[i * 3], buf[i * 3 + 1], buf[i * 3 + 2]);
+      lead = Math.min(lead, buf[i * 3 + 1]);
+    }
+    if (run.hits[fi] > 0) click(run.hits[fi]);
+    updateBoard(buf, fi);
+    $('hudT').textContent = (playFrame / run.renderFrames * T.targetSeconds).toFixed(1);
+
+    camY += (lead + 3.4 - camY) * Math.min(1, dtReal * 3.4);
+    camAng += dtReal * 0.075;
+  }
+
+  const r = 15.5;
+  camera.position.set(Math.cos(camAng) * r, camY + 3.4, Math.sin(camAng) * r);
+  camera.lookAt(0, camY - 1.6, 0);
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(tick);
+
+function finishRace() {
+  if (!playing) return;
+  playing = false;
+  const w = run.ranking[0];
+  setTimeout(() => {
+    $('resLabel2').textContent = $('label').value || 'Winner';
+    $('resName').textContent = roster[w];
+    const sw = $('resSwatch');
+    sw.style.background = colors[w]; sw.style.color = colors[w];
+    $('resOrder').innerHTML = run.ranking.map((mi, i) =>
+      `<div class="lane"><span class="pos">${i + 1}</span>
+       <span class="dot" style="background:${colors[mi]}"></span>
+       <span class="nm">${escapeHtml(roster[mi])}</span></div>`).join('');
+    $('resSeed').textContent = `seed ${run.seed.toString(16)} · ${(run.renderFrames * T.dt).toFixed(1)}s natural · ${speed.toFixed(2)}× playback`;
+
+    const h = (saved.history || []);
+    h.unshift({ seed: run.seed, at: Date.now(), roster, order: run.ranking.map(i => roster[i]) });
+    saved.history = h.slice(0, 50);
+    persist();
+
+    $('result').style.display = 'grid';
+  }, 700);
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+</script>
+</body>
+</html>

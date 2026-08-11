@@ -17,7 +17,12 @@ system. It has no concept of "presenter" in the MVP.
 Physics decides the winner. No pre-drawn result, no rigged race, no weighted
 draw.
 
-- First marble to reach the finish basin is the selected person.
+- A user-facing selection-mode setting chooses `first` or `last`, defaults to
+  `first`, and persists in `localStorage`.
+- In `first` mode, the first marble to reach the finish basin is selected and
+  the recording ends at that crossing.
+- In `last` mode, the final marble to reach the finish basin is selected and
+  the recording ends at that crossing.
 - The result label is a config string, so the same mechanic reads as "Winner"
   or "Unlucky" depending on how the team frames presenting.
 - Person → start-slot mapping is shuffled every race. Lane bias is a real
@@ -95,8 +100,8 @@ approach is two-layer:
 
 Simulate-first also yields, for free:
 
-- The winner is known before a single frame renders, so the reveal can be
-  staged.
+- The selected person is known before a single frame renders, so the reveal
+  can be staged.
 - Slow-motion on the final approach — the highest-impact bit of drama in the
   genre.
 
@@ -173,29 +178,35 @@ duration control, the known-winner reveal, and the stuck-race guard with it.
 
 ### Stuck-race handling
 
-If the headless simulation produces no winner within a 60s sim-time ceiling,
-discard the seed and roll a new one. The audience never sees a failed race.
+The headless simulation has a 60s sim-time ceiling. In `first` mode, discard
+the seed and retry if no marble finishes by then. In `last` mode, discard the
+seed and retry unless every marble finishes by then. The audience never sees
+a failed race.
 
 Caveat recorded for honesty: rejecting stuck outcomes is technically a small
 bias, since wedging correlates with start position. At a roster of 5 this is
 noise, but it is not literally zero.
 
-Simulation continues past first place so the leaderboard shows a complete
-finishing order. This also makes "remove the winner and race again" free.
+The recorded finish order ends with the selected marble: one finisher in
+`first` mode and the complete order in `last` mode. Trailing marbles in
+`first` mode remain ranked by their position at the selection frame.
 
 ### Persistence shape
 
 Stored in `localStorage`:
 
 - Current roster.
-- Committed race records: seed, timestamp, roster, finishing order.
+- Picker settings, including selection mode; the result label remains an app
+  config string rather than user data.
+- Committed race records: seed, timestamp, roster, selection mode, selected
+  person, observed finish order, and final positional ranking.
 
 The seed is shown on the results screen. Seed + recorded result is also the
 substrate that memory mode needs later.
 
 ### Deployment
 
-Static hosting (GitHub Pages or Netlify), auto-deploy on push.
+GitHub Pages, auto-deployed from `main` by GitHub Actions.
 
 No single-file offline build. Inlining a multi-megabyte WASM blob as base64 is
 real friction for an offline case that probably never occurs. Add it only if
@@ -230,3 +241,78 @@ let the peg field carry the race.
 - Race history UI beyond what trust-commit requires.
 - Adjustable race duration.
 - Single-file offline build.
+
+## Implementation map
+
+The prototype at `specs/prototypes/first-look.html` is a disposable visual and
+physics reference. Production code is a modular Vite application under `src/`.
+
+### Foundation and simulation
+
+- Vite's `vanilla-ts` scaffold is created in a `mktemp -d` staging directory
+  with `pnpm create vite "$RACING_VITE_STAGING_DIR" --template vanilla-ts --no-interactive`
+  and promoted to the repository root without touching `specs/`. Its
+  `package.json`, `index.html`, `src/`, and TypeScript configs are then adjusted
+  for pnpm, Three.js, `@dimforge/rapier3d-compat`, Vitest, Oxlint, Oxfmt, and
+  `dev`, `typecheck`, `test`, `lint`, `format`, `format:check`, and `build`
+  scripts: `typecheck` is `tsc -b`, `test` is `vitest run`, `lint` is
+  `oxlint src`, `format` is `oxfmt --write .`, and `format:check` is
+  `oxfmt --check .`. `pnpm install` creates `pnpm-lock.yaml`;
+  `.prettierignore` excludes `specs/` from Oxfmt. `vite.config.ts` is
+  introduced only for Pages in the deployment phase.
+- `src/race/types.ts` exports `SelectionMode`, `MarbleTransform`,
+  `TransformFrame`, `RecordedContactEvent`, `RaceRecording`,
+  `CommittedRaceRecord`, `PickerSettingsV1`, and `PickerStateV1`.
+- `src/race/config.ts` exports `DEFAULT_RACE_CONFIG` with the result label,
+  `DEFAULT_PICKER_SETTINGS` with `first` selection mode, and `RaceConfig`.
+- `src/race/random.ts` exports `createSeededRandom(seed: number): () => number`
+  and `shuffleStartSlots(count: number, random: () => number): number[]`.
+- `src/track/definition.ts` exports `TrackDefinition`, `TrackConfig`,
+  `DEFAULT_TRACK_CONFIG`, and `createTrackDefinition(config: TrackConfig): TrackDefinition`.
+- `src/track/colliders.ts` exports
+  `attachTrackColliders(world: RAPIER.World, track: TrackDefinition): void`.
+- `src/simulation/simulateRace.ts` exports
+  `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`.
+- `src/simulation/simulateWithRetry.ts` exports
+  `simulateWithRetry(roster: readonly string[], mode: SelectionMode): RaceRecording`.
+
+### Replay and presentation
+
+- `src/render/createRaceScene.ts` exports
+  `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, styles: readonly MarbleStyle[]): RaceScene`.
+- `src/render/marbleStyles.ts` exports `MarbleStyle` and
+  `createMarbleStyles(count: number): MarbleStyle[]` for colourblind-safe solid
+  colours followed by patterned variants.
+- `src/replay/createReplayController.ts` exports `ReplayCallbacks`,
+  `ReplayController`, and
+  `createReplayController(scene: RaceScene, recording: RaceRecording, callbacks: ReplayCallbacks): ReplayController`.
+- `src/ui/createRaceView.ts` exports
+  `createRaceView(root: HTMLElement, recording: RaceRecording): RaceView` and
+  owns the lineup, leaderboard, canvas, replay, and result handoff.
+- `preview.html` and `src/dev/racePreview.ts` provide a retained tuning harness
+  for seeded tracks without coupling simulation to rendering.
+
+### Application, persistence, and audio
+
+- `index.html`, `src/main.ts`, and `src/app/createApp.ts` compose the roster
+  confirmation, persisted settings, simulate-first flow, replay, committed
+  result, copy-list action, and visible new-race flow.
+- `src/storage/raceStore.ts` exports `RaceStore` and
+  `createRaceStore(storage: Storage): RaceStore`, using the versioned
+  `marble-race-picker` localStorage entry and safe defaults for absent or
+  malformed data.
+- `src/ui/createSetupView.ts` exports
+  `createSetupView(root: HTMLElement, initial: PickerStateV1): SetupView`.
+- `src/ui/createResultDialog.ts` exports
+  `createResultDialog(root: HTMLElement, record: CommittedRaceRecord, label: string): ResultDialog`.
+- `src/audio/createRaceAudio.ts` exports `RaceAudio` and
+  `createRaceAudio(): RaceAudio`; it starts only from the mute-toggle user
+  gesture and plays recorded collision events plus the finish sting.
+
+### Deployment
+
+- `.github/workflows/deploy-pages.yml` installs the pinned pnpm dependencies
+  with `pnpm install --frozen-lockfile`, builds `dist/`, and deploys it to
+  GitHub Pages on pushes to `main`.
+- `vite.config.ts` uses relative asset paths so the build works at the
+  repository's Pages subpath.

@@ -29,11 +29,11 @@ Fresh review: not required
 - [x] (amended 2026-08-12) Enable strict TypeScript checking in `tsconfig.json` before adding simulation contracts.
 - [x] Implement the strict recording, settings, and persisted-record contracts in `src/race/types.ts` and defaults in `src/race/config.ts`.
 - [x] Implement seeded randomness and unbiased person-to-slot shuffling in `src/race/random.ts` via `createSeededRandom()` and `shuffleStartSlots()`.
-- [ ] Implement helix, peg-field, funnel-pinch, and finish-basin descriptors in `src/track/definition.ts` and Rapier colliders in `src/track/colliders.ts`.
+- [x] Implement helix, peg-field, funnel-pinch, and finish-basin descriptors in `src/track/definition.ts` and Rapier colliders in `src/track/colliders.ts`.
 - [x] (amended 2026-08-12) Add `src/simulation/initializeRapier.ts` to initialize Rapier WASM once before the synchronous simulation APIs are called.
-- [ ] Implement fixed-step position, rotation, finish-crossing, and collision-event recording in `src/simulation/simulateRace.ts`; stop on the first crossing in `first` mode, the final crossing in `last` mode, and return `null` when the mode-specific target is unmet at 60 simulated seconds.
-- [ ] Implement invisible seed retries in `src/simulation/simulateWithRetry.ts` while preserving each accepted recording's seed.
-- [ ] Add deterministic contract coverage in `src/race/random.test.ts`, `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/simulateWithRetry.test.ts` for shuffled slots, both selection modes, recorded transforms/contact events, and mode-specific timeout retries.
+- [x] Implement fixed-step position, rotation, finish-crossing, and collision-event recording in `src/simulation/simulateRace.ts`; stop on the first crossing in `first` mode, the final crossing in `last` mode, and return `null` when the mode-specific target is unmet at 60 simulated seconds.
+- [x] Implement invisible seed retries in `src/simulation/simulateWithRetry.ts` while preserving each accepted recording's seed.
+- [x] Add deterministic contract coverage in `src/race/random.test.ts`, `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/simulateWithRetry.test.ts` for shuffled slots, both selection modes, recorded transforms/contact events, and mode-specific timeout retries.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`

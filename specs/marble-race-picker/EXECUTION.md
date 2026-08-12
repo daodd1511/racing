@@ -55,7 +55,7 @@ Fresh review: not required
 
 - [ ] Implement colourblind-safe solid and patterned marble styles in `src/render/marbleStyles.ts` and track, marble, lighting, and camera rendering in `src/render/createRaceScene.ts`.
 - [ ] Implement immutable transform replay, a 30-second time-warp curve, final-approach slow motion, collision callbacks, cancellation, and disposal in `src/replay/createReplayController.ts`.
-- [ ] Implement the three-second named lineup, fixed name-to-style mapping, live positional leaderboard, canvas, and result handoff in `src/ui/createRaceView.ts` and `src/styles/race.css`.
+- [ ] Implement the three-second named lineup, fixed name-to-style mapping, live positional leaderboard, canvas, and result handoff in `src/ui/createRaceView.ts` and `src/styles/race.css`, applying the warm arcade presentation selected in `ui-variant-2-arcade.html` without copying its placeholder course or CSS race motion.
 - [ ] Add `preview.html` and `src/dev/racePreview.ts` as a seed/mode/roster tuning harness that calls the production simulation and replay interfaces.
 - [ ] Tune `DEFAULT_TRACK_CONFIG` in `src/track/definition.ts` for short helix order-locking, peg-field lead changes, funnel rebunching, and successful 5- and 15-marble runs through both selection modes.
 - [ ] Add fake-clock replay coverage in `src/replay/createReplayController.test.ts`, style coverage in `src/render/marbleStyles.test.ts`, and representative fixed-seed completion coverage in `src/simulation/trackStress.test.ts`.
@@ -82,8 +82,8 @@ Produces: `RaceStore`, `SetupView`, `ResultDialog`, `AppController`, `createRace
 Fresh review: not required
 
 - [ ] Implement versioned `marble-race-picker` state loading, safe malformed-state fallback, roster/settings saves, and immutable committed-record appends in `src/storage/raceStore.ts`.
-- [ ] Implement `src/ui/createSetupView.ts` with newline parsing that trims empty lines, accepts 1–15 entries, preserves duplicate names as distinct marbles, persists the `first`/`last` setting, and copies the normalized roster through `navigator.clipboard.writeText()`.
-- [ ] Implement `src/ui/createResultDialog.ts` with the `DEFAULT_RACE_CONFIG` label, selected name/style, seed, observed finish order, and a `New race` action that returns to roster confirmation instead of rerunning immediately.
+- [ ] Implement `src/ui/createSetupView.ts` with newline parsing that trims empty lines, accepts 1–15 entries, preserves duplicate names as distinct marbles, persists the `first`/`last` setting, copies the normalized roster through `navigator.clipboard.writeText()`, and carries over the selected arcade-style roster controls and mode switches.
+- [ ] Implement `src/ui/createResultDialog.ts` with the `DEFAULT_RACE_CONFIG` label, selected name/style, seed, observed finish order, the selected ticket-like arcade reveal, and a `New race` action that returns to roster confirmation instead of rerunning immediately.
 - [ ] Compose simulate-first execution, race replay, commit-on-result, settings persistence, and lifecycle cleanup in `src/app/createApp.ts`, `src/main.ts`, `index.html`, and `src/styles/app.css`.
 - [ ] Add storage coverage in `src/storage/raceStore.test.ts`, setup/result DOM coverage in `src/ui/createSetupView.test.ts` and `src/ui/createResultDialog.test.ts`, and first/last end-to-end controller coverage in `src/app/createApp.test.ts`.
 

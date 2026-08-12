@@ -244,8 +244,14 @@ let the peg field carry the race.
 
 ## Implementation map
 
-The prototype at `specs/prototypes/first-look.html` is a disposable visual and
-physics reference. Production code is a modular Vite application under `src/`.
+The prototype at `specs/prototypes/first-look.html` is a disposable physics
+reference. `ui-variant-2-arcade.html` is the selected visual reference for the
+production interface: use its warm arcade palette, tactile controls, cabinet
+framing, scoreboard, and ticket-like result reveal. Its CSS race animation and
+pinball-style course are presentation placeholders, not implementation
+references. Production retains the Three.js/Rapier vertical stack of helix,
+peg field, funnel pinch, and finish basin described above. Production code is
+a modular Vite application under `src/`.
 
 ### Foundation and simulation
 

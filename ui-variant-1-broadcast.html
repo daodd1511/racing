@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marble Race — Broadcast Noir</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@400;500&display=swap');
+:root{--ink:#f3f0e8;--muted:#918f88;--acid:#d8ff42;--red:#ff5a3d;--glass:rgba(18,20,19,.84);--line:rgba(255,255,255,.13)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{overflow:hidden;background:#080a09;color:var(--ink);font-family:"DM Mono",monospace}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;z-index:20;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E")}
+.shell{height:100%;display:grid;grid-template-rows:70px 1fr 54px;background:radial-gradient(circle at 58% 18%,#2a302a 0,#101311 34%,#070908 70%)}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line);background:rgba(8,10,9,.72);z-index:4}
+.brand{display:flex;align-items:center;gap:13px}.mark{width:31px;height:31px;border:7px solid var(--acid);border-radius:50%;box-shadow:inset 0 0 0 2px #080a09}.brand b{font-family:"Archivo Black",sans-serif;text-transform:uppercase;font-size:17px;letter-spacing:-.04em}.live{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--acid)}.live:before{content:"";display:inline-block;width:7px;height:7px;background:var(--red);border-radius:50%;margin-right:8px;animation:pulse 1.2s infinite}@keyframes pulse{50%{opacity:.35}}
+main{min-height:0;display:grid;grid-template-columns:310px 1fr 260px;position:relative}.rail{padding:24px 22px;background:var(--glass);backdrop-filter:blur(18px);border-right:1px solid var(--line);z-index:4;overflow:auto}.rail.right{border-left:1px solid var(--line);border-right:0}
+.eyebrow{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--acid);margin-bottom:8px}.rail h1{font:30px/.95 "Archivo Black",sans-serif;text-transform:uppercase;letter-spacing:-.055em;margin:0 0 12px}.intro{color:var(--muted);font-size:11px;line-height:1.65;margin:0 0 24px}
+label{display:block;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}textarea{width:100%;height:145px;resize:none;border:1px solid var(--line);background:#0a0d0b;color:var(--ink);padding:12px;font:12px/1.65 "DM Mono";outline:none}textarea:focus{border-color:var(--acid)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);margin:16px 0}.seg button{border:0;background:transparent;color:var(--muted);padding:10px;font:10px "DM Mono";text-transform:uppercase;letter-spacing:.1em;cursor:pointer}.seg button.active{background:var(--acid);color:#111;font-weight:700}
+.race{width:100%;border:0;background:var(--acid);color:#111;padding:14px;font:13px "Archivo Black";text-transform:uppercase;cursor:pointer;transition:.2s}.race:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(216,255,66,.22)}
+.stage{position:relative;overflow:hidden;background:linear-gradient(115deg,transparent 0 49.8%,rgba(255,255,255,.03) 50%,transparent 50.2%)}.stage:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.022) 80px),repeating-linear-gradient(0deg,transparent 0 79px,rgba(255,255,255,.022) 80px)}
+.track{position:absolute;left:50%;top:6%;width:360px;height:89%;transform:translateX(-50%)}.ring{position:absolute;left:50%;transform:translateX(-50%) rotateX(64deg);border:2px solid rgba(216,255,66,.42);border-radius:50%;box-shadow:0 0 28px rgba(216,255,66,.06)}.ring:nth-child(1){top:2%;width:330px;height:128px}.ring:nth-child(2){top:22%;width:275px;height:110px}.ring:nth-child(3){top:42%;width:215px;height:90px}.ring:nth-child(4){top:61%;width:150px;height:68px}.stem{position:absolute;top:72%;bottom:4%;left:50%;width:42px;transform:translateX(-50%);border-left:1px solid rgba(216,255,66,.38);border-right:1px solid rgba(216,255,66,.38);background:linear-gradient(90deg,transparent,rgba(216,255,66,.05),transparent)}.finish{position:absolute;bottom:3%;left:50%;transform:translateX(-50%);width:150px;height:25px;border:1px solid var(--acid);border-radius:50%;box-shadow:0 0 38px rgba(216,255,66,.2)}
+.marble{position:absolute;width:18px;height:18px;border-radius:50%;z-index:2;left:calc(50% - 9px);top:8%;background:radial-gradient(circle at 32% 28%,#fff 0 7%,var(--c) 22%,color-mix(in srgb,var(--c),#000 40%) 75%);box-shadow:0 0 16px color-mix(in srgb,var(--c),transparent 48%);transition:top 3s cubic-bezier(.4,.05,.7,1),transform 3s ease-in-out}.marble.run{top:88%;transform:translate(var(--x),0) rotate(1080deg)}
+.stage-copy{position:absolute;left:28px;bottom:24px;z-index:3}.stage-copy span{font-size:9px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}.stage-copy strong{display:block;font:38px/.95 "Archivo Black";letter-spacing:-.055em;text-transform:uppercase;margin-top:6px}
+.right h2{font:11px "Archivo Black";letter-spacing:.08em;text-transform:uppercase;margin:0 0 16px}.person{display:grid;grid-template-columns:22px 14px 1fr;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line);font-size:11px}.pos{color:var(--muted)}.dot{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}.mode-note{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:10px;line-height:1.6}
+footer{display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-top:1px solid var(--line);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}.sound{border:0;background:none;color:var(--ink);font:inherit;cursor:pointer}
+.result{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(4,5,4,.82);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:.35s}.result.show{opacity:1;pointer-events:auto}.card{width:min(520px,90vw);border:1px solid var(--acid);background:#0d100e;padding:44px;text-align:center;box-shadow:14px 14px 0 var(--acid)}.card small{color:var(--acid);text-transform:uppercase;letter-spacing:.2em}.card h2{font:54px/.9 "Archivo Black";letter-spacing:-.06em;text-transform:uppercase;margin:13px 0 26px}.card button{border:1px solid var(--line);background:transparent;color:var(--ink);font:10px "DM Mono";padding:11px 18px;text-transform:uppercase;cursor:pointer}
+@media(max-width:900px){main{grid-template-columns:260px 1fr}.rail.right{display:none}}@media(max-width:650px){main{display:block}.rail{position:absolute;left:12px;right:12px;bottom:12px;padding:16px;max-height:44%;border:1px solid var(--line)}.rail h1,.intro{display:none}.stage{height:100%}header{padding:0 15px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header><div class="brand"><i class="mark"></i><b>Drop / Select</b></div><div class="live">Race control</div></header>
+  <main>
+    <section class="rail">
+      <div class="eyebrow">Roster setup</div><h1>Let gravity decide.</h1><p class="intro">Every name gets a marble. Every race gets one result. No rerolls behind closed doors.</p>
+      <label for="names">Names · one per line</label><textarea id="names">Avery
+Jordan
+Morgan
+Riley
+Sam</textarea>
+      <div class="seg" aria-label="Selection mode"><button class="active" data-mode="first">First wins</button><button data-mode="last">Last chosen</button></div>
+      <button class="race" id="race">Start the race →</button>
+    </section>
+    <section class="stage"><div class="track"><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="stem"></i><i class="finish"></i><div id="marbles"></div></div><div class="stage-copy"><span>Vertical funnel · 00:30</span><strong id="status">Awaiting drop</strong></div></section>
+    <aside class="rail right"><h2>Live positions</h2><div id="board"></div><p class="mode-note" id="note">The first marble across the finish ends the race.</p></aside>
+  </main>
+  <footer><span>Physics decides · Seed 8f2c—17a0</span><button class="sound" id="sound">Sound: off</button></footer>
+</div>
+<div class="result" id="result"><div class="card"><small id="resultLabel">Winner</small><h2 id="winner">—</h2><button id="again">Return to roster</button></div></div>
+<script>
+const colors=['#ff5a3d','#58c7ff','#d8ff42','#c78bff','#ffca55','#50e3b3'];let mode='first';
+const namesEl=document.querySelector('#names'), board=document.querySelector('#board'), marbles=document.querySelector('#marbles');
+function names(){return namesEl.value.split(/\n/).map(v=>v.trim()).filter(Boolean).slice(0,15)}
+function render(){const ns=names();board.innerHTML=ns.map((n,i)=>`<div class="person"><span class="pos">${String(i+1).padStart(2,'0')}</span><i class="dot" style="--c:${colors[i%colors.length]}"></i><span>${n}</span></div>`).join('');marbles.innerHTML=ns.map((_,i)=>`<i class="marble" style="--c:${colors[i%colors.length]};--x:${(i%2?-1:1)*(20+i*5)}px;transition-delay:${i*.08}s"></i>`).join('')}
+namesEl.oninput=render;render();
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));document.querySelector('#note').textContent=mode==='first'?'The first marble across the finish ends the race.':'The race runs until every marble finishes. The last arrival is chosen.'});
+document.querySelector('#race').onclick=()=>{const ns=names();if(ns.length<2)return;document.querySelector('#status').textContent='Race live';document.querySelectorAll('.marble').forEach(m=>m.classList.add('run'));setTimeout(()=>{const pick=mode==='first'?0:ns.length-1;document.querySelector('#resultLabel').textContent=mode==='first'?'Winner':'Last finisher';document.querySelector('#winner').textContent=ns[pick];document.querySelector('#result').classList.add('show')},3400)};
+document.querySelector('#again').onclick=()=>{document.querySelector('#result').classList.remove('show');document.querySelector('#status').textContent='Awaiting drop';document.querySelectorAll('.marble').forEach(m=>m.classList.remove('run'))};document.querySelector('#sound').onclick=e=>e.target.textContent=e.target.textContent.endsWith('off')?'Sound: on':'Sound: off';
+</script>
+</body></html>

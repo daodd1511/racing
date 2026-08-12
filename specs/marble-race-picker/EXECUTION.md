@@ -1,14 +1,15 @@
 # Marble Race Picker — Execution Plan
 
 Spec: [PLAN.md](PLAN.md). Rulebook: `specs/RULEBOOK.md`.
-Integration branch: `main`. Branch model: sequential — GitHub reports stacked
-PRs are disabled for this repository, so the stack request fell back on 2026-08-12.
+Integration branch: `main`. Branch model: manual stack — GitHub reports stacked
+PRs are disabled, so, at the user's request on 2026-08-12, each phase branches
+from and opens its PR against its immediate predecessor without waiting for merge.
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — in-progress
 - Phase 1 — Simulation foundation: done
-- Phase 2 — Race replay and tuning: pending
+- Phase 2 — Race replay and tuning: in-progress
 - Phase 3 — Picker application and persistence: pending
 - Phase 4 — Race audio: pending
 - Phase 5 — GitHub Pages deployment: pending
@@ -16,7 +17,7 @@ PRs are disabled for this repository, so the stack request fell back on 2026-08-
 
 ## Phase 1 — Simulation foundation
 
-Branch: `marble-race-picker/phase-1-simulation-foundation` (sequential: off `main`)
+Branch: `marble-race-picker/phase-1-simulation-foundation` (manual-stack bottom: off `main`)
 
 Establish the typed recording contract, parametric track, and headless physics layer that every visible feature consumes.
 
@@ -47,7 +48,7 @@ Fresh review: not required
 
 ## Phase 2 — Race replay and tuning
 
-Branch: `marble-race-picker/phase-2-race-replay` (sequential: off `main`)
+Branch: `marble-race-picker/phase-2-race-replay` (manual stack: on Phase 1)
 
 Turn immutable recordings into the fixed-duration visual race, with a retained harness for the track's high-risk tuning work.
 
@@ -75,7 +76,7 @@ Fresh review: not required
 
 ## Phase 3 — Picker application and persistence
 
-Branch: `marble-race-picker/phase-3-picker-application` (sequential: off `main`)
+Branch: `marble-race-picker/phase-3-picker-application` (manual stack: on Phase 2)
 
 Compose the production roster, settings, race, committed-result, and visible rerun flow over the simulation and replay contracts.
 
@@ -103,7 +104,7 @@ Fresh review: not required
 
 ## Phase 4 — Race audio
 
-Branch: `marble-race-picker/phase-4-race-audio` (sequential: off `main`)
+Branch: `marble-race-picker/phase-4-race-audio` (manual stack: on Phase 3)
 
 Add the deliberately last, user-gesture-gated audio layer without coupling sound generation to physics or rendering.
 
@@ -127,7 +128,7 @@ Fresh review: not required
 
 ## Phase 5 — GitHub Pages deployment
 
-Branch: `marble-race-picker/phase-5-pages-deployment` (sequential: off `main`)
+Branch: `marble-race-picker/phase-5-pages-deployment` (manual stack: on Phase 4)
 
 Make the completed static application reproducibly deployable at a GitHub Pages repository subpath.
 

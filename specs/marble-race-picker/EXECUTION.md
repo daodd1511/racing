@@ -1,7 +1,8 @@
 # Marble Race Picker — Execution Plan
 
 Spec: [PLAN.md](PLAN.md). Rulebook: `specs/RULEBOOK.md`.
-Integration branch: `main`. Branch model: sequential — `gh stack` cannot resolve a stack because the workspace is not yet a GitHub repository.
+Integration branch: `main`. Branch model: stacked — user elected to adopt the
+existing Phase 1 branch as a GitHub stack on 2026-08-12.
 
 ## STATUS
 
@@ -15,7 +16,7 @@ Integration branch: `main`. Branch model: sequential — `gh stack` cannot resol
 
 ## Phase 1 — Simulation foundation
 
-Branch: `marble-race-picker/phase-1-simulation-foundation` (sequential: off `main`)
+Branch: `marble-race-picker/phase-1-simulation-foundation` (stack bottom: off `main`)
 
 Establish the typed recording contract, parametric track, and headless physics layer that every visible feature consumes.
 
@@ -46,7 +47,7 @@ Fresh review: not required
 
 ## Phase 2 — Race replay and tuning
 
-Branch: `marble-race-picker/phase-2-race-replay` (sequential: off `main`)
+Branch: `marble-race-picker/phase-2-race-replay` (stacked: on Phase 1)
 
 Turn immutable recordings into the fixed-duration visual race, with a retained harness for the track's high-risk tuning work.
 
@@ -74,7 +75,7 @@ Fresh review: not required
 
 ## Phase 3 — Picker application and persistence
 
-Branch: `marble-race-picker/phase-3-picker-application` (sequential: off `main`)
+Branch: `marble-race-picker/phase-3-picker-application` (stacked: on Phase 2)
 
 Compose the production roster, settings, race, committed-result, and visible rerun flow over the simulation and replay contracts.
 
@@ -102,7 +103,7 @@ Fresh review: not required
 
 ## Phase 4 — Race audio
 
-Branch: `marble-race-picker/phase-4-race-audio` (sequential: off `main`)
+Branch: `marble-race-picker/phase-4-race-audio` (stacked: on Phase 3)
 
 Add the deliberately last, user-gesture-gated audio layer without coupling sound generation to physics or rendering.
 
@@ -126,7 +127,7 @@ Fresh review: not required
 
 ## Phase 5 — GitHub Pages deployment
 
-Branch: `marble-race-picker/phase-5-pages-deployment` (sequential: off `main`)
+Branch: `marble-race-picker/phase-5-pages-deployment` (stacked: on Phase 4)
 
 Make the completed static application reproducibly deployable at a GitHub Pages repository subpath.
 

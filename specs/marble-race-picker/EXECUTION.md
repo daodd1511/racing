@@ -7,9 +7,9 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done
 - Phase 1 — Simulation foundation: done
-- Phase 2 — Race replay and tuning: in-progress
+- Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: pending
 - Phase 4 — Race audio: pending
 - Phase 5 — GitHub Pages deployment: pending
@@ -57,16 +57,17 @@ Produces: `MarbleStyle`, `RaceScene`, `ReplayCallbacks`, `ReplayController`, `Ra
 
 Fresh review: not required
 
-- [ ] Implement colourblind-safe solid and patterned marble styles in `src/render/marbleStyles.ts` and track, marble, lighting, and camera rendering in `src/render/createRaceScene.ts`.
-- [ ] Implement immutable transform replay, a 30-second time-warp curve, final-approach slow motion, collision callbacks, cancellation, and disposal in `src/replay/createReplayController.ts`.
-- [ ] Implement the three-second named lineup, fixed name-to-style mapping, live positional leaderboard, canvas, and result handoff in `src/ui/createRaceView.ts` and `src/styles/race.css`, applying the warm arcade presentation selected in `ui-variant-2-arcade.html` without copying its placeholder course or CSS race motion.
-- [ ] Add `preview.html` and `src/dev/racePreview.ts` as a seed/mode/roster tuning harness that calls the production simulation and replay interfaces.
-- [ ] Tune `DEFAULT_TRACK_CONFIG` in `src/track/definition.ts` for short helix order-locking, peg-field lead changes, funnel rebunching, and successful 5- and 15-marble runs through both selection modes.
-- [ ] Add fake-clock replay coverage in `src/replay/createReplayController.test.ts`, style coverage in `src/render/marbleStyles.test.ts`, and representative fixed-seed completion coverage in `src/simulation/trackStress.test.ts`.
+- [x] (amended 2026-08-12) Add `vite.config.ts` with development dependency-scan entries limited to `index.html` and `preview.html`, so the disposable `specs/` prototype does not participate; Phase 5 will add its Pages production settings to this file.
+- [x] Implement colourblind-safe solid and patterned marble styles in `src/render/marbleStyles.ts` and track, marble, lighting, and camera rendering in `src/render/createRaceScene.ts`.
+- [x] Implement immutable transform replay, a 30-second time-warp curve, final-approach slow motion, collision callbacks, cancellation, and disposal in `src/replay/createReplayController.ts`.
+- [x] Implement the three-second named lineup, fixed name-to-style mapping, live positional leaderboard, canvas, and result handoff in `src/ui/createRaceView.ts` and `src/styles/race.css`, applying the warm arcade presentation selected in `ui-variant-2-arcade.html` without copying its placeholder course or CSS race motion.
+- [x] Add `preview.html` and `src/dev/racePreview.ts` as a seed/mode/roster tuning harness that calls the production simulation and replay interfaces.
+- [x] Tune `DEFAULT_TRACK_CONFIG` in `src/track/definition.ts` for short helix order-locking, peg-field lead changes, funnel rebunching, and successful 5- and 15-marble runs through both selection modes.
+- [x] Add fake-clock replay coverage in `src/replay/createReplayController.test.ts`, style coverage in `src/render/marbleStyles.test.ts`, and representative fixed-seed completion coverage in `src/simulation/trackStress.test.ts`.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Open `/preview.html` at 1080p with five names and confirm a three-second lineup, readable identity tracking, visible peg-field lead changes, funnel rebunching, final-approach slow motion, and result reveal at 30 seconds.

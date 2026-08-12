@@ -208,30 +208,29 @@ export function simulateRace(
         ) {
           finishFrameByMarbleIndex[marbleIndex] = frameIndex;
           finishOrder.push(marbleIndex);
+
+          const isSelected = mode === "first" || finishOrder.length === roster.length;
+
+          if (isSelected) {
+            const selectedMarbleIndex =
+              mode === "first" ? marbleIndex : finishOrder[finishOrder.length - 1];
+
+            return Object.freeze({
+              seed,
+              roster: Object.freeze([...roster]),
+              selectionMode: mode,
+              slotByMarbleIndex: Object.freeze([...slotByMarbleIndex]),
+              frames: Object.freeze(frames),
+              contactEvents: Object.freeze(contactEvents),
+              finishFrameByMarbleIndex: Object.freeze([...finishFrameByMarbleIndex]),
+              finishOrder: Object.freeze([...finishOrder]),
+              finalRanking: Object.freeze(createFinalRanking(finishFrameByMarbleIndex, frame)),
+              selectedMarbleIndex,
+              selectionFrameIndex: frameIndex,
+              simulationDurationSeconds: simulationTimeSeconds,
+            });
+          }
         }
-      }
-
-      const isSelected =
-        mode === "first" ? finishOrder.length >= 1 : finishOrder.length === roster.length;
-
-      if (isSelected) {
-        const selectedMarbleIndex =
-          mode === "first" ? finishOrder[0] : finishOrder[finishOrder.length - 1];
-
-        return Object.freeze({
-          seed,
-          roster: Object.freeze([...roster]),
-          selectionMode: mode,
-          slotByMarbleIndex: Object.freeze([...slotByMarbleIndex]),
-          frames: Object.freeze(frames),
-          contactEvents: Object.freeze(contactEvents),
-          finishFrameByMarbleIndex: Object.freeze([...finishFrameByMarbleIndex]),
-          finishOrder: Object.freeze([...finishOrder]),
-          finalRanking: Object.freeze(createFinalRanking(finishFrameByMarbleIndex, frame)),
-          selectedMarbleIndex,
-          selectionFrameIndex: frameIndex,
-          simulationDurationSeconds: simulationTimeSeconds,
-        });
       }
     }
 

@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: sequential — `gh stack` cannot resol
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Simulation foundation: pending
+- Current phase: 1 — in-progress
+- Phase 1 — Simulation foundation: in-progress
 - Phase 2 — Race replay and tuning: pending
 - Phase 3 — Picker application and persistence: pending
 - Phase 4 — Race audio: pending
@@ -23,9 +23,9 @@ Produces: `SelectionMode`, `RaceRecording`, `CommittedRaceRecord`, `PickerSettin
 
 Fresh review: not required
 
-- [ ] Set `RACING_VITE_STAGING_DIR="$(mktemp -d)"`; run `pnpm create vite "$RACING_VITE_STAGING_DIR" --template vanilla-ts --no-interactive`; promote its `package.json`, `index.html`, `src/`, `public/`, and TypeScript configs to the repository root without overwriting `specs/`.
-- [ ] Run `pnpm install`, then adjust the Vite-generated `package.json` and TypeScript configs for Three.js, `@dimforge/rapier3d-compat`, Vitest, Oxlint, and Oxfmt; set `typecheck` to `tsc -b`, `test` to `vitest run`, `lint` to `oxlint src`, `format` to `oxfmt --write .`, and `format:check` to `oxfmt --check .`; commit the generated `pnpm-lock.yaml` and defer `vite.config.ts` to Phase 5.
-- [ ] Add `.prettierignore` so `oxfmt --check .` and `oxfmt --write .` exclude `specs/` while formatting production source and configuration files.
+- [x] Set `RACING_VITE_STAGING_DIR="$(mktemp -d)"`; run `pnpm create vite "$RACING_VITE_STAGING_DIR" --template vanilla-ts --no-interactive`; promote its `package.json`, `index.html`, `src/`, `public/`, and TypeScript configs to the repository root without overwriting `specs/`.
+- [x] Run `pnpm install`, then adjust the Vite-generated `package.json` and TypeScript configs for Three.js, `@dimforge/rapier3d-compat`, Vitest, Oxlint, and Oxfmt; set `typecheck` to `tsc -b`, `test` to `vitest run`, `lint` to `oxlint src`, `format` to `oxfmt --write .`, and `format:check` to `oxfmt --check .`; commit the generated `pnpm-lock.yaml` and defer `vite.config.ts` to Phase 5.
+- [x] Add `.prettierignore` so `oxfmt --check .` and `oxfmt --write .` exclude `specs/` while formatting production source and configuration files.
 - [ ] Implement the strict recording, settings, and persisted-record contracts in `src/race/types.ts` and defaults in `src/race/config.ts`.
 - [ ] Implement seeded randomness and unbiased person-to-slot shuffling in `src/race/random.ts` via `createSeededRandom()` and `shuffleStartSlots()`.
 - [ ] Implement helix, peg-field, funnel-pinch, and finish-basin descriptors in `src/track/definition.ts` and Rapier colliders in `src/track/colliders.ts`.

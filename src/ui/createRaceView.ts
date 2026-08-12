@@ -1,4 +1,3 @@
-import { DEFAULT_RACE_CONFIG } from "../race/config";
 import type { RaceRecording } from "../race/types";
 import { createRaceScene, type RaceScene } from "../render/createRaceScene";
 import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
@@ -156,20 +155,7 @@ export function createRaceView(root: HTMLElement, recording: RaceRecording): Rac
   board.append(boardHeading, leaderboard.root);
   stage.append(playfield, board);
 
-  const result = createElement("section", "race-result");
-  result.hidden = true;
-  const resultLabel = createElement("p", "race-result-label");
-  resultLabel.textContent =
-    recording.selectionMode === "first" ? DEFAULT_RACE_CONFIG.resultLabel : "Last finisher";
-  const selectedStyle = styles[recording.selectedMarbleIndex];
-  result.append(createMarbleToken(selectedStyle, "marble-token marble-token--result"), resultLabel);
-  const resultName = createElement("strong", "race-result-name");
-  resultName.textContent = recording.roster[recording.selectedMarbleIndex];
-  const resultDetail = createElement("p", "race-result-detail");
-  resultDetail.textContent = `Seed ${recording.seed} · ${recording.finishOrder.length} finish${recording.finishOrder.length === 1 ? "" : "es"} observed`;
-  result.append(resultName, resultDetail);
-
-  cabinet.append(header, stage, result);
+  cabinet.append(header, stage);
   root.replaceChildren(cabinet);
 
   let scene: RaceScene | undefined;
@@ -221,8 +207,6 @@ export function createRaceView(root: HTMLElement, recording: RaceRecording): Rac
       },
       onComplete() {
         status.textContent = "Selection locked";
-        result.hidden = false;
-        result.classList.add("is-revealed");
         completionListeners.forEach((listener) => listener());
       },
     });

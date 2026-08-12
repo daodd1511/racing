@@ -19,16 +19,18 @@ Branch: `marble-race-picker/phase-1-simulation-foundation` (sequential: off `mai
 
 Establish the typed recording contract, parametric track, and headless physics layer that every visible feature consumes.
 
-Produces: `SelectionMode`, `RaceRecording`, `CommittedRaceRecord`, `PickerSettingsV1`, `PickerStateV1`, `TrackDefinition`, `createTrackDefinition(config: TrackConfig): TrackDefinition`, `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`, and `simulateWithRetry(roster: readonly string[], mode: SelectionMode): RaceRecording`.
+Produces: `SelectionMode`, `RaceRecording`, `CommittedRaceRecord`, `PickerSettingsV1`, `PickerStateV1`, `TrackDefinition`, `createTrackDefinition(config: TrackConfig): TrackDefinition`, `initializeRapier(): Promise<void>`, `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`, and `simulateWithRetry(roster: readonly string[], mode: SelectionMode): RaceRecording`.
 
 Fresh review: not required
 
 - [x] Set `RACING_VITE_STAGING_DIR="$(mktemp -d)"`; run `pnpm create vite "$RACING_VITE_STAGING_DIR" --template vanilla-ts --no-interactive`; promote its `package.json`, `index.html`, `src/`, `public/`, and TypeScript configs to the repository root without overwriting `specs/`.
 - [x] Run `pnpm install`, then adjust the Vite-generated `package.json` and TypeScript configs for Three.js, `@dimforge/rapier3d-compat`, Vitest, Oxlint, and Oxfmt; set `typecheck` to `tsc -b`, `test` to `vitest run`, `lint` to `oxlint src`, `format` to `oxfmt --write .`, and `format:check` to `oxfmt --check .`; commit the generated `pnpm-lock.yaml` and defer `vite.config.ts` to Phase 5.
 - [x] Add `.prettierignore` so `oxfmt --check .` and `oxfmt --write .` exclude `specs/` while formatting production source and configuration files.
-- [ ] Implement the strict recording, settings, and persisted-record contracts in `src/race/types.ts` and defaults in `src/race/config.ts`.
-- [ ] Implement seeded randomness and unbiased person-to-slot shuffling in `src/race/random.ts` via `createSeededRandom()` and `shuffleStartSlots()`.
+- [x] (amended 2026-08-12) Enable strict TypeScript checking in `tsconfig.json` before adding simulation contracts.
+- [x] Implement the strict recording, settings, and persisted-record contracts in `src/race/types.ts` and defaults in `src/race/config.ts`.
+- [x] Implement seeded randomness and unbiased person-to-slot shuffling in `src/race/random.ts` via `createSeededRandom()` and `shuffleStartSlots()`.
 - [ ] Implement helix, peg-field, funnel-pinch, and finish-basin descriptors in `src/track/definition.ts` and Rapier colliders in `src/track/colliders.ts`.
+- [x] (amended 2026-08-12) Add `src/simulation/initializeRapier.ts` to initialize Rapier WASM once before the synchronous simulation APIs are called.
 - [ ] Implement fixed-step position, rotation, finish-crossing, and collision-event recording in `src/simulation/simulateRace.ts`; stop on the first crossing in `first` mode, the final crossing in `last` mode, and return `null` when the mode-specific target is unmet at 60 simulated seconds.
 - [ ] Implement invisible seed retries in `src/simulation/simulateWithRetry.ts` while preserving each accepted recording's seed.
 - [ ] Add deterministic contract coverage in `src/race/random.test.ts`, `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/simulateWithRetry.test.ts` for shuffled slots, both selection modes, recorded transforms/contact events, and mode-specific timeout retries.

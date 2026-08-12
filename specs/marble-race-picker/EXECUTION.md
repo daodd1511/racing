@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: sequential — `gh stack` cannot resol
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Simulation foundation: in-progress
+- Current phase: 1 — done
+- Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: pending
 - Phase 3 — Picker application and persistence: pending
 - Phase 4 — Race audio: pending
@@ -36,8 +36,8 @@ Fresh review: not required
 - [x] Add deterministic contract coverage in `src/race/random.test.ts`, `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/simulateWithRetry.test.ts` for shuffled slots, both selection modes, recorded transforms/contact events, and mode-specific timeout retries.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Inspect the fixed-seed fixtures and confirm `first` selects the earliest crossing while `last` selects the final crossing without assigning unfinished marbles a fabricated finish time.

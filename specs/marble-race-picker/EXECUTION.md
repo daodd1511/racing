@@ -7,10 +7,10 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — in-progress
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
-- Phase 3 — Picker application and persistence: pending
+- Phase 3 — Picker application and persistence: in-progress
 - Phase 4 — Race audio: pending
 - Phase 5 — GitHub Pages deployment: pending
 - Verification debt: none
@@ -86,7 +86,8 @@ Produces: `RaceStore`, `SetupView`, `ResultDialog`, `AppController`, `createRace
 
 Fresh review: not required
 
-- [ ] Implement versioned `marble-race-picker` state loading, safe malformed-state fallback, roster/settings saves, and immutable committed-record appends in `src/storage/raceStore.ts`.
+- [x] (amended 2026-08-12) Add `happy-dom` as a development dependency so the required setup, result, and controller DOM coverage runs in a browser-like Vitest environment.
+- [x] Implement versioned `marble-race-picker` state loading, safe malformed-state fallback, roster/settings saves, and immutable committed-record appends in `src/storage/raceStore.ts`.
 - [ ] Implement `src/ui/createSetupView.ts` with newline parsing that trims empty lines, accepts 1–15 entries, preserves duplicate names as distinct marbles, persists the `first`/`last` setting, copies the normalized roster through `navigator.clipboard.writeText()`, and carries over the selected arcade-style roster controls and mode switches.
 - [ ] Implement `src/ui/createResultDialog.ts` with the `DEFAULT_RACE_CONFIG` label, selected name/style, seed, observed finish order, the selected ticket-like arcade reveal, and a `New race` action that returns to roster confirmation instead of rerunning immediately.
 - [ ] Compose simulate-first execution, race replay, commit-on-result, settings persistence, and lifecycle cleanup in `src/app/createApp.ts`, `src/main.ts`, `index.html`, and `src/styles/app.css`.

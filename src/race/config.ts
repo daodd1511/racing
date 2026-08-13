@@ -12,7 +12,7 @@ export interface RaceConfig {
 export const DEFAULT_RACE_CONFIG: RaceConfig = Object.freeze({
   resultLabel: "Winner",
   maximumRosterSize: 15,
-  maximumSimulationSeconds: 60,
+  maximumSimulationSeconds: 120,
   fixedTimeStepSeconds: 1 / 60,
   retryLimit: 24,
   marbleRadius: 0.35,

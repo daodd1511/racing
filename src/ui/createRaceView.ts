@@ -212,14 +212,15 @@ export function createRaceView(
 
     lineup.classList.add("is-hidden");
     status.textContent = "Live race";
-    scene = createRaceScene(canvas, track, styles, recording.selectionMode);
+    scene = createRaceScene(canvas, track, recording.roster, styles, recording.selectionMode);
     scene.render(recording.frames[0].transforms);
     updateLeaderboard(0);
     controller = createReplayController(scene, recording, {
       onFrame(frameIndex) {
-        const frame = recording.frames[frameIndex];
-        timing.textContent = frame.simulationTimeSeconds.toFixed(2);
         updateLeaderboard(frameIndex);
+      },
+      onPlaybackTime(seconds) {
+        timing.textContent = seconds.toFixed(2);
       },
       onContact(event) {
         callbacks.onContact?.(event);

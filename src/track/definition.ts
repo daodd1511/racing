@@ -5,19 +5,12 @@ export interface TrackMaterial {
   readonly friction: number;
 }
 
-export type TrackBoxKind = "side-rail" | "splitter-rail" | "deflector";
-
+export type TrackBoxKind = "side-rail" | "gate" | "splitter" | "chicane" | "deflector";
 export interface TrackBox {
   readonly kind: TrackBoxKind;
   readonly center: Vector3;
   readonly rotation: Quaternion;
   readonly halfExtents: Vector3;
-  readonly material: TrackMaterial;
-}
-
-export interface TrackBumper {
-  readonly center: Vector3;
-  readonly radius: number;
   readonly material: TrackMaterial;
 }
 
@@ -50,17 +43,13 @@ export interface TrackConfig {
   readonly railThickness: number;
   readonly samplesPerSpan: number;
   readonly maximumBankRadians: number;
-  readonly bumperRadius: number;
   readonly marbleRadius: number;
   readonly startSlotCount: number;
-  readonly startSlotsPerRow: number;
-  readonly startRowGap: number;
 }
 
 export interface TrackDefinition {
   readonly config: TrackConfig;
   readonly boxes: readonly TrackBox[];
-  readonly bumpers: readonly TrackBumper[];
   readonly surface: TrackSurface;
   readonly path: readonly TrackPathSample[];
   readonly startSlots: readonly Vector3[];
@@ -69,33 +58,35 @@ export interface TrackDefinition {
 }
 
 export const DEFAULT_TRACK_CONFIG: TrackConfig = Object.freeze({
-  trackHalfWidth: 4.8,
+  trackHalfWidth: 5.5,
   trackThickness: 0.38,
   railHeight: 1.35,
   railThickness: 0.2,
-  samplesPerSpan: 12,
-  maximumBankRadians: 0.18,
-  bumperRadius: 0.58,
+  samplesPerSpan: 32,
+  maximumBankRadians: 0.08,
   marbleRadius: 0.35,
   startSlotCount: 15,
-  startSlotsPerRow: 5,
-  startRowGap: 1.05,
 });
 
-const TRACK_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.12, friction: 0.06 });
-const RAIL_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.34, friction: 0.01 });
-const BUMPER_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.68, friction: 0.16 });
+const TRACK_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0, friction: 0.1 });
+const RAIL_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.03, friction: 0.11 });
+const BUMPER_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0, friction: 0.04 });
 const WORLD_UP: Vector3 = [0, 1, 0];
 
 const COURSE_WAYPOINTS: readonly Vector3[] = Object.freeze([
-  [0, 28, -8],
-  [0, 25, 8],
-  [9, 21, 24],
-  [-8, 17, 42],
-  [-5, 13, 58],
-  [8, 9, 76],
-  [-6, 5, 94],
-  [0, 1, 116],
+  [0, 30, -8],
+  [0, 26, 8],
+  [9, 20, 24],
+  [-8, 15.5, 42],
+  [-5, 11.5, 58],
+  [8, 7, 76],
+  [-6, 2.5, 94],
+  [0, -3, 116],
+  [10, -8, 136],
+  [-5, -11.5, 150],
+  [4, -16.5, 170],
+  [1, -21.5, 190],
+  [0, -26.5, 210],
 ]);
 
 function add(left: Vector3, right: Vector3): Vector3 {
@@ -108,6 +99,10 @@ function subtract(left: Vector3, right: Vector3): Vector3 {
 
 function scale(vector: Vector3, factor: number): Vector3 {
   return [vector[0] * factor, vector[1] * factor, vector[2] * factor];
+}
+
+function dot(left: Vector3, right: Vector3): number {
+  return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
 }
 
 function length(vector: Vector3): number {
@@ -242,13 +237,23 @@ function interpolatePathSample(
   const right = path[upperIndex];
   const span = right.distance - left.distance;
   const fraction = span === 0 ? 0 : (bounded - left.distance) / span;
+  const tangent = normalize(
+    add(left.tangent, scale(subtract(right.tangent, left.tangent), fraction)),
+  );
+  const blendedSide = add(left.side, scale(subtract(right.side, left.side), fraction));
+  const side = normalize(subtract(blendedSide, scale(tangent, dot(blendedSide, tangent))));
   return {
     position: add(left.position, scale(subtract(right.position, left.position), fraction)),
-    tangent: normalize(add(left.tangent, scale(subtract(right.tangent, left.tangent), fraction))),
-    side: normalize(add(left.side, scale(subtract(right.side, left.side), fraction))),
-    up: normalize(add(left.up, scale(subtract(right.up, left.up), fraction))),
+    tangent,
+    side,
+    up: normalize(cross(tangent, side)),
     distance: bounded,
   };
+}
+
+function trackHalfWidthAtDistance(config: TrackConfig, distance: number): number {
+  const apronFraction = Math.max(0, Math.min(1, (36 - distance) / 24));
+  return config.trackHalfWidth + apronFraction * 0.9;
 }
 
 function assertTrackConfig(config: TrackConfig): void {
@@ -257,13 +262,12 @@ function assertTrackConfig(config: TrackConfig): void {
   }
   if (
     !Number.isSafeInteger(config.samplesPerSpan) ||
-    !Number.isSafeInteger(config.startSlotCount) ||
-    !Number.isSafeInteger(config.startSlotsPerRow)
+    !Number.isSafeInteger(config.startSlotCount)
   ) {
     throw new RangeError("Track sample and slot counts must be safe integers");
   }
-  if (config.startSlotsPerRow > config.startSlotCount || config.maximumBankRadians >= Math.PI / 4) {
-    throw new RangeError("Track grid and bank settings are outside supported bounds");
+  if (config.maximumBankRadians >= Math.PI / 4) {
+    throw new RangeError("Track bank setting is outside supported bounds");
   }
 }
 
@@ -271,13 +275,13 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   assertTrackConfig(config);
   const path = createPath(config);
   const boxes: TrackBox[] = [];
-  const bumpers: TrackBumper[] = [];
 
   const surfaceVertices: number[] = [];
   const surfaceIndices: number[] = [];
   for (const sample of path) {
-    const right = add(sample.position, scale(sample.side, config.trackHalfWidth));
-    const left = add(sample.position, scale(sample.side, -config.trackHalfWidth));
+    const halfWidth = trackHalfWidthAtDistance(config, sample.distance);
+    const right = add(sample.position, scale(sample.side, halfWidth));
+    const left = add(sample.position, scale(sample.side, -halfWidth));
     surfaceVertices.push(...right, ...left);
   }
   for (let index = 0; index < path.length - 1; index += 1) {
@@ -293,6 +297,7 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
     const end = path[index + 1];
     const centerSample = interpolatePathSample(path, (start.distance + end.distance) / 2);
     const segmentLength = end.distance - start.distance;
+    const halfWidth = trackHalfWidthAtDistance(config, centerSample.distance);
     const rotation = quaternionFromBasis(centerSample.side, centerSample.up, centerSample.tangent);
     for (const direction of [-1, 1]) {
       boxes.push({
@@ -300,10 +305,7 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
         center: add(
           add(
             centerSample.position,
-            scale(
-              centerSample.side,
-              direction * (config.trackHalfWidth - config.railThickness / 2),
-            ),
+            scale(centerSample.side, direction * (halfWidth - config.railThickness / 2)),
           ),
           scale(centerSample.up, config.railHeight / 2),
         ),
@@ -315,93 +317,66 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   }
 
   const totalDistance = path.at(-1)?.distance ?? 0;
-  const bumperLayout: readonly [number, number][] = [
-    [0.23, -2.7],
-    [0.255, 1.65],
-    [0.285, -0.45],
-    [0.315, 2.75],
-    [0.345, -2.15],
-    [0.375, 0.85],
-    [0.405, 2.55],
-    [0.435, -1.2],
-    [0.69, -2.45],
-    [0.74, 2.45],
-    [0.79, -1.55],
-  ];
-  for (const [fraction, lateral] of bumperLayout) {
+  const addBarrier = (
+    kind: Exclude<TrackBoxKind, "side-rail">,
+    fraction: number,
+    direction: -1 | 1,
+    halfWidth: number,
+    lateralOffset: number,
+    angle: number,
+  ): void => {
     const sample = interpolatePathSample(path, totalDistance * fraction);
-    bumpers.push({
-      center: add(
-        add(sample.position, scale(sample.side, lateral)),
-        scale(sample.up, config.bumperRadius * 0.9),
-      ),
-      radius: config.bumperRadius,
-      material: BUMPER_MATERIAL,
-    });
-  }
-
-  bumpers.push({
-    center: add(
-      interpolatePathSample(path, totalDistance * 0.475).position,
-      scale(interpolatePathSample(path, totalDistance * 0.475).up, config.bumperRadius * 0.9),
-    ),
-    radius: config.bumperRadius,
-    material: BUMPER_MATERIAL,
-  });
-
-  for (let index = 0; index < path.length - 1; index += 1) {
-    const start = path[index];
-    const end = path[index + 1];
-    const fraction = (start.distance + end.distance) / 2 / totalDistance;
-    if (fraction < 0.49 || fraction > 0.62) {
-      continue;
-    }
-    const sample = interpolatePathSample(path, (start.distance + end.distance) / 2);
+    const barrierAxis = normalize(add(sample.side, scale(sample.tangent, direction * angle)));
+    const barrierForward = normalize(cross(barrierAxis, sample.up));
     boxes.push({
-      kind: "splitter-rail",
-      center: add(sample.position, scale(sample.up, config.railHeight * 0.55)),
-      rotation: quaternionFromBasis(sample.side, sample.up, sample.tangent),
-      halfExtents: [
-        config.railThickness / 2,
-        config.railHeight * 0.55,
-        (end.distance - start.distance) / 2 + 0.1,
-      ],
-      material: RAIL_MATERIAL,
-    });
-  }
-
-  const deflectors: readonly [number, -1 | 1, number][] = [
-    [0.86, -1, 0.25],
-    [0.86, 1, 0.25],
-  ];
-  for (const [fraction, direction, halfWidth] of deflectors) {
-    const sample = interpolatePathSample(path, totalDistance * fraction);
-    const lateral = direction * (config.trackHalfWidth - halfWidth);
-    const deflectorAxis = normalize(add(sample.side, scale(sample.tangent, direction * 0.55)));
-    const deflectorForward = normalize(cross(deflectorAxis, sample.up));
-    boxes.push({
-      kind: "deflector",
+      kind,
       center: add(
-        add(sample.position, scale(sample.side, lateral)),
+        add(sample.position, scale(sample.side, lateralOffset)),
         scale(sample.up, config.railHeight * 0.52),
       ),
-      rotation: quaternionFromBasis(deflectorAxis, sample.up, deflectorForward),
+      rotation: quaternionFromBasis(barrierAxis, sample.up, barrierForward),
       halfExtents: [halfWidth, config.railHeight * 0.52, config.railThickness],
       material: BUMPER_MATERIAL,
     });
+  };
+
+  const gateLayout: readonly [number, -1 | 1][] = [
+    [0.18, -1],
+    [0.25, 1],
+    [0.32, -1],
+    [0.47, 1],
+    [0.54, -1],
+    [0.68, 1],
+    [0.76, -1],
+  ];
+  for (const [fraction, direction] of gateLayout) {
+    addBarrier("gate", fraction, direction, 0.95, direction * 2, 10);
+  }
+
+  for (const direction of [-1, 1] as const) {
+    addBarrier(
+      "deflector",
+      0.92,
+      direction,
+      0.32,
+      direction * (config.trackHalfWidth - 0.32),
+      0.55,
+    );
   }
 
   const startSlots: Vector3[] = [];
-  const columnGap = (config.trackHalfWidth * 1.25) / Math.max(1, config.startSlotsPerRow - 1);
+  const startSample = interpolatePathSample(path, 1.5);
+  const availableHalfWidth =
+    trackHalfWidthAtDistance(config, startSample.distance) -
+    config.railThickness -
+    config.marbleRadius;
+  const slotGap = Math.min(0.66, (availableHalfWidth * 2) / (config.startSlotCount - 1));
   for (let slot = 0; slot < config.startSlotCount; slot += 1) {
-    const row = Math.floor(slot / config.startSlotsPerRow);
-    const column = slot % config.startSlotsPerRow;
-    const sample = interpolatePathSample(path, 1.5 + row * config.startRowGap);
-    const lateral = (column - (config.startSlotsPerRow - 1) / 2) * columnGap;
+    const lateral = (slot - (config.startSlotCount - 1) / 2) * slotGap;
     startSlots.push(
       add(
-        add(sample.position, scale(sample.side, lateral)),
-        scale(sample.up, config.marbleRadius + 0.08),
+        add(startSample.position, scale(startSample.side, lateral)),
+        scale(startSample.up, config.marbleRadius + 0.005),
       ),
     );
   }
@@ -411,7 +386,6 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   return Object.freeze({
     config,
     boxes: Object.freeze(boxes),
-    bumpers: Object.freeze(bumpers),
     surface: Object.freeze({
       vertices: Object.freeze(surfaceVertices),
       indices: Object.freeze(surfaceIndices),

@@ -45,6 +45,7 @@ describe("createReplayController", () => {
   it("replays immutable transforms, contact events, and completion", () => {
     const onContact = vi.fn();
     const onComplete = vi.fn();
+    const onPlaybackTime = vi.fn();
     vi.stubGlobal("performance", { now: () => 0 });
     vi.stubGlobal("window", {
       requestAnimationFrame: (callback: FrameRequestCallback) => {
@@ -56,14 +57,16 @@ describe("createReplayController", () => {
     const controller = createReplayController({ render, resize: vi.fn(), dispose }, RECORDING, {
       onContact,
       onComplete,
+      onPlaybackTime,
     });
 
     controller.start();
     scheduled?.(0);
-    scheduled?.(30_000);
+    scheduled?.(2_000);
 
     expect(render).toHaveBeenCalled();
     expect(onContact).toHaveBeenCalledWith(RECORDING.contactEvents[0]);
+    expect(onPlaybackTime).toHaveBeenLastCalledWith(2);
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
@@ -79,9 +82,9 @@ describe("createReplayController", () => {
     const controller = createReplayController({ render, resize: vi.fn(), dispose }, RECORDING, {});
 
     controller.start();
-    scheduled?.(24_600);
+    scheduled?.(1_640);
     const approachPosition = render.mock.calls.at(-1)?.[0][0].position[1];
-    scheduled?.(27_300);
+    scheduled?.(1_820);
     const slowMotionPosition = render.mock.calls.at(-1)?.[0][0].position[1];
 
     expect(approachPosition).toBeCloseTo(1.2, 2);

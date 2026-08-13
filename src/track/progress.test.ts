@@ -23,11 +23,11 @@ describe("track progress", () => {
     expect(measureTrackProgress(track, lateralPosition)).toBeCloseTo(sample.distance, 0);
   });
 
-  it("samples the path nearest a requested progress", () => {
+  it("interpolates the path at requested progress", () => {
     const requested = track.finishProgress * 0.5;
     const sample = sampleTrackPath(track, requested);
 
-    expect(Math.abs(sample.distance - requested)).toBeLessThan(2);
+    expect(sample.distance).toBeCloseTo(requested, 6);
   });
 
   it("accepts only bounded crossings of the physical finish plane", () => {

@@ -39,7 +39,7 @@ function createControlPanel(): {
   const heading = document.createElement("h1");
   heading.textContent = "Race tuning harness";
   const note = document.createElement("p");
-  note.textContent = "Runs the production physics recording and 30-second replay.";
+  note.textContent = "Runs the production gravity-only physics recording in real time.";
   const form = document.createElement("form");
   const seed = document.createElement("input");
   seed.id = "preview-seed";

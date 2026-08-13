@@ -13,43 +13,133 @@ export interface RaceScene {
 
 const TRACK_COLORS: Record<TrackBox["kind"], number> = {
   "side-rail": 0xf04f2e,
-  "splitter-rail": 0x2faaa2,
+  gate: 0x42d6c8,
+  splitter: 0x2faaa2,
+  chicane: 0xf6c944,
   deflector: 0xf6c944,
 };
 
-function createPatternTexture(style: MarbleStyle): THREE.Texture | null {
-  if (style.pattern === "solid") {
-    return null;
-  }
+function createPatternTexture(style: MarbleStyle): THREE.CanvasTexture {
   const surface = document.createElement("canvas");
-  surface.width = 96;
-  surface.height = 96;
+  surface.width = 256;
+  surface.height = 256;
   const context = surface.getContext("2d");
-  if (context === null) {
-    return null;
-  }
-  context.fillStyle = style.color;
-  context.fillRect(0, 0, surface.width, surface.height);
-  context.fillStyle = style.accentColor;
-  if (style.pattern === "stripe") {
-    context.lineWidth = 14;
-    for (let offset = -96; offset <= 96; offset += 30) {
+  if (context !== null) {
+    context.fillStyle = style.color;
+    context.fillRect(0, 0, surface.width, surface.height);
+    context.strokeStyle = style.accentColor;
+    context.fillStyle = style.accentColor;
+    context.lineCap = "round";
+
+    if (style.pattern === "ribbon") {
+      context.lineWidth = 52;
       context.beginPath();
-      context.moveTo(offset, 0);
-      context.lineTo(offset + 96, 96);
+      context.moveTo(-24, 210);
+      context.bezierCurveTo(48, 138, 152, 170, 280, 22);
       context.stroke();
-    }
-  } else {
-    for (const coordinate of [18, 48, 78]) {
+      context.strokeStyle = "#ffffff";
+      context.globalAlpha = 0.42;
+      context.lineWidth = 10;
       context.beginPath();
-      context.arc(coordinate, 24, 10, 0, Math.PI * 2);
-      context.arc(coordinate - 15, 68, 10, 0, Math.PI * 2);
+      context.moveTo(-20, 192);
+      context.bezierCurveTo(58, 126, 142, 160, 268, 14);
+      context.stroke();
+      context.globalAlpha = 1;
+    } else if (style.pattern === "orbit") {
+      context.lineWidth = 24;
+      for (const rotation of [-0.5, 0.42]) {
+        context.save();
+        context.translate(128, 128);
+        context.rotate(rotation);
+        context.beginPath();
+        context.ellipse(0, 0, 128, 48, 0, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+      context.fillStyle = "#fff7e8";
+      context.beginPath();
+      context.arc(105, 94, 13, 0, Math.PI * 2);
+      context.fill();
+    } else if (style.pattern === "confetti") {
+      const marks: readonly [number, number, number, number][] = [
+        [32, 42, 12, 32],
+        [84, 70, 28, 10],
+        [148, 32, 14, 30],
+        [210, 66, 30, 12],
+        [46, 138, 30, 12],
+        [108, 130, 12, 34],
+        [174, 142, 28, 12],
+        [224, 166, 12, 30],
+        [72, 218, 14, 28],
+        [146, 208, 30, 12],
+        [204, 226, 16, 28],
+      ];
+      for (const [x, y, width, height] of marks) {
+        context.save();
+        context.translate(x, y);
+        context.rotate((x + y) / 110);
+        context.fillRect(-width / 2, -height / 2, width, height);
+        context.restore();
+      }
+    } else if (style.pattern === "diamond") {
+      for (let row = -1; row < 6; row += 1) {
+        for (let column = -1; column < 6; column += 1) {
+          context.save();
+          context.translate(column * 64 + (row % 2) * 32, row * 52 + 18);
+          context.rotate(Math.PI / 4);
+          context.fillRect(-20, -20, 40, 40);
+          context.restore();
+        }
+      }
+    } else {
+      context.fillRect(0, 0, surface.width, 92);
+      context.fillStyle = "#fff7e8";
+      context.globalAlpha = 0.72;
+      context.fillRect(0, 98, surface.width, 12);
+      context.globalAlpha = 1;
+      context.beginPath();
+      context.arc(128, 175, 54, 0, Math.PI * 2);
       context.fill();
     }
   }
   const texture = new THREE.CanvasTexture(surface);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
+}
+
+function createNameTagTexture(
+  name: string,
+  accentColor: string,
+): {
+  readonly texture: THREE.CanvasTexture;
+  readonly aspectRatio: number;
+} {
+  const surface = document.createElement("canvas");
+  const context = surface.getContext("2d");
+  const label = name.length > 18 ? `${name.slice(0, 17)}…` : name;
+  const font = "700 34px ui-monospace, SFMono-Regular, Menlo, monospace";
+  if (context !== null) {
+    context.font = font;
+  }
+  const textWidth = context === null ? label.length * 20 : context.measureText(label).width;
+  surface.width = Math.ceil(textWidth + 52);
+  surface.height = 58;
+  const drawingContext = surface.getContext("2d");
+  if (drawingContext !== null) {
+    drawingContext.fillStyle = "rgba(7, 17, 31, 0.94)";
+    drawingContext.beginPath();
+    drawingContext.roundRect(1, 1, surface.width - 2, surface.height - 2, 15);
+    drawingContext.fill();
+    drawingContext.fillStyle = accentColor;
+    drawingContext.fillRect(14, 9, 5, surface.height - 18);
+    drawingContext.font = font;
+    drawingContext.textBaseline = "middle";
+    drawingContext.fillStyle = "#fff7e8";
+    drawingContext.fillText(label, 30, surface.height / 2 + 1);
+  }
+  const texture = new THREE.CanvasTexture(surface);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return { texture, aspectRatio: surface.width / surface.height };
 }
 
 function createFinishTexture(): THREE.CanvasTexture {
@@ -82,9 +172,13 @@ function setQuaternion(target: THREE.Quaternion, value: readonly number[]): void
 export function createRaceScene(
   canvas: HTMLCanvasElement,
   track: TrackDefinition,
+  roster: readonly string[],
   styles: readonly MarbleStyle[],
   mode: SelectionMode,
 ): RaceScene {
+  if (roster.length !== styles.length) {
+    throw new RangeError("Every marble requires one roster name and one visual style");
+  }
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -95,9 +189,9 @@ export function createRaceScene(
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x10243b);
-  scene.fog = new THREE.Fog(0x10243b, 34, 105);
+  scene.fog = new THREE.Fog(0x10243b, 48, 215);
 
-  const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 220);
+  const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 300);
   const cameraLookAt = new THREE.Vector3();
   let cameraInitialized = false;
   let lastRenderedAt = performance.now();
@@ -111,11 +205,11 @@ export function createRaceScene(
   rimLight.position.set(24, 18, -12);
   scene.add(rimLight);
 
-  const floorGeometry = new THREE.PlaneGeometry(190, 190);
+  const floorGeometry = new THREE.PlaneGeometry(290, 290);
   const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x07111f, roughness: 0.94 });
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
   floor.rotation.x = -Math.PI / 2;
-  floor.position.set(0, -1.5, 55);
+  floor.position.set(0, -29, 100);
   floor.receiveShadow = true;
   scene.add(floor);
 
@@ -153,7 +247,11 @@ export function createRaceScene(
     const material = new THREE.MeshStandardMaterial({
       color: TRACK_COLORS[box.kind],
       emissive:
-        box.kind === "side-rail" ? 0x351008 : box.kind === "splitter-rail" ? 0x062f34 : 0x000000,
+        box.kind === "side-rail"
+          ? 0x351008
+          : box.kind === "gate" || box.kind === "splitter"
+            ? 0x063d42
+            : 0x493400,
       emissiveIntensity: 0.45,
       roughness: 0.42,
       metalness: 0.2,
@@ -167,42 +265,6 @@ export function createRaceScene(
     meshes.push(mesh);
     geometries.push(geometry);
     materials.push(material);
-  }
-
-  const bumperGeometry = new THREE.SphereGeometry(track.config.bumperRadius, 20, 14);
-  const bumperRingGeometry = new THREE.TorusGeometry(
-    track.config.bumperRadius * 0.94,
-    track.config.bumperRadius * 0.12,
-    8,
-    20,
-  );
-  const bumperMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6ce0d3,
-    emissive: 0x0b4c52,
-    emissiveIntensity: 0.75,
-    roughness: 0.25,
-    metalness: 0.25,
-  });
-  const bumperRingMaterial = new THREE.MeshStandardMaterial({
-    color: 0xf6c944,
-    emissive: 0x493400,
-    emissiveIntensity: 0.7,
-    roughness: 0.28,
-  });
-  geometries.push(bumperGeometry, bumperRingGeometry);
-  materials.push(bumperMaterial, bumperRingMaterial);
-  for (const bumper of track.bumpers) {
-    const mesh = new THREE.Mesh(bumperGeometry, bumperMaterial);
-    setVector(mesh.position, bumper.center);
-    mesh.castShadow = true;
-    scene.add(mesh);
-    meshes.push(mesh);
-    const ring = new THREE.Mesh(bumperRingGeometry, bumperRingMaterial);
-    setVector(ring.position, bumper.center);
-    ring.rotation.x = Math.PI / 2;
-    ring.castShadow = true;
-    scene.add(ring);
-    meshes.push(ring);
   }
 
   const finishTexture = createFinishTexture();
@@ -232,14 +294,14 @@ export function createRaceScene(
   geometries.push(marbleGeometry);
   const marbleMeshes = styles.map((style) => {
     const map = createPatternTexture(style);
-    if (map !== null) {
-      textures.push(map);
-    }
-    const material = new THREE.MeshStandardMaterial({
-      color: style.color,
+    textures.push(map);
+    const material = new THREE.MeshPhysicalMaterial({
+      color: "#ffffff",
       map,
-      roughness: 0.22,
-      metalness: 0.12,
+      roughness: 0.16,
+      metalness: 0.08,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.14,
     });
     const mesh = new THREE.Mesh(marbleGeometry, material);
     mesh.castShadow = true;
@@ -248,6 +310,24 @@ export function createRaceScene(
     meshes.push(mesh);
     materials.push(material);
     return mesh;
+  });
+  const marbleLabels = roster.map((name, index) => {
+    const tag = createNameTagTexture(name, styles[index].accentColor);
+    const material = new THREE.SpriteMaterial({
+      map: tag.texture,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const sprite = new THREE.Sprite(material);
+    const baseHeight = 0.54;
+    sprite.scale.set(baseHeight * tag.aspectRatio, baseHeight, 1);
+    sprite.renderOrder = 3;
+    scene.add(sprite);
+    meshes.push(sprite);
+    materials.push(material);
+    textures.push(tag.texture);
+    return { sprite, material, baseHeight, aspectRatio: tag.aspectRatio };
   });
 
   function resize(): void {
@@ -269,10 +349,20 @@ export function createRaceScene(
       marbleMeshes[index].visible = true;
       setVector(marbleMeshes[index].position, transform.position);
       setQuaternion(marbleMeshes[index].quaternion, transform.rotation);
+      const label = marbleLabels[index];
+      label.sprite.position.set(
+        transform.position[0],
+        transform.position[1] + track.config.marbleRadius * 2.55,
+        transform.position[2],
+      );
     }
 
+    let trackedMarbleIndex = -1;
+    let trackedPosition: THREE.Vector3 | undefined;
     if (transforms.length > 0) {
       const target = createCameraTarget(transforms, track, mode);
+      trackedMarbleIndex = target.marbleIndex;
+      trackedPosition = new THREE.Vector3(...transforms[target.marbleIndex].position);
       const desiredPosition = new THREE.Vector3(...target.position);
       const desiredLookAt = new THREE.Vector3(...target.lookAt);
       const renderedAt = performance.now();
@@ -288,6 +378,28 @@ export function createRaceScene(
         cameraLookAt.lerp(desiredLookAt, response);
       }
       camera.lookAt(cameraLookAt);
+    }
+
+    for (let index = 0; index < marbleLabels.length; index += 1) {
+      const label = marbleLabels[index];
+      const transform = transforms[index];
+      if (transform === undefined) {
+        label.sprite.visible = false;
+        continue;
+      }
+      const isTracked = index === trackedMarbleIndex;
+      const distanceSquared = label.sprite.position.distanceToSquared(camera.position);
+      const nearbyTrackedMarbles =
+        trackedPosition === undefined
+          ? 0
+          : transforms.filter(
+              (candidate) =>
+                new THREE.Vector3(...candidate.position).distanceToSquared(trackedPosition) < 5 * 5,
+            ).length;
+      label.sprite.visible = isTracked || (nearbyTrackedMarbles <= 3 && distanceSquared < 30 * 30);
+      label.material.opacity = isTracked ? 1 : 0.82;
+      const height = label.baseHeight * (isTracked ? 1.22 : 1);
+      label.sprite.scale.set(height * label.aspectRatio, height, 1);
     }
 
     renderer.render(scene, camera);

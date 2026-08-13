@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createMarbleStyles } from "./marbleStyles";
 
 describe("createMarbleStyles", () => {
-  it("assigns distinct solid colours before adding patterns", () => {
+  it("assigns every marble a distinct patterned design", () => {
     const styles = createMarbleStyles(15);
 
-    expect(styles.slice(0, 10).every((style) => style.pattern === "solid")).toBe(true);
-    expect(styles.slice(10).some((style) => style.pattern === "stripe")).toBe(true);
-    expect(styles.slice(10).some((style) => style.pattern === "spot")).toBe(true);
+    expect(styles.every((style) => style.pattern !== undefined)).toBe(true);
+    expect(new Set(styles.map((style) => style.color)).size).toBe(15);
+    expect(new Set(styles.map((style) => style.pattern)).size).toBeGreaterThanOrEqual(5);
   });
 
   it("rejects invalid counts", () => {

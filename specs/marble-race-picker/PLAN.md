@@ -1,7 +1,7 @@
 # Marble Race Picker — Plan
 
 A hosted static web page that picks a person at random from a pasted list and
-reveals the result as a 30-second 3D marble race down an obstacle raceway.
+reveals the result as a one-minute 3D marble race down an obstacle raceway.
 
 Replaces an existing duck-racing tool used to choose the next weekly-meeting
 presenter. The duck tool works; it just isn't appealing. Spectacle is the
@@ -29,6 +29,9 @@ draw.
   property of any track geometry and is invisible; shuffling stops it from
   attaching to the same human week after week. This makes the *long run*
   fair, not any single race.
+- Every race begins with all marbles side-by-side on one common start line.
+  A widened start apron tapers into the course so the 15-marble lineup remains
+  physical rather than overlapping or starting inside a rail.
 
 Honest limitation, accepted deliberately: rigid-body physics is chaotic, not
 provably uniform. The tool looks fair and is unbiased in expectation, but a
@@ -65,7 +68,7 @@ The raceway is assembled from **parametric modules**. MVP module set:
 | --- | --- |
 | Start grid and release chute | Gives 1–15 marbles room to launch without a pile-up. |
 | Banked S-curves | Establishes speed and creates inside/outside passing lines. |
-| Staggered bumper slalom | Deflects marbles between lines and creates lead changes. |
+| Staggered angled deflector gates | Redirect marbles laterally through tall vertical faces, creating lead changes without launches. |
 | Dual-route splitter and merge | Forces route choice, rebunching, and overtakes. |
 | Chicane and narrowing gate | Compresses the field before the final straight. |
 | Finish straight and line | Makes first and final crossings unambiguous. |
@@ -74,7 +77,7 @@ Rationale for modules over a monolithic track:
 
 - Drama: every obstacle module creates a credible opportunity to change position.
 - Tuning: total duration is roughly the sum of per-module durations, so hitting
-  30s is arithmetic rather than guesswork.
+  one minute is arithmetic rather than guesswork.
 - Future random maps: randomising the module list *is* the procedural-track
   feature. Each module is individually validated, so any stack of them is
   traversable by construction. Same code, no rewrite.
@@ -85,16 +88,16 @@ parameter set only.
 
 ### Duration
 
-Fixed at 30 seconds. No user-facing setting.
+Approximately one minute, determined by the physical course. No user-facing setting.
 
 Duration is emergent from physics and cannot be commanded directly. The
 approach is two-layer:
 
-1. Hand-tune course slope, friction, length, and obstacle spacing so a natural
-   run lands near 30s.
-2. Simulate headlessly before rendering, then play back at a time scale that
-   lands exactly on 30s. With layer 1 done, the scale factor sits near 1.0 and
-   is imperceptible. Cap it at roughly 0.5–2.0x regardless.
+1. Hand-tune course slope, friction, length, and obstacle spacing so every
+   racer clears a substantial course under gravity alone, with no launch or
+   velocity recovery.
+2. Simulate headlessly before rendering, then replay the recorded physical
+   duration without a fixed-duration time warp.
 
 Simulate-first also yields, for free:
 
@@ -282,27 +285,32 @@ application under `src/`.
 - `src/track/definition.ts` exports `TrackDefinition`, `TrackConfig`,
   `TrackPathSample`, `DEFAULT_TRACK_CONFIG`, and
   `createTrackDefinition(config: TrackConfig): TrackDefinition` for the start
-  chute, S-curves, bumper slalom, splitter/merge, chicane, and finish straight.
+  chute, S-curves, angled deflector gates, splitter/merge, chicane, and finish
+  straight. Raceway, marble, rail, and post materials keep ordinary course
+  travel grounded; high-resolution continuous mesh sampling removes collision
+  lift at track facets, and posts redirect laterally instead of acting as
+  launch ramps.
 - `src/track/progress.ts` exports
   `measureTrackProgress(track: TrackDefinition, position: Vector3): number` by
   projecting a position onto the sampled centreline.
 - `src/track/colliders.ts` exports
   `attachTrackColliders(world: RAPIER.World, track: TrackDefinition): void`.
 - `src/simulation/simulateRace.ts` exports
-  `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`.
+  `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`
+  and `DEFAULT_MARBLE_MATERIAL` for the shared grounded-raceway material contract.
 - `src/simulation/simulateWithRetry.ts` exports
   `simulateWithRetry(roster: readonly string[], mode: SelectionMode): RaceRecording`.
 
 ### Replay and presentation
 
 - `src/render/createRaceScene.ts` exports
-  `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, styles: readonly MarbleStyle[], mode: SelectionMode): RaceScene`.
+  `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, roster: readonly string[], styles: readonly MarbleStyle[], mode: SelectionMode): RaceScene`.
   It renders the obstacle raceway and uses centreline progress to drive an
   elevated, damped chase camera following the leader in `first` mode or trailer
-  in `last` mode.
+  in `last` mode. Each marble carries a camera-facing name tag that follows it.
 - `src/render/marbleStyles.ts` exports `MarbleStyle` and
-  `createMarbleStyles(count: number): MarbleStyle[]` for colourblind-safe solid
-  colours followed by patterned variants.
+  `createMarbleStyles(count: number): MarbleStyle[]` for distinct, patterned
+  marble designs; no racer is rendered as a single-colour ball.
 - `src/replay/createReplayController.ts` exports `ReplayCallbacks`,
   `ReplayController`, and
   `createReplayController(scene: RaceScene, recording: RaceRecording, callbacks: ReplayCallbacks): ReplayController`.

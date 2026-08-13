@@ -17,6 +17,14 @@ function dot(left: Vector3, right: Vector3): number {
   return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
 }
 
+function cross(left: Vector3, right: Vector3): Vector3 {
+  return [
+    left[1] * right[2] - left[2] * right[1],
+    left[2] * right[0] - left[0] * right[2],
+    left[0] * right[1] - left[1] * right[0],
+  ];
+}
+
 export function hasCrossedFinish(track: TrackDefinition, position: Vector3): boolean {
   const offset = subtract(position, track.finishLine.center);
   const forward = dot(offset, track.finishLine.tangent);
@@ -33,6 +41,14 @@ export function hasCrossedFinish(track: TrackDefinition, position: Vector3): boo
 
 function lengthSquared(vector: Vector3): number {
   return dot(vector, vector);
+}
+
+function normalize(vector: Vector3): Vector3 {
+  const vectorLength = Math.sqrt(lengthSquared(vector));
+  if (vectorLength === 0) {
+    return vector;
+  }
+  return scale(vector, 1 / vectorLength);
 }
 
 export function measureTrackProgress(track: TrackDefinition, position: Vector3): number {
@@ -74,5 +90,18 @@ export function sampleTrackPath(track: TrackDefinition, progress: number): Track
   }
   const left = track.path[upperIndex - 1];
   const right = track.path[upperIndex];
-  return bounded - left.distance <= right.distance - bounded ? left : right;
+  const span = right.distance - left.distance;
+  const fraction = span === 0 ? 0 : (bounded - left.distance) / span;
+  const tangent = normalize(
+    add(left.tangent, scale(subtract(right.tangent, left.tangent), fraction)),
+  );
+  const blendedSide = add(left.side, scale(subtract(right.side, left.side), fraction));
+  const side = normalize(subtract(blendedSide, scale(tangent, dot(blendedSide, tangent))));
+  return {
+    position: add(left.position, scale(subtract(right.position, left.position), fraction)),
+    tangent,
+    side,
+    up: normalize(cross(tangent, side)),
+    distance: bounded,
+  };
 }

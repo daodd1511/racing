@@ -7,12 +7,12 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 5 — done
+- Current phase: 5 — in-progress
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: done
 - Phase 4 — Race audio: done
-- Phase 5 — Obstacle raceway refactor: done
+- Phase 5 — Obstacle raceway refactor: in-progress
 - Phase 6 — GitHub Pages deployment: pending
 - Verification debt: none
 
@@ -138,7 +138,7 @@ Branch: `marble-race-picker/phase-5-obstacle-raceway` (manual stack: on Phase 4)
 Replace the rejected vertical tower with a progress-measured downhill raceway and mode-aware elevated chase camera.
 
 Consumes: `SelectionMode`, `RaceRecording`, `MarbleTransform`, `TrackDefinition`, `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`, `RaceScene`, `ReplayController`, and `RaceView`.
-Produces: `TrackPathSample`, `measureTrackProgress(track: TrackDefinition, position: Vector3): number`, updated `TrackDefinition`, and `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, styles: readonly MarbleStyle[], mode: SelectionMode): RaceScene`.
+Produces: `TrackPathSample`, `measureTrackProgress(track: TrackDefinition, position: Vector3): number`, updated `TrackDefinition`, and `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, roster: readonly string[], styles: readonly MarbleStyle[], mode: SelectionMode): RaceScene`.
 
 Fresh review: required — core simulation geometry, ranking, and camera behavior replace a rejected implementation.
 
@@ -148,6 +148,12 @@ Fresh review: required — core simulation geometry, ranking, and camera behavio
 - [x] Update `src/ui/createRaceView.ts`, `src/styles/race.css`, and `src/dev/racePreview.ts` for a full-width course view, compact overlaid leaderboard, and retained seed/mode tuning controls without changing lineup or result-dialog behavior.
 - [x] Tune `DEFAULT_TRACK_CONFIG` so 5- and 15-marble fixed-seed and retry runs complete inside 60 simulated seconds, remain contained, reach the lower obstacle modules, and demonstrate position changes across the bumper, splitter/merge, or chicane sections.
 - [x] Replace vertical-course assertions in `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/trackStress.test.ts`; add `src/track/progress.test.ts` and camera-target coverage for projection, first-mode leader following, last-mode trailer following, smooth target changes, finish order, containment, and representative overtakes.
+- [ ] (amended 2026-08-13) Replace launch-prone spherical bumpers in `src/track/definition.ts`, `src/track/colliders.ts`, and `src/render/createRaceScene.ts` with track-normal posts; retune marble, surface, rail, and obstacle materials plus start contact in `src/simulation/simulateRace.ts`; interpolate centreline sampling in `src/track/progress.ts`; and add coverage proving marbles stay grounded while obstacles still create overtakes.
+- [ ] (amended 2026-08-13, fresh-review correction) Increase triangle-mesh path sampling in `src/track/definition.ts`, enforce a maximum `0.05` sphere-to-surface gap, and bind overtake coverage in `src/simulation/trackStress.test.ts` to the post-slalom module boundaries.
+- [ ] (amended 2026-08-13) Extend the raceway with further grounded obstacle modules; raise the launch speed while retaining containment and stable rolling; change replay presentation to one minute; replace all single-colour marble styles with distinctive patterned designs; and add camera-facing roster name tags that follow each marble in `src/track/definition.ts`, `src/simulation/simulateRace.ts`, `src/replay/createReplayController.ts`, `src/render/marbleStyles.ts`, `src/render/createRaceScene.ts`, `src/ui/createRaceView.ts`, and their coverage.
+- [ ] (amended 2026-08-13) Remove artificial launch velocity, movement recovery, containment correction, and fixed one-minute replay timing from `src/simulation/simulateRace.ts` and `src/replay/createReplayController.ts`; use a longer, steeper, grounded track and low-profile deflectors in `src/track/definition.ts` so gravity and collisions alone produce the race duration and speed; raise the physical safety ceiling in `src/race/config.ts`; and update physics and replay coverage accordingly.
+- [ ] (amended 2026-08-13) Replace the launch-prone track-normal slalom posts with tall angled deflector gates and a tall splitter divider in `src/track/definition.ts`, `src/track/colliders.ts`, and `src/render/createRaceScene.ts`; update raceway and overtake coverage from post slalom to gate-run boundaries.
+- [ ] (amended 2026-08-13) Restore a full physical obstacle sequence—staggered gate lanes, continuous splitter, chicane, and narrowing gate—using only track-aligned box colliders in `src/track/definition.ts` and `src/render/createRaceScene.ts`; put every marble on one common start line and add corresponding `src/track/definition.test.ts` coverage.
 
 **Phase gate (hard):**
 - [x] `pnpm typecheck`

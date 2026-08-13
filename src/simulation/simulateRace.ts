@@ -23,6 +23,8 @@ interface MarbleBody {
   readonly colliderHandle: RAPIER.ColliderHandle;
 }
 
+export const DEFAULT_MARBLE_MATERIAL = Object.freeze({ restitution: 0, friction: 0.12 });
+
 function validateRoster(roster: readonly string[]): void {
   if (roster.length === 0 || roster.length > DEFAULT_RACE_CONFIG.maximumRosterSize) {
     throw new RangeError(`Roster must contain 1–${DEFAULT_RACE_CONFIG.maximumRosterSize} entries`);
@@ -50,26 +52,22 @@ function createMarbleBodies(
   track: ReturnType<typeof createTrackDefinition>,
   rosterSize: number,
   slotByMarbleIndex: readonly number[],
-  random: () => number,
 ): MarbleBody[] {
   const bodies: MarbleBody[] = [];
 
   for (let marbleIndex = 0; marbleIndex < rosterSize; marbleIndex += 1) {
     const slot = track.startSlots[slotByMarbleIndex[marbleIndex]];
-    const jitter = (random() - 0.5) * 0.05;
-    const releaseDirection = track.path[0].tangent;
     const body = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(slot[0], slot[1] + jitter, slot[2])
-        .setLinvel(releaseDirection[0] * 3.5, releaseDirection[1] * 3.5, releaseDirection[2] * 3.5)
-        .setLinearDamping(0.06)
-        .setAngularDamping(0.06)
+        .setTranslation(slot[0], slot[1], slot[2])
+        .setLinearDamping(0.02)
+        .setAngularDamping(0.02)
         .setCcdEnabled(true),
     );
     const collider = world.createCollider(
       RAPIER.ColliderDesc.ball(DEFAULT_TRACK_CONFIG.marbleRadius)
-        .setRestitution(0.34)
-        .setFriction(0.12)
+        .setRestitution(DEFAULT_MARBLE_MATERIAL.restitution)
+        .setFriction(DEFAULT_MARBLE_MATERIAL.friction)
         .setDensity(2.4)
         .setActiveEvents(
           RAPIER.ActiveEvents.COLLISION_EVENTS | RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS,
@@ -174,7 +172,7 @@ export function simulateRace(
   try {
     world.timestep = DEFAULT_RACE_CONFIG.fixedTimeStepSeconds;
     attachTrackColliders(world, track);
-    const marbleBodies = createMarbleBodies(world, track, roster.length, slotByMarbleIndex, random);
+    const marbleBodies = createMarbleBodies(world, track, roster.length, slotByMarbleIndex);
     const marbleIndexByColliderHandle = new Map<RAPIER.ColliderHandle, number>(
       marbleBodies.map(({ colliderHandle }, marbleIndex) => [colliderHandle, marbleIndex]),
     );

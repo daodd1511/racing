@@ -3,6 +3,7 @@ import type { RaceScene } from "../render/createRaceScene";
 
 export interface ReplayCallbacks {
   onFrame?(frameIndex: number): void;
+  onPlaybackTime?(seconds: number): void;
   onContact?(event: RecordedContactEvent): void;
   onComplete?(): void;
 }
@@ -13,7 +14,6 @@ export interface ReplayController {
   dispose(): void;
 }
 
-const REPLAY_DURATION_MS = 30_000;
 const SLOW_APPROACH_START = 0.82;
 const SLOW_APPROACH_SOURCE_FRACTION = 0.9;
 
@@ -66,6 +66,7 @@ export function createReplayController(
   let disposed = false;
 
   const durationSeconds = recording.simulationDurationSeconds;
+  const replayDurationMs = durationSeconds * 1_000;
   const lastFrame = recording.frames.at(-1);
 
   if (lastFrame === undefined || durationSeconds <= 0) {
@@ -79,7 +80,8 @@ export function createReplayController(
     }
 
     const elapsed = Math.max(0, timestamp - startedAt);
-    const playbackProgress = Math.min(1, elapsed / REPLAY_DURATION_MS);
+    const playbackProgress = Math.min(1, elapsed / replayDurationMs);
+    callbacks.onPlaybackTime?.(elapsed / 1_000);
     const sourceTimeSeconds = sourceProgressAt(playbackProgress) * durationSeconds;
     const framePosition = sourceTimeSeconds / recording.frames[0].simulationTimeSeconds - 1;
     const lowerFrameIndex = Math.max(0, Math.min(finalFrame.index, Math.floor(framePosition)));

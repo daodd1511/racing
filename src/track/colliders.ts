@@ -39,19 +39,4 @@ export function attachTrackColliders(world: RAPIER.World, track: TrackDefinition
   for (const box of track.boxes) {
     attachBoxCollider(world, box);
   }
-
-  for (const bumper of track.bumpers) {
-    const rigidBody = world.createRigidBody(
-      RAPIER.RigidBodyDesc.fixed().setTranslation(
-        bumper.center[0],
-        bumper.center[1],
-        bumper.center[2],
-      ),
-    );
-    const collider = RAPIER.ColliderDesc.ball(bumper.radius)
-      .setRestitution(bumper.material.restitution)
-      .setFriction(bumper.material.friction);
-
-    world.createCollider(collider, rigidBody);
-  }
 }

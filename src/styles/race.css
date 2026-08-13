@@ -25,10 +25,10 @@ textarea {
 }
 
 .race-cabinet {
-  width: min(1440px, 100%);
+  width: 100%;
   min-height: 100vh;
   margin: 0 auto;
-  padding: clamp(1rem, 2.7vw, 2.75rem);
+  padding: clamp(0.65rem, 1.4vw, 1.25rem);
   background:
     radial-gradient(circle at 12% 0%, #fff8e9 0 7%, transparent 28%),
     linear-gradient(155deg, #d7eee3, #f7ecd3 52%, #c6e6e2);
@@ -39,7 +39,7 @@ textarea {
   grid-template-columns: 1fr auto;
   align-items: end;
   gap: 0.5rem 1.5rem;
-  padding: 0 0.25rem 1.25rem;
+  padding: 0 0.25rem 0.75rem;
 }
 
 .race-eyebrow,
@@ -60,7 +60,7 @@ textarea {
   margin: 0;
   color: #f05a30;
   font-family: "Bowlby One SC", Impact, sans-serif;
-  font-size: clamp(2.3rem, 6vw, 5.3rem);
+  font-size: clamp(2rem, 4vw, 3.8rem);
   font-weight: 400;
   letter-spacing: -0.04em;
   line-height: 0.88;
@@ -84,8 +84,8 @@ textarea {
 }
 
 .race-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 330px);
+  position: relative;
+  display: block;
   overflow: hidden;
   border: 3px solid #17243b;
   border-radius: 26px;
@@ -95,7 +95,7 @@ textarea {
 
 .race-playfield {
   position: relative;
-  min-height: min(70vh, 730px);
+  min-height: calc(100vh - 7.5rem);
   overflow: hidden;
   background: #c9e2d9;
 }
@@ -239,12 +239,22 @@ textarea {
 }
 
 .race-scoreboard {
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  right: 1rem;
   display: flex;
   flex-direction: column;
+  width: min(19rem, 28vw);
+  max-height: calc(100% - 2rem);
   min-height: 0;
-  border-left: 3px solid #17243b;
-  background: #17243b;
+  overflow: hidden;
+  border: 2px solid #f6c944;
+  border-radius: 12px;
+  background: rgb(16 36 59 / 91%);
+  box-shadow: 5px 5px 0 rgb(7 17 31 / 75%);
   color: #fff7e8;
+  backdrop-filter: blur(10px);
 }
 
 .race-scoreboard-heading {
@@ -312,6 +322,39 @@ textarea {
   font-family: "DM Mono", monospace;
   font-size: 0.58rem;
   text-transform: uppercase;
+}
+
+.race-scoreboard.is-dense .race-scoreboard-heading {
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem 0.65rem;
+}
+
+.race-scoreboard.is-dense .race-scoreboard-mode {
+  font-size: 0.9rem;
+}
+
+.race-scoreboard.is-dense .race-leaderboard-list {
+  gap: 0.16rem;
+  padding: 0.45rem;
+}
+
+.race-scoreboard.is-dense .race-leaderboard-row {
+  grid-template-columns: 1.15rem 0.8rem minmax(0, 1fr) auto;
+  gap: 0.3rem;
+  min-height: 0;
+  padding: 0.25rem 0.35rem;
+}
+
+.race-scoreboard.is-dense .marble-token--small {
+  width: 0.76rem;
+}
+
+.race-scoreboard.is-dense .race-leaderboard-name {
+  font-size: 0.72rem;
+}
+
+.race-scoreboard.is-dense .race-leaderboard-state {
+  font-size: 0.5rem;
 }
 
 .race-result {
@@ -507,9 +550,15 @@ textarea {
   }
 
   .race-scoreboard {
+    position: static;
+    width: 100%;
     max-height: 21rem;
     border-top: 3px solid #17243b;
+    border-right: 0;
+    border-bottom: 0;
     border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .race-leaderboard-list {

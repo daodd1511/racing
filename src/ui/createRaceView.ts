@@ -2,7 +2,12 @@ import type { RaceRecording, RecordedContactEvent } from "../race/types";
 import { createRaceScene, type RaceScene } from "../render/createRaceScene";
 import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
 import { createReplayController, type ReplayController } from "../replay/createReplayController";
-import { createTrackDefinition, DEFAULT_TRACK_CONFIG } from "../track/definition";
+import {
+  createTrackDefinition,
+  DEFAULT_TRACK_CONFIG,
+  type TrackDefinition,
+} from "../track/definition";
+import { measureTrackProgress } from "../track/progress";
 
 export interface RaceView {
   start(): void;
@@ -53,7 +58,11 @@ function createLineup(roster: readonly string[], styles: readonly MarbleStyle[])
   return lineup;
 }
 
-function rankAtFrame(recording: RaceRecording, frameIndex: number): readonly number[] {
+function rankAtFrame(
+  recording: RaceRecording,
+  track: TrackDefinition,
+  frameIndex: number,
+): readonly number[] {
   const frame = recording.frames[frameIndex];
 
   if (frame === undefined) {
@@ -84,14 +93,10 @@ function rankAtFrame(recording: RaceRecording, frameIndex: number): readonly num
         return left - right;
       }
 
-      const leftHorizontalDistance = leftPosition[0] ** 2 + leftPosition[2] ** 2;
-      const rightHorizontalDistance = rightPosition[0] ** 2 + rightPosition[2] ** 2;
+      const leftProgress = measureTrackProgress(track, leftPosition);
+      const rightProgress = measureTrackProgress(track, rightPosition);
 
-      return (
-        leftPosition[1] - rightPosition[1] ||
-        leftHorizontalDistance - rightHorizontalDistance ||
-        left - right
-      );
+      return rightProgress - leftProgress || left - right;
     },
   );
 }
@@ -124,6 +129,7 @@ export function createRaceView(
   callbacks: RaceViewCallbacks = {},
 ): RaceView {
   const styles = createMarbleStyles(recording.roster.length);
+  const track = createTrackDefinition(DEFAULT_TRACK_CONFIG);
   const cabinet = createElement("main", "race-cabinet");
   const header = createElement("header", "race-cabinet-header");
   const eyebrow = createElement("p", "race-eyebrow");
@@ -154,6 +160,7 @@ export function createRaceView(
   playfield.append(canvas, liveReadout, lineup);
 
   const board = createElement("aside", "race-scoreboard");
+  board.classList.toggle("is-dense", recording.roster.length > 10);
   const boardHeading = createElement("div", "race-scoreboard-heading");
   const boardLabel = createElement("p", "race-scoreboard-label");
   boardLabel.textContent = "Live positions";
@@ -175,7 +182,7 @@ export function createRaceView(
   const completionListeners = new Set<() => void>();
 
   function updateLeaderboard(frameIndex: number): void {
-    const ranking = rankAtFrame(recording, frameIndex);
+    const ranking = rankAtFrame(recording, track, frameIndex);
     const completed = new Set(
       recording.finishOrder.filter((marbleIndex) => {
         const finishFrame = recording.finishFrameByMarbleIndex[marbleIndex];
@@ -205,7 +212,7 @@ export function createRaceView(
 
     lineup.classList.add("is-hidden");
     status.textContent = "Live race";
-    scene = createRaceScene(canvas, createTrackDefinition(DEFAULT_TRACK_CONFIG), styles);
+    scene = createRaceScene(canvas, track, styles, recording.selectionMode);
     scene.render(recording.frames[0].transforms);
     updateLeaderboard(0);
     controller = createReplayController(scene, recording, {

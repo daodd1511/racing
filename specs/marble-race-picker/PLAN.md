@@ -1,7 +1,7 @@
 # Marble Race Picker — Plan
 
 A hosted static web page that picks a person at random from a pasted list and
-reveals the result as a 30-second 3D marble race down a funnel track.
+reveals the result as a 30-second 3D marble race down an obstacle raceway.
 
 Replaces an existing duck-racing tool used to choose the next weekly-meeting
 presenter. The duck tool works; it just isn't appealing. Spectacle is the
@@ -19,9 +19,9 @@ draw.
 
 - A user-facing selection-mode setting chooses `first` or `last`, defaults to
   `first`, and persists in `localStorage`.
-- In `first` mode, the first marble to reach the finish basin is selected and
+- In `first` mode, the first marble to cross the finish line is selected and
   the recording ends at that crossing.
-- In `last` mode, the final marble to reach the finish basin is selected and
+- In `last` mode, the final marble to cross the finish line is selected and
   the recording ends at that crossing.
 - The result label is a config string, so the same mechanic reads as "Winner"
   or "Unlucky" depending on how the team frames presenting.
@@ -54,28 +54,25 @@ Two modes, only the first in the MVP:
 
 ### Race format
 
-A **vertical funnel**, chosen over a horizontal race track for two specific
-reasons that sink amateur marble racers:
+The race uses a **real downhill raceway**, viewed from an elevated chase camera.
+Marbles roll along a broad, railed course rather than falling through a tower.
+The fixed MVP course follows a long horizontal route with a gradual vertical
+drop, so forward progress is visually obvious and overtakes read as a race.
 
-- **Camera.** 15 marbles spread along a long horizontal course cannot be
-  framed. Follow the leader and viewers lose their own marble; go wide and
-  everything is 4 pixels. A descent keeps the field bunched and the camera
-  motion trivial.
-- **Duration.** Horizontal courses long enough for interesting overtaking run
-  60–90 seconds. A funnel's runtime is bounded by drop height.
-
-The track is a vertical stack of **parametric modules**. MVP module set:
+The raceway is assembled from **parametric modules**. MVP module set:
 
 | Module | Purpose |
 | --- | --- |
-| Helix segment | Descent and visual interest. Order tends to lock here. |
-| Peg field | Where the race is actually decided. Primary source of lead changes. |
-| Funnel pinch | Bunches the field back together for a tense finish. |
-| Finish basin | Arrival and reveal. |
+| Start grid and release chute | Gives 1–15 marbles room to launch without a pile-up. |
+| Banked S-curves | Establishes speed and creates inside/outside passing lines. |
+| Staggered bumper slalom | Deflects marbles between lines and creates lead changes. |
+| Dual-route splitter and merge | Forces route choice, rebunching, and overtakes. |
+| Chicane and narrowing gate | Compresses the field before the final straight. |
+| Finish straight and line | Makes first and final crossings unambiguous. |
 
 Rationale for modules over a monolithic track:
 
-- Drama: every module boundary reshuffles the field.
+- Drama: every obstacle module creates a credible opportunity to change position.
 - Tuning: total duration is roughly the sum of per-module durations, so hitting
   30s is arithmetic rather than guesswork.
 - Future random maps: randomising the module list *is* the procedural-track
@@ -93,7 +90,8 @@ Fixed at 30 seconds. No user-facing setting.
 Duration is emergent from physics and cannot be commanded directly. The
 approach is two-layer:
 
-1. Hand-tune module parameters so a natural run lands near 30s.
+1. Hand-tune course slope, friction, length, and obstacle spacing so a natural
+   run lands near 30s.
 2. Simulate headlessly before rendering, then play back at a time scale that
    lands exactly on 30s. With layer 1 done, the scale factor sits near 1.0 and
    is imperceptible. Cap it at roughly 0.5–2.0x regardless.
@@ -109,9 +107,8 @@ Simulate-first also yields, for free:
 
 Target: a person finds their marble on a screen-shared 1080p window.
 
-- Marbles are clean coloured spheres. **No floating name labels** — in a funnel
-  the field bunches, and labels overlap into an unreadable pile at exactly the
-  moment the race matters most.
+- Marbles are clean coloured spheres. **No floating name labels** — labels
+  overlap during merges and obscure the obstacles at the moments that matter.
 - A fixed sidebar lists name → colour swatch, reordered live by race position.
   It doubles as the leaderboard.
 - A 3-second pre-race lineup shows each marble with its name, so "I'm green"
@@ -176,7 +173,18 @@ design sidesteps it entirely.
 Do not let a "just simulate live" shortcut creep in. It would take exact
 duration control, the known-winner reveal, and the stuck-race guard with it.
 
-### Stuck-race handling
+### Progress, camera, and stuck-race handling
+
+Race position is measured by projecting each marble onto the raceway centreline
+and using cumulative path distance, not world-space height or a single axis.
+That progress value drives the live leaderboard, final positional ranking, and
+camera target.
+
+The elevated chase camera looks down and forward along the local track tangent.
+In `first` mode it smoothly follows the marble with greatest current progress;
+in `last` mode it follows the marble with least current progress. The camera
+uses look-ahead and damped motion so target changes remain legible instead of
+snapping between marbles.
 
 The headless simulation has a 60s sim-time ceiling. In `first` mode, discard
 the seed and retry if no marble finishes by then. In `last` mode, discard the
@@ -217,14 +225,11 @@ someone asks.
 Not in rendering, collisions, or the physics engine — those are solved,
 boring problems. ~20 marbles at 60fps is comfortable.
 
-The risk is **tuning the peg field and funnel pinch** so that 5 marbles produce
-genuine lead changes rather than a locked procession, and so nothing wedges.
-This is iterative parameter work with no shortcut, and it will be most of the
-effort. Plan for it explicitly rather than discovering it.
-
-Secondary risk: helix segments are inherently undramatic — marbles in constant
-contact with a smooth spiral hold their order. Keep helix segments short and
-let the peg field carry the race.
+The risk is **tuning the raceway obstacles and merge geometry** so 5 and 15
+marbles produce genuine lead changes without wedging, escaping the rails, or
+turning the start into an unreadable pile-up. The second risk is chase-camera
+target churn when the lead changes rapidly; damping must preserve the overtake
+without losing the mode-selected position.
 
 ## Assumptions
 
@@ -244,14 +249,15 @@ let the peg field carry the race.
 
 ## Implementation map
 
-The prototype at `specs/prototypes/first-look.html` is a disposable physics
-reference. `ui-variant-2-arcade.html` is the selected visual reference for the
+The prototype at `specs/prototypes/first-look.html` is rejected as a visual and
+track reference; it remains only as historical physics exploration.
+`ui-variant-2-arcade.html` is the selected visual reference for the
 production interface: use its warm arcade palette, tactile controls, cabinet
 framing, scoreboard, and ticket-like result reveal. Its CSS race animation and
 pinball-style course are presentation placeholders, not implementation
-references. Production retains the Three.js/Rapier vertical stack of helix,
-peg field, funnel pinch, and finish basin described above. Production code is
-a modular Vite application under `src/`.
+references. Production uses the Three.js/Rapier downhill obstacle raceway and
+mode-aware chase camera described above. Production code is a modular Vite
+application under `src/`.
 
 ### Foundation and simulation
 
@@ -274,7 +280,12 @@ a modular Vite application under `src/`.
 - `src/race/random.ts` exports `createSeededRandom(seed: number): () => number`
   and `shuffleStartSlots(count: number, random: () => number): number[]`.
 - `src/track/definition.ts` exports `TrackDefinition`, `TrackConfig`,
-  `DEFAULT_TRACK_CONFIG`, and `createTrackDefinition(config: TrackConfig): TrackDefinition`.
+  `TrackPathSample`, `DEFAULT_TRACK_CONFIG`, and
+  `createTrackDefinition(config: TrackConfig): TrackDefinition` for the start
+  chute, S-curves, bumper slalom, splitter/merge, chicane, and finish straight.
+- `src/track/progress.ts` exports
+  `measureTrackProgress(track: TrackDefinition, position: Vector3): number` by
+  projecting a position onto the sampled centreline.
 - `src/track/colliders.ts` exports
   `attachTrackColliders(world: RAPIER.World, track: TrackDefinition): void`.
 - `src/simulation/simulateRace.ts` exports
@@ -285,7 +296,10 @@ a modular Vite application under `src/`.
 ### Replay and presentation
 
 - `src/render/createRaceScene.ts` exports
-  `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, styles: readonly MarbleStyle[]): RaceScene`.
+  `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, styles: readonly MarbleStyle[], mode: SelectionMode): RaceScene`.
+  It renders the obstacle raceway and uses centreline progress to drive an
+  elevated, damped chase camera following the leader in `first` mode or trailer
+  in `last` mode.
 - `src/render/marbleStyles.ts` exports `MarbleStyle` and
   `createMarbleStyles(count: number): MarbleStyle[]` for colourblind-safe solid
   colours followed by patterned variants.
@@ -294,7 +308,8 @@ a modular Vite application under `src/`.
   `createReplayController(scene: RaceScene, recording: RaceRecording, callbacks: ReplayCallbacks): ReplayController`.
 - `src/ui/createRaceView.ts` exports
   `createRaceView(root: HTMLElement, recording: RaceRecording): RaceView` and
-  owns the lineup, leaderboard, canvas, replay, and result handoff.
+  owns the lineup, centreline-progress leaderboard, canvas, replay, and result
+  handoff.
 - `preview.html` and `src/dev/racePreview.ts` provide a retained tuning harness
   for seeded tracks without coupling simulation to rendering.
 

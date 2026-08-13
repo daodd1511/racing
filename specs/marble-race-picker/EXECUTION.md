@@ -7,12 +7,13 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 4 — done
+- Current phase: 5 — in-progress
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: done
 - Phase 4 — Race audio: done
-- Phase 5 — GitHub Pages deployment: pending
+- Phase 5 — Obstacle raceway refactor: in-progress
+- Phase 6 — GitHub Pages deployment: pending
 - Verification debt: none
 
 ## Phase 1 — Simulation foundation
@@ -130,9 +131,38 @@ Fresh review: not required
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.
 
-## Phase 5 — GitHub Pages deployment
+## Phase 5 — Obstacle raceway refactor
 
-Branch: `marble-race-picker/phase-5-pages-deployment` (manual stack: on Phase 4)
+Branch: `marble-race-picker/phase-5-obstacle-raceway` (manual stack: on Phase 4)
+
+Replace the rejected vertical tower with a progress-measured downhill raceway and mode-aware elevated chase camera.
+
+Consumes: `SelectionMode`, `RaceRecording`, `MarbleTransform`, `TrackDefinition`, `simulateRace(roster: readonly string[], seed: number, mode: SelectionMode): RaceRecording | null`, `RaceScene`, `ReplayController`, and `RaceView`.
+Produces: `TrackPathSample`, `measureTrackProgress(track: TrackDefinition, position: Vector3): number`, updated `TrackDefinition`, and `createRaceScene(canvas: HTMLCanvasElement, track: TrackDefinition, styles: readonly MarbleStyle[], mode: SelectionMode): RaceScene`.
+
+Fresh review: required — core simulation geometry, ranking, and camera behavior replace a rejected implementation.
+
+- [ ] Replace the vertical helix/funnel descriptors in `src/track/definition.ts` and their construction in `src/track/colliders.ts` with a wide start grid, banked S-curves, staggered bumper slalom, dual-route splitter/merge, chicane, narrowing gate, railed finish straight, sampled centreline, and unambiguous finish plane.
+- [ ] Add `src/track/progress.ts` with segment-projection cumulative progress, then update `src/simulation/simulateRace.ts` and `src/ui/createRaceView.ts` so finish detection, live ordering, and final ranking use centreline progress instead of world-space height.
+- [ ] Rebuild `src/render/createRaceScene.ts` with visible raceway bed, rails, exact collider-matched obstacles, finish markings, and an elevated damped chase camera that follows greatest progress in `first` mode or least progress in `last` mode with tangent look-ahead.
+- [ ] Update `src/ui/createRaceView.ts`, `src/styles/race.css`, and `src/dev/racePreview.ts` for a full-width course view, compact overlaid leaderboard, and retained seed/mode tuning controls without changing lineup or result-dialog behavior.
+- [ ] Tune `DEFAULT_TRACK_CONFIG` so 5- and 15-marble fixed-seed and retry runs complete inside 60 simulated seconds, remain contained, reach the lower obstacle modules, and demonstrate position changes across the bumper, splitter/merge, or chicane sections.
+- [ ] Replace vertical-course assertions in `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/trackStress.test.ts`; add `src/track/progress.test.ts` and camera-target coverage for projection, first-mode leader following, last-mode trailer following, smooth target changes, finish order, containment, and representative overtakes.
+
+**Phase gate (hard):**
+- [ ] `pnpm typecheck`
+- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+
+**Review checklist (user, at PR review):**
+- [ ] Run five and fifteen marbles in `first` mode and confirm the view reads as a downhill race track, obstacles visibly change positions, all marbles remain inside the rails, and the elevated camera follows the current leader through the finish.
+- [ ] Run five and fifteen marbles in `last` mode and confirm the camera follows the current trailing marble without abrupt snapping while the race continues until that marble crosses the finish line.
+- [ ] Confirm the start grid, S-curves, bumper slalom, splitter/merge, chicane, narrowing gate, and finish straight are visually distinct at 1080p and the overlaid leaderboard remains readable.
+
+**On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.
+
+## Phase 6 — GitHub Pages deployment
+
+Branch: `marble-race-picker/phase-6-pages-deployment` (manual stack: on Phase 5)
 
 Make the completed static application reproducibly deployable at a GitHub Pages repository subpath.
 

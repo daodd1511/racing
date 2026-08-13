@@ -1,4 +1,4 @@
-import type { RaceRecording } from "../race/types";
+import type { RaceRecording, RecordedContactEvent } from "../race/types";
 import { createRaceScene, type RaceScene } from "../render/createRaceScene";
 import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
 import { createReplayController, type ReplayController } from "../replay/createReplayController";
@@ -8,6 +8,11 @@ export interface RaceView {
   start(): void;
   onComplete(listener: () => void): () => void;
   dispose(): void;
+}
+
+export interface RaceViewCallbacks {
+  onContact?(event: RecordedContactEvent): void;
+  onComplete?(): void;
 }
 
 function createElement<K extends keyof HTMLElementTagNameMap>(
@@ -113,7 +118,11 @@ function createLeaderboard(
   return { root, rows };
 }
 
-export function createRaceView(root: HTMLElement, recording: RaceRecording): RaceView {
+export function createRaceView(
+  root: HTMLElement,
+  recording: RaceRecording,
+  callbacks: RaceViewCallbacks = {},
+): RaceView {
   const styles = createMarbleStyles(recording.roster.length);
   const cabinet = createElement("main", "race-cabinet");
   const header = createElement("header", "race-cabinet-header");
@@ -205,8 +214,12 @@ export function createRaceView(root: HTMLElement, recording: RaceRecording): Rac
         timing.textContent = frame.simulationTimeSeconds.toFixed(2);
         updateLeaderboard(frameIndex);
       },
+      onContact(event) {
+        callbacks.onContact?.(event);
+      },
       onComplete() {
         status.textContent = "Selection locked";
+        callbacks.onComplete?.();
         completionListeners.forEach((listener) => listener());
       },
     });

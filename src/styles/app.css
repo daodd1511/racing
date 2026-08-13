@@ -246,6 +246,83 @@
   outline-offset: 3px;
 }
 
+.setup-audio-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
+  padding: 0.7rem 0.8rem;
+  border: 2px solid #17243b;
+  border-radius: 8px;
+  background: #d7eee3;
+  box-shadow: 3px 3px 0 #17243b;
+  cursor: pointer;
+}
+
+.setup-audio-control input {
+  position: absolute;
+  opacity: 0;
+}
+
+.setup-audio-copy {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.setup-audio-copy strong {
+  color: #17243b;
+  font-size: 0.82rem;
+}
+
+.setup-audio-copy span {
+  color: #425675;
+  font-family: "DM Mono", monospace;
+  font-size: 0.61rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.setup-audio-indicator {
+  position: relative;
+  display: block;
+  width: 2.7rem;
+  height: 1.55rem;
+  border: 2px solid #17243b;
+  border-radius: 999px;
+  background: #fff7e8;
+  transition: background 0.16s ease;
+}
+
+.setup-audio-indicator::after {
+  position: absolute;
+  top: 0.17rem;
+  left: 0.17rem;
+  width: 0.84rem;
+  aspect-ratio: 1;
+  border: 1.5px solid #17243b;
+  border-radius: 50%;
+  background: #f05a30;
+  content: "";
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease;
+}
+
+.setup-audio-control input:checked ~ .setup-audio-indicator {
+  background: #f6c944;
+}
+
+.setup-audio-control input:checked ~ .setup-audio-indicator::after {
+  background: #2faaa2;
+  transform: translateX(1.08rem);
+}
+
+.setup-audio-control input:focus-visible ~ .setup-audio-indicator {
+  outline: 3px solid #2858d7;
+  outline-offset: 3px;
+}
+
 .setup-validation {
   min-height: 1.1rem;
   margin: 0.15rem 0 0;

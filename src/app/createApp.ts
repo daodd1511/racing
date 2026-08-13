@@ -1,5 +1,6 @@
 import { DEFAULT_RACE_CONFIG } from "../race/config";
 import type { CommittedRaceRecord, RaceRecording } from "../race/types";
+import { createRaceAudio, type RaceAudio } from "../audio/createRaceAudio";
 import { initializeRapier } from "../simulation/initializeRapier";
 import { simulateWithRetry } from "../simulation/simulateWithRetry";
 import { createRaceStore, type RaceStore } from "../storage/raceStore";
@@ -42,6 +43,7 @@ function renderFailure(root: HTMLElement): void {
 
 export function createApp(root: HTMLElement): AppController {
   const store: RaceStore = createRaceStore(window.localStorage);
+  const audio: RaceAudio = createRaceAudio();
   let setupView: SetupView | undefined;
   let raceView: RaceView | undefined;
   let resultDialog: ResultDialog | undefined;
@@ -62,12 +64,15 @@ export function createApp(root: HTMLElement): AppController {
     }
 
     disposeActiveView();
-    setupView = createSetupView(root, store.load());
+    setupView = createSetupView(root, store.load(), audio.isMuted());
     setupView.onRosterChange((roster) => {
       store.saveRoster(roster);
     });
     setupView.onSettingsChange((selectionMode) => {
       store.saveSettings({ selectionMode });
+    });
+    setupView.onAudioChange((muted) => {
+      void audio.setMuted(muted).catch(() => undefined);
     });
     setupView.onStart(({ roster, selectionMode }) => {
       store.saveRoster(roster);
@@ -75,7 +80,14 @@ export function createApp(root: HTMLElement): AppController {
       setupView?.dispose();
       setupView = undefined;
       const recording = simulateWithRetry(roster, selectionMode);
-      raceView = createRaceView(root, recording);
+      raceView = createRaceView(root, recording, {
+        onContact(event) {
+          audio.playContact(event);
+        },
+        onComplete() {
+          audio.playFinish();
+        },
+      });
       raceView.onComplete(() => {
         if (disposed || raceView === undefined) {
           return;
@@ -110,6 +122,7 @@ export function createApp(root: HTMLElement): AppController {
       }
       disposed = true;
       disposeActiveView();
+      audio.dispose();
       root.replaceChildren();
     },
   };

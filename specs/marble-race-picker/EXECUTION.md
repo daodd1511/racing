@@ -7,11 +7,11 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 3 — done
+- Current phase: 4 — done
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: done
-- Phase 4 — Race audio: pending
+- Phase 4 — Race audio: done
 - Phase 5 — GitHub Pages deployment: pending
 - Verification debt: none
 
@@ -116,13 +116,14 @@ Produces: `RaceAudio` and `createRaceAudio(): RaceAudio`.
 
 Fresh review: not required
 
-- [ ] Implement `src/audio/createRaceAudio.ts` with lazy `AudioContext` creation, default-muted state, impact-impulse pitch/volume modulation, event throttling, finish sting, and deterministic disposal.
-- [ ] Add a prominent mute toggle to `src/ui/createSetupView.ts` and connect recorded contact events and selection completion to `RaceAudio` through `src/app/createApp.ts` replay callbacks.
-- [ ] Add mocked Web Audio coverage in `src/audio/createRaceAudio.test.ts` and app wiring coverage in `src/app/createApp.test.ts` for default silence, gesture activation, collision modulation, finish sting, and disposal.
+- [x] (amended 2026-08-13) Add optional `RaceViewCallbacks` to `src/ui/createRaceView.ts` so its replay contact and completion events can be forwarded to audio without coupling `simulateRace()` to sound.
+- [x] Implement `src/audio/createRaceAudio.ts` with lazy `AudioContext` creation, default-muted state, impact-impulse pitch/volume modulation, event throttling, finish sting, and deterministic disposal.
+- [x] Add a prominent mute toggle to `src/ui/createSetupView.ts` and connect recorded contact events and selection completion to `RaceAudio` through `src/app/createApp.ts` replay callbacks.
+- [x] Add mocked Web Audio coverage in `src/audio/createRaceAudio.test.ts` and app wiring coverage in `src/app/createApp.test.ts` for default silence, gesture activation, collision modulation, finish sting, and disposal.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm a fresh page load is silent, enabling audio from the visible toggle produces varied collision sounds plus one finish sting, muting takes effect immediately, and browser autoplay is never invoked before the gesture.

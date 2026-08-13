@@ -2,10 +2,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { RaceRecording, SelectionMode } from "../race/types";
+import type { RaceRecording, RecordedContactEvent, SelectionMode } from "../race/types";
+import type { RaceViewCallbacks } from "../ui/createRaceView";
 
 const mocks = vi.hoisted(() => ({
+  callbacks: undefined as RaceViewCallbacks | undefined,
   complete: undefined as (() => void) | undefined,
+  audioDispose: vi.fn(),
+  audioPlayContact: vi.fn(),
+  audioPlayFinish: vi.fn(),
+  audioSetMuted: vi.fn().mockResolvedValue(undefined),
   start: vi.fn(),
   dispose: vi.fn(),
   simulateWithRetry: vi.fn(),
@@ -19,16 +25,30 @@ vi.mock("../simulation/simulateWithRetry", () => ({
   simulateWithRetry: mocks.simulateWithRetry,
 }));
 
-vi.mock("../ui/createRaceView", () => ({
-  createRaceView: vi.fn(() => ({
-    start: mocks.start,
-    cancel: vi.fn(),
-    dispose: mocks.dispose,
-    onComplete(listener: () => void) {
-      mocks.complete = listener;
-      return () => undefined;
-    },
+vi.mock("../audio/createRaceAudio", () => ({
+  createRaceAudio: vi.fn(() => ({
+    isMuted: () => true,
+    setMuted: mocks.audioSetMuted,
+    playContact: mocks.audioPlayContact,
+    playFinish: mocks.audioPlayFinish,
+    dispose: mocks.audioDispose,
   })),
+}));
+
+vi.mock("../ui/createRaceView", () => ({
+  createRaceView: vi.fn(
+    (_root: HTMLElement, _recording: RaceRecording, callbacks: RaceViewCallbacks = {}) => {
+      mocks.callbacks = callbacks;
+      return {
+        start: mocks.start,
+        dispose: mocks.dispose,
+        onComplete(listener: () => void) {
+          mocks.complete = listener;
+          return () => undefined;
+        },
+      };
+    },
+  ),
 }));
 
 import { createApp } from "./createApp";
@@ -93,11 +113,17 @@ describe("createApp", () => {
   beforeEach(() => {
     storage = new MemoryStorage();
     Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+    mocks.audioSetMuted.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     document.body.replaceChildren();
+    mocks.callbacks = undefined;
     mocks.complete = undefined;
+    mocks.audioDispose.mockReset();
+    mocks.audioPlayContact.mockReset();
+    mocks.audioPlayFinish.mockReset();
+    mocks.audioSetMuted.mockReset();
     mocks.start.mockReset();
     mocks.dispose.mockReset();
     mocks.simulateWithRetry.mockReset();
@@ -134,4 +160,36 @@ describe("createApp", () => {
       expect(root.querySelector("#race-roster")).not.toBeNull();
     },
   );
+
+  it("activates audio from the switch and forwards replay callbacks", async () => {
+    mocks.simulateWithRetry.mockReturnValue(recordingFor("first"));
+    const root = document.createElement("div");
+    document.body.append(root);
+    const app = createApp(root);
+    await Promise.resolve();
+    const audioToggle = root.querySelector<HTMLInputElement>('input[role="switch"]');
+    const roster = root.querySelector<HTMLTextAreaElement>("#race-roster");
+    const form = root.querySelector<HTMLFormElement>("form");
+
+    if (audioToggle === null || roster === null || form === null) {
+      throw new Error("Expected setup controls");
+    }
+    audioToggle.click();
+    roster.value = "Avery\nBlake";
+    form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+    const contact: RecordedContactEvent = {
+      frameIndex: 0,
+      simulationTimeSeconds: 0,
+      marbleIndices: [0],
+      impulse: 2,
+    };
+    mocks.callbacks?.onContact?.(contact);
+    mocks.callbacks?.onComplete?.();
+    app.dispose();
+
+    expect(mocks.audioSetMuted).toHaveBeenCalledWith(false);
+    expect(mocks.audioPlayContact).toHaveBeenCalledWith(contact);
+    expect(mocks.audioPlayFinish).toHaveBeenCalledOnce();
+    expect(mocks.audioDispose).toHaveBeenCalledOnce();
+  });
 });

@@ -10,6 +10,7 @@ export interface SetupView {
   onStart(listener: (input: SetupRaceInput) => void): () => void;
   onRosterChange(listener: (roster: readonly string[]) => void): () => void;
   onSettingsChange(listener: (selectionMode: SelectionMode) => void): () => void;
+  onAudioChange(listener: (muted: boolean) => void): () => void;
   dispose(): void;
 }
 
@@ -63,10 +64,15 @@ function createMarbleDecoration(): HTMLDivElement {
   return decoration;
 }
 
-export function createSetupView(root: HTMLElement, initial: PickerStateV1): SetupView {
+export function createSetupView(
+  root: HTMLElement,
+  initial: PickerStateV1,
+  initiallyMuted = true,
+): SetupView {
   const startListeners = new Set<(input: SetupRaceInput) => void>();
   const rosterListeners = new Set<(roster: readonly string[]) => void>();
   const settingsListeners = new Set<(selectionMode: SelectionMode) => void>();
+  const audioListeners = new Set<(muted: boolean) => void>();
   const shell = document.createElement("main");
   shell.className = "setup-page";
   const header = document.createElement("header");
@@ -135,6 +141,24 @@ export function createSetupView(root: HTMLElement, initial: PickerStateV1): Setu
       initial.settings.selectionMode === "last",
     ),
   );
+  const audioControl = document.createElement("label");
+  audioControl.className = "setup-audio-control";
+  const audioToggle = document.createElement("input");
+  audioToggle.type = "checkbox";
+  audioToggle.role = "switch";
+  audioToggle.setAttribute("aria-label", "Race audio");
+  audioToggle.checked = !initiallyMuted;
+  const audioCopy = document.createElement("span");
+  audioCopy.className = "setup-audio-copy";
+  const audioHeading = document.createElement("strong");
+  audioHeading.textContent = "Race sound";
+  const audioDetail = document.createElement("span");
+  audioDetail.textContent = initiallyMuted ? "Muted by default" : "Sound on";
+  audioCopy.append(audioHeading, audioDetail);
+  const audioIndicator = document.createElement("span");
+  audioIndicator.className = "setup-audio-indicator";
+  audioIndicator.setAttribute("aria-hidden", "true");
+  audioControl.append(audioToggle, audioCopy, audioIndicator);
   const error = document.createElement("p");
   error.className = "setup-validation";
   error.setAttribute("role", "alert");
@@ -142,7 +166,16 @@ export function createSetupView(root: HTMLElement, initial: PickerStateV1): Setu
   startButton.className = "setup-start-button";
   startButton.type = "submit";
   startButton.textContent = "Release the marbles";
-  form.append(rosterLabel, roster, rosterFooter, modeLabel, modes, error, startButton);
+  form.append(
+    rosterLabel,
+    roster,
+    rosterFooter,
+    modeLabel,
+    modes,
+    audioControl,
+    error,
+    startButton,
+  );
   content.append(eyebrow, heading, intro, form);
   card.append(content, createMarbleDecoration());
   shell.append(header, card);
@@ -192,6 +225,11 @@ export function createSetupView(root: HTMLElement, initial: PickerStateV1): Setu
     }
     settingsListeners.forEach((listener) => listener(selectionMode));
   };
+  const onAudioChange = (): void => {
+    const muted = !audioToggle.checked;
+    audioDetail.textContent = muted ? "Muted by default" : "Sound on";
+    audioListeners.forEach((listener) => listener(muted));
+  };
   const onCopy = async (): Promise<void> => {
     const normalized = updateRosterFeedback();
     if (normalized.length === 0) {
@@ -222,6 +260,7 @@ export function createSetupView(root: HTMLElement, initial: PickerStateV1): Setu
 
   roster.addEventListener("input", onRosterInput);
   modes.addEventListener("change", onModeChange);
+  audioToggle.addEventListener("change", onAudioChange);
   copyButton.addEventListener("click", onCopy);
   form.addEventListener("submit", onSubmit);
   updateRosterFeedback();
@@ -239,9 +278,14 @@ export function createSetupView(root: HTMLElement, initial: PickerStateV1): Setu
       settingsListeners.add(listener);
       return () => settingsListeners.delete(listener);
     },
+    onAudioChange(listener) {
+      audioListeners.add(listener);
+      return () => audioListeners.delete(listener);
+    },
     dispose() {
       roster.removeEventListener("input", onRosterInput);
       modes.removeEventListener("change", onModeChange);
+      audioToggle.removeEventListener("change", onAudioChange);
       copyButton.removeEventListener("click", onCopy);
       form.removeEventListener("submit", onSubmit);
       root.replaceChildren();

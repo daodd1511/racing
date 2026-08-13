@@ -62,4 +62,21 @@ describe("createSetupView", () => {
 
     expect(writeText).toHaveBeenCalledWith("Avery\nBlake");
   });
+
+  it("reports audio changes only after the visible switch is changed", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const view = createSetupView(root, INITIAL_STATE);
+    const onAudioChange = vi.fn();
+    view.onAudioChange(onAudioChange);
+    const audioToggle = root.querySelector<HTMLInputElement>('input[role="switch"]');
+
+    if (audioToggle === null) {
+      throw new Error("Expected audio control");
+    }
+    expect(audioToggle.checked).toBe(false);
+    audioToggle.click();
+
+    expect(onAudioChange).toHaveBeenCalledWith(false);
+  });
 });

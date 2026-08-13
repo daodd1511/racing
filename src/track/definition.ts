@@ -5,13 +5,7 @@ export interface TrackMaterial {
   readonly friction: number;
 }
 
-export type TrackBoxKind =
-  | "containment-wall"
-  | "helix-ramp"
-  | "helix-rail"
-  | "funnel-panel"
-  | "finish-tube"
-  | "finish-basin";
+export type TrackBoxKind = "side-rail" | "splitter-rail" | "deflector";
 
 export interface TrackBox {
   readonly kind: TrackBoxKind;
@@ -21,100 +15,88 @@ export interface TrackBox {
   readonly material: TrackMaterial;
 }
 
-export interface TrackPeg {
+export interface TrackBumper {
   readonly center: Vector3;
   readonly radius: number;
   readonly material: TrackMaterial;
 }
 
+export interface TrackSurface {
+  readonly vertices: readonly number[];
+  readonly indices: readonly number[];
+  readonly material: TrackMaterial;
+}
+
+export interface TrackPathSample {
+  readonly position: Vector3;
+  readonly tangent: Vector3;
+  readonly side: Vector3;
+  readonly up: Vector3;
+  readonly distance: number;
+}
+
+export interface TrackFinishLine {
+  readonly center: Vector3;
+  readonly tangent: Vector3;
+  readonly side: Vector3;
+  readonly up: Vector3;
+  readonly halfWidth: number;
+}
+
 export interface TrackConfig {
-  readonly containmentRadius: number;
-  readonly towerTop: number;
-  readonly helixTop: number;
-  readonly helixBottom: number;
-  readonly helixTurns: number;
-  readonly helixSegmentsPerTurn: number;
-  readonly rampRadius: number;
-  readonly rampHalfWidth: number;
-  readonly innerRailRadius: number;
-  readonly innerRailHeight: number;
-  readonly pegTop: number;
-  readonly pegBottom: number;
-  readonly pegLayerGap: number;
-  readonly pegRadius: number;
-  readonly pegFieldRadius: number;
-  readonly funnelTop: number;
-  readonly funnelBottom: number;
-  readonly funnelMouthRadius: number;
-  readonly funnelThroatRadius: number;
-  readonly funnelPanelCount: number;
-  readonly finishTubeBottom: number;
-  readonly finishTubeRadius: number;
-  readonly finishY: number;
-  readonly basinY: number;
+  readonly trackHalfWidth: number;
+  readonly trackThickness: number;
+  readonly railHeight: number;
+  readonly railThickness: number;
+  readonly samplesPerSpan: number;
+  readonly maximumBankRadians: number;
+  readonly bumperRadius: number;
   readonly marbleRadius: number;
   readonly startSlotCount: number;
   readonly startSlotsPerRow: number;
+  readonly startRowGap: number;
 }
 
 export interface TrackDefinition {
   readonly config: TrackConfig;
   readonly boxes: readonly TrackBox[];
-  readonly pegs: readonly TrackPeg[];
+  readonly bumpers: readonly TrackBumper[];
+  readonly surface: TrackSurface;
+  readonly path: readonly TrackPathSample[];
   readonly startSlots: readonly Vector3[];
-  readonly finishY: number;
+  readonly finishProgress: number;
+  readonly finishLine: TrackFinishLine;
 }
 
 export const DEFAULT_TRACK_CONFIG: TrackConfig = Object.freeze({
-  containmentRadius: 6,
-  towerTop: 44,
-  helixTop: 40,
-  helixBottom: 22,
-  helixTurns: 4,
-  helixSegmentsPerTurn: 32,
-  rampRadius: 4.8,
-  rampHalfWidth: 1.2,
-  innerRailRadius: 3.6,
-  innerRailHeight: 1,
-  pegTop: 22,
-  pegBottom: 10.5,
-  pegLayerGap: 1.45,
-  pegRadius: 0.42,
-  pegFieldRadius: 5,
-  funnelTop: 10.5,
-  funnelBottom: 3.4,
-  funnelMouthRadius: 6,
-  funnelThroatRadius: 1.35,
-  funnelPanelCount: 32,
-  finishTubeBottom: 1.6,
-  finishTubeRadius: 1.5,
-  finishY: 1.1,
-  basinY: 0,
+  trackHalfWidth: 4.8,
+  trackThickness: 0.38,
+  railHeight: 1.35,
+  railThickness: 0.2,
+  samplesPerSpan: 12,
+  maximumBankRadians: 0.18,
+  bumperRadius: 0.58,
   marbleRadius: 0.35,
   startSlotCount: 15,
-  startSlotsPerRow: 3,
+  startSlotsPerRow: 5,
+  startRowGap: 1.05,
 });
 
-const CONTAINMENT_MATERIAL: TrackMaterial = Object.freeze({
-  restitution: 0.1,
-  friction: 0.3,
-});
-const TRACK_MATERIAL: TrackMaterial = Object.freeze({
-  restitution: 0.18,
-  friction: 0.45,
-});
-const RAIL_MATERIAL: TrackMaterial = Object.freeze({
-  restitution: 0.12,
-  friction: 0.3,
-});
-const PEG_MATERIAL: TrackMaterial = Object.freeze({
-  restitution: 0.42,
-  friction: 0.2,
-});
-const FUNNEL_MATERIAL: TrackMaterial = Object.freeze({
-  restitution: 0.12,
-  friction: 0.28,
-});
+const TRACK_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.12, friction: 0.06 });
+const RAIL_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.34, friction: 0.01 });
+const BUMPER_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.68, friction: 0.16 });
+const WORLD_UP: Vector3 = [0, 1, 0];
+
+const COURSE_WAYPOINTS: readonly Vector3[] = Object.freeze([
+  [0, 28, -8],
+  [0, 25, 8],
+  [9, 21, 24],
+  [-8, 17, 42],
+  [-5, 13, 58],
+  [8, 9, 76],
+  [-6, 5, 94],
+  [0, 1, 116],
+]);
 
 function add(left: Vector3, right: Vector3): Vector3 {
   return [left[0] + right[0], left[1] + right[1], left[2] + right[2]];
@@ -128,21 +110,15 @@ function scale(vector: Vector3, factor: number): Vector3 {
   return [vector[0] * factor, vector[1] * factor, vector[2] * factor];
 }
 
-function midpoint(left: Vector3, right: Vector3): Vector3 {
-  return scale(add(left, right), 0.5);
-}
-
 function length(vector: Vector3): number {
   return Math.hypot(vector[0], vector[1], vector[2]);
 }
 
 function normalize(vector: Vector3): Vector3 {
   const vectorLength = length(vector);
-
   if (vectorLength === 0) {
     throw new Error("Cannot normalize a zero-length vector");
   }
-
   return scale(vector, 1 / vectorLength);
 }
 
@@ -154,8 +130,17 @@ function cross(left: Vector3, right: Vector3): Vector3 {
   ];
 }
 
-function rotateAroundY(radians: number): Quaternion {
-  return [0, Math.sin(radians / 2), 0, Math.cos(radians / 2)];
+function rotateAroundAxis(vector: Vector3, axis: Vector3, radians: number): Vector3 {
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const axisProjection = scale(
+    axis,
+    axis[0] * vector[0] + axis[1] * vector[1] + axis[2] * vector[2],
+  );
+  return add(
+    add(scale(vector, cosine), scale(cross(axis, vector), sine)),
+    scale(axisProjection, 1 - cosine),
+  );
 }
 
 function quaternionFromBasis(xAxis: Vector3, yAxis: Vector3, zAxis: Vector3): Quaternion {
@@ -174,258 +159,273 @@ function quaternionFromBasis(xAxis: Vector3, yAxis: Vector3, zAxis: Vector3): Qu
     const root = Math.sqrt(trace + 1) * 2;
     return [(m21 - m12) / root, (m02 - m20) / root, (m10 - m01) / root, root / 4];
   }
-
   if (m00 > m11 && m00 > m22) {
     const root = Math.sqrt(1 + m00 - m11 - m22) * 2;
     return [root / 4, (m01 + m10) / root, (m02 + m20) / root, (m21 - m12) / root];
   }
-
   if (m11 > m22) {
     const root = Math.sqrt(1 + m11 - m00 - m22) * 2;
     return [(m01 + m10) / root, root / 4, (m12 + m21) / root, (m02 - m20) / root];
   }
-
   const root = Math.sqrt(1 + m22 - m00 - m11) * 2;
   return [(m02 + m20) / root, (m12 + m21) / root, root / 4, (m10 - m01) / root];
 }
 
-function helixPoint(config: TrackConfig, t: number): Vector3 {
-  const angle = t * config.helixTurns * Math.PI * 2;
-  const y = config.helixTop - t * (config.helixTop - config.helixBottom);
+function catmullRom(
+  before: Vector3,
+  start: Vector3,
+  end: Vector3,
+  after: Vector3,
+  t: number,
+): Vector3 {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  const coordinate = (axis: 0 | 1 | 2): number =>
+    0.5 *
+    (2 * start[axis] +
+      (-before[axis] + end[axis]) * t +
+      (2 * before[axis] - 5 * start[axis] + 4 * end[axis] - after[axis]) * t2 +
+      (-before[axis] + 3 * start[axis] - 3 * end[axis] + after[axis]) * t3);
+  return [coordinate(0), coordinate(1), coordinate(2)];
+}
 
-  return [config.rampRadius * Math.cos(angle), y, config.rampRadius * Math.sin(angle)];
+function createPath(config: TrackConfig): TrackPathSample[] {
+  const positions: Vector3[] = [];
+  for (let span = 0; span < COURSE_WAYPOINTS.length - 1; span += 1) {
+    const before = COURSE_WAYPOINTS[Math.max(0, span - 1)];
+    const start = COURSE_WAYPOINTS[span];
+    const end = COURSE_WAYPOINTS[span + 1];
+    const after = COURSE_WAYPOINTS[Math.min(COURSE_WAYPOINTS.length - 1, span + 2)];
+    for (let step = 0; step < config.samplesPerSpan; step += 1) {
+      positions.push(catmullRom(before, start, end, after, step / config.samplesPerSpan));
+    }
+  }
+  positions.push(COURSE_WAYPOINTS.at(-1) as Vector3);
+
+  let cumulativeDistance = 0;
+  return positions.map((position, index) => {
+    if (index > 0) {
+      cumulativeDistance += length(subtract(position, positions[index - 1]));
+    }
+    const previous = positions[Math.max(0, index - 1)];
+    const next = positions[Math.min(positions.length - 1, index + 1)];
+    const tangent = normalize(subtract(next, previous));
+    const baseSide = normalize(cross(WORLD_UP, tangent));
+    const previousTangent =
+      index > 0 ? normalize(subtract(position, positions[index - 1])) : tangent;
+    const nextTangent =
+      index < positions.length - 1 ? normalize(subtract(positions[index + 1], position)) : tangent;
+    const turn = previousTangent[0] * nextTangent[2] - previousTangent[2] * nextTangent[0];
+    const bank = Math.max(
+      -config.maximumBankRadians,
+      Math.min(config.maximumBankRadians, turn * 2.8),
+    );
+    const side = normalize(rotateAroundAxis(baseSide, tangent, bank));
+    const up = normalize(cross(tangent, side));
+    return Object.freeze({ position, tangent, side, up, distance: cumulativeDistance });
+  });
+}
+
+function interpolatePathSample(
+  path: readonly TrackPathSample[],
+  distance: number,
+): TrackPathSample {
+  const bounded = Math.max(0, Math.min(path.at(-1)?.distance ?? 0, distance));
+  let upperIndex = path.findIndex((sample) => sample.distance >= bounded);
+  if (upperIndex <= 0) {
+    return path[0];
+  }
+  if (upperIndex < 0) {
+    upperIndex = path.length - 1;
+  }
+  const left = path[upperIndex - 1];
+  const right = path[upperIndex];
+  const span = right.distance - left.distance;
+  const fraction = span === 0 ? 0 : (bounded - left.distance) / span;
+  return {
+    position: add(left.position, scale(subtract(right.position, left.position), fraction)),
+    tangent: normalize(add(left.tangent, scale(subtract(right.tangent, left.tangent), fraction))),
+    side: normalize(add(left.side, scale(subtract(right.side, left.side), fraction))),
+    up: normalize(add(left.up, scale(subtract(right.up, left.up), fraction))),
+    distance: bounded,
+  };
 }
 
 function assertTrackConfig(config: TrackConfig): void {
-  for (const value of Object.values(config)) {
-    if (!Number.isFinite(value)) {
-      throw new RangeError("Track configuration values must be finite numbers");
-    }
+  if (Object.values(config).some((value) => !Number.isFinite(value) || value <= 0)) {
+    throw new RangeError("Track configuration values must be positive finite numbers");
   }
-
-  const positiveValues = [
-    config.containmentRadius,
-    config.towerTop,
-    config.helixTop,
-    config.helixBottom,
-    config.helixTurns,
-    config.helixSegmentsPerTurn,
-    config.rampRadius,
-    config.rampHalfWidth,
-    config.innerRailRadius,
-    config.innerRailHeight,
-    config.pegTop,
-    config.pegBottom,
-    config.pegLayerGap,
-    config.pegRadius,
-    config.pegFieldRadius,
-    config.funnelTop,
-    config.funnelBottom,
-    config.funnelMouthRadius,
-    config.funnelThroatRadius,
-    config.funnelPanelCount,
-    config.finishTubeBottom,
-    config.finishTubeRadius,
-    config.finishY,
-    config.marbleRadius,
-    config.startSlotCount,
-    config.startSlotsPerRow,
-  ];
-
-  if (positiveValues.some((value) => value <= 0)) {
-    throw new RangeError("Track dimensions and counts must be positive");
-  }
-
   if (
-    !Number.isSafeInteger(config.helixTurns) ||
-    !Number.isSafeInteger(config.helixSegmentsPerTurn) ||
-    !Number.isSafeInteger(config.funnelPanelCount) ||
+    !Number.isSafeInteger(config.samplesPerSpan) ||
     !Number.isSafeInteger(config.startSlotCount) ||
     !Number.isSafeInteger(config.startSlotsPerRow)
   ) {
-    throw new RangeError("Track segment and slot counts must be safe integers");
+    throw new RangeError("Track sample and slot counts must be safe integers");
   }
-
-  if (
-    config.towerTop < config.helixTop ||
-    config.helixTop < config.helixBottom ||
-    config.helixBottom < config.pegBottom ||
-    config.pegTop < config.pegBottom ||
-    config.funnelTop < config.funnelBottom ||
-    config.funnelBottom < config.finishTubeBottom ||
-    config.finishY >= config.finishTubeBottom
-  ) {
-    throw new RangeError("Track heights must form a descending course above the finish line");
-  }
-
-  if (
-    config.innerRailRadius >= config.rampRadius ||
-    config.funnelThroatRadius >= config.funnelMouthRadius ||
-    config.finishTubeRadius >= config.containmentRadius
-  ) {
-    throw new RangeError("Track radii must preserve the course interior");
+  if (config.startSlotsPerRow > config.startSlotCount || config.maximumBankRadians >= Math.PI / 4) {
+    throw new RangeError("Track grid and bank settings are outside supported bounds");
   }
 }
 
 export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   assertTrackConfig(config);
-
+  const path = createPath(config);
   const boxes: TrackBox[] = [];
-  const pegs: TrackPeg[] = [];
-  const containmentPanels = 48;
-  const containmentPanelHalfWidth =
-    (Math.PI * 2 * config.containmentRadius * 0.62) / containmentPanels;
+  const bumpers: TrackBumper[] = [];
 
-  for (let index = 0; index < containmentPanels; index += 1) {
-    const angle = (index / containmentPanels) * Math.PI * 2;
-    boxes.push({
-      kind: "containment-wall",
-      center: [
-        config.containmentRadius * Math.cos(angle),
-        config.towerTop / 2,
-        config.containmentRadius * Math.sin(angle),
-      ],
-      rotation: rotateAroundY(-angle),
-      halfExtents: [0.15, config.towerTop / 2, containmentPanelHalfWidth],
-      material: CONTAINMENT_MATERIAL,
+  const surfaceVertices: number[] = [];
+  const surfaceIndices: number[] = [];
+  for (const sample of path) {
+    const right = add(sample.position, scale(sample.side, config.trackHalfWidth));
+    const left = add(sample.position, scale(sample.side, -config.trackHalfWidth));
+    surfaceVertices.push(...right, ...left);
+  }
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const right = index * 2;
+    const left = right + 1;
+    const nextRight = right + 2;
+    const nextLeft = right + 3;
+    surfaceIndices.push(right, left, nextRight, left, nextLeft, nextRight);
+  }
+
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const start = path[index];
+    const end = path[index + 1];
+    const centerSample = interpolatePathSample(path, (start.distance + end.distance) / 2);
+    const segmentLength = end.distance - start.distance;
+    const rotation = quaternionFromBasis(centerSample.side, centerSample.up, centerSample.tangent);
+    for (const direction of [-1, 1]) {
+      boxes.push({
+        kind: "side-rail",
+        center: add(
+          add(
+            centerSample.position,
+            scale(
+              centerSample.side,
+              direction * (config.trackHalfWidth - config.railThickness / 2),
+            ),
+          ),
+          scale(centerSample.up, config.railHeight / 2),
+        ),
+        rotation,
+        halfExtents: [config.railThickness / 2, config.railHeight / 2, segmentLength / 2 + 0.35],
+        material: RAIL_MATERIAL,
+      });
+    }
+  }
+
+  const totalDistance = path.at(-1)?.distance ?? 0;
+  const bumperLayout: readonly [number, number][] = [
+    [0.23, -2.7],
+    [0.255, 1.65],
+    [0.285, -0.45],
+    [0.315, 2.75],
+    [0.345, -2.15],
+    [0.375, 0.85],
+    [0.405, 2.55],
+    [0.435, -1.2],
+    [0.69, -2.45],
+    [0.74, 2.45],
+    [0.79, -1.55],
+  ];
+  for (const [fraction, lateral] of bumperLayout) {
+    const sample = interpolatePathSample(path, totalDistance * fraction);
+    bumpers.push({
+      center: add(
+        add(sample.position, scale(sample.side, lateral)),
+        scale(sample.up, config.bumperRadius * 0.9),
+      ),
+      radius: config.bumperRadius,
+      material: BUMPER_MATERIAL,
     });
   }
 
-  const helixSteps = config.helixTurns * config.helixSegmentsPerTurn;
+  bumpers.push({
+    center: add(
+      interpolatePathSample(path, totalDistance * 0.475).position,
+      scale(interpolatePathSample(path, totalDistance * 0.475).up, config.bumperRadius * 0.9),
+    ),
+    radius: config.bumperRadius,
+    material: BUMPER_MATERIAL,
+  });
 
-  for (let index = 0; index < helixSteps; index += 1) {
-    const start = helixPoint(config, index / helixSteps);
-    const end = helixPoint(config, (index + 1) / helixSteps);
-    const center = midpoint(start, end);
-    const tangent = normalize(subtract(end, start));
-    const angle = ((index + 0.5) / helixSteps) * config.helixTurns * Math.PI * 2;
-    const radial: Vector3 = [Math.cos(angle), 0, Math.sin(angle)];
-    const up = normalize(cross(tangent, radial));
-    const side = normalize(cross(up, tangent));
-    const rotation = quaternionFromBasis(side, up, tangent);
-    const segmentLength = length(subtract(end, start));
-
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const start = path[index];
+    const end = path[index + 1];
+    const fraction = (start.distance + end.distance) / 2 / totalDistance;
+    if (fraction < 0.49 || fraction > 0.62) {
+      continue;
+    }
+    const sample = interpolatePathSample(path, (start.distance + end.distance) / 2);
     boxes.push({
-      kind: "helix-ramp",
-      center,
-      rotation,
-      halfExtents: [config.rampHalfWidth, 0.11, segmentLength / 2 + 0.06],
-      material: TRACK_MATERIAL,
-    });
-    boxes.push({
-      kind: "helix-rail",
-      center: add(
-        add(center, scale(side, -(config.rampRadius - config.innerRailRadius))),
-        scale(up, config.innerRailHeight / 2),
-      ),
-      rotation,
-      halfExtents: [0.1, config.innerRailHeight / 2, segmentLength / 2 + 0.06],
+      kind: "splitter-rail",
+      center: add(sample.position, scale(sample.up, config.railHeight * 0.55)),
+      rotation: quaternionFromBasis(sample.side, sample.up, sample.tangent),
+      halfExtents: [
+        config.railThickness / 2,
+        config.railHeight * 0.55,
+        (end.distance - start.distance) / 2 + 0.1,
+      ],
       material: RAIL_MATERIAL,
     });
   }
 
-  const pegLayers = Math.floor((config.pegTop - config.pegBottom) / config.pegLayerGap);
-  const pegRingFractions = [0.34, 0.62, 0.88];
-
-  for (let layer = 0; layer < pegLayers; layer += 1) {
-    const y = config.pegTop - layer * config.pegLayerGap;
-
-    for (let ringIndex = 0; ringIndex < pegRingFractions.length; ringIndex += 1) {
-      const count = 4 + ringIndex * 4;
-      const radius = config.pegFieldRadius * pegRingFractions[ringIndex];
-
-      for (let index = 0; index < count; index += 1) {
-        const angle =
-          (index / count) * Math.PI * 2 +
-          (layer % 2 === 0 ? 0 : Math.PI / count) +
-          ringIndex * 0.31;
-        pegs.push({
-          center: [radius * Math.cos(angle), y, radius * Math.sin(angle)],
-          radius: config.pegRadius,
-          material: PEG_MATERIAL,
-        });
-      }
-    }
-  }
-
-  const radiusDelta = config.funnelMouthRadius - config.funnelThroatRadius;
-  const heightDelta = config.funnelTop - config.funnelBottom;
-  const funnelSlantLength = Math.hypot(radiusDelta, heightDelta);
-  const funnelTilt = Math.atan2(radiusDelta, heightDelta);
-  const funnelMiddleRadius = (config.funnelMouthRadius + config.funnelThroatRadius) / 2;
-  const funnelMiddleY = (config.funnelTop + config.funnelBottom) / 2;
-  const funnelPanelHalfWidth = (Math.PI * 2 * funnelMiddleRadius * 0.85) / config.funnelPanelCount;
-
-  for (let index = 0; index < config.funnelPanelCount; index += 1) {
-    const angle = (index / config.funnelPanelCount) * Math.PI * 2;
-    const cosine = Math.cos(angle);
-    const sine = Math.sin(angle);
-    const up = normalize([
-      Math.sin(funnelTilt) * cosine,
-      Math.cos(funnelTilt),
-      Math.sin(funnelTilt) * sine,
-    ]);
-    const tangent: Vector3 = [-sine, 0, cosine];
-    const normal = normalize(cross(tangent, up));
-
+  const deflectors: readonly [number, -1 | 1, number][] = [
+    [0.86, -1, 0.25],
+    [0.86, 1, 0.25],
+  ];
+  for (const [fraction, direction, halfWidth] of deflectors) {
+    const sample = interpolatePathSample(path, totalDistance * fraction);
+    const lateral = direction * (config.trackHalfWidth - halfWidth);
+    const deflectorAxis = normalize(add(sample.side, scale(sample.tangent, direction * 0.55)));
+    const deflectorForward = normalize(cross(deflectorAxis, sample.up));
     boxes.push({
-      kind: "funnel-panel",
-      center: [funnelMiddleRadius * cosine, funnelMiddleY, funnelMiddleRadius * sine],
-      rotation: quaternionFromBasis(tangent, up, normal),
-      halfExtents: [funnelPanelHalfWidth, funnelSlantLength / 2, 0.1],
-      material: FUNNEL_MATERIAL,
+      kind: "deflector",
+      center: add(
+        add(sample.position, scale(sample.side, lateral)),
+        scale(sample.up, config.railHeight * 0.52),
+      ),
+      rotation: quaternionFromBasis(deflectorAxis, sample.up, deflectorForward),
+      halfExtents: [halfWidth, config.railHeight * 0.52, config.railThickness],
+      material: BUMPER_MATERIAL,
     });
   }
-
-  const tubePanels = 20;
-  const tubePanelHalfWidth = (Math.PI * 2 * config.finishTubeRadius * 0.72) / tubePanels;
-  const tubeCenterY = (config.funnelBottom + config.finishTubeBottom) / 2;
-
-  for (let index = 0; index < tubePanels; index += 1) {
-    const angle = (index / tubePanels) * Math.PI * 2;
-    boxes.push({
-      kind: "finish-tube",
-      center: [
-        config.finishTubeRadius * Math.cos(angle),
-        tubeCenterY,
-        config.finishTubeRadius * Math.sin(angle),
-      ],
-      rotation: rotateAroundY(-angle),
-      halfExtents: [0.12, (config.funnelBottom - config.finishTubeBottom) / 2, tubePanelHalfWidth],
-      material: CONTAINMENT_MATERIAL,
-    });
-  }
-
-  boxes.push({
-    kind: "finish-basin",
-    center: [0, config.basinY - 0.3, 0],
-    rotation: [0, 0, 0, 1],
-    halfExtents: [config.containmentRadius, 0.3, config.containmentRadius],
-    material: Object.freeze({ restitution: 0, friction: 0.7 }),
-  });
 
   const startSlots: Vector3[] = [];
-
+  const columnGap = (config.trackHalfWidth * 1.25) / Math.max(1, config.startSlotsPerRow - 1);
   for (let slot = 0; slot < config.startSlotCount; slot += 1) {
     const row = Math.floor(slot / config.startSlotsPerRow);
     const column = slot % config.startSlotsPerRow;
-    const t = -(0.0022 + row * 0.0075);
-    const position = helixPoint(config, t);
-    const nextPosition = helixPoint(config, t + 0.001);
-    const tangent = normalize(subtract(nextPosition, position));
-    const angle = t * config.helixTurns * Math.PI * 2;
-    const radial: Vector3 = [Math.cos(angle), 0, Math.sin(angle)];
-    const up = normalize(cross(tangent, radial));
-    const side = normalize(cross(up, tangent));
-    const lateral = (column - (config.startSlotsPerRow - 1) / 2) * config.rampHalfWidth * 1.05;
-    startSlots.push(add(add(position, scale(side, lateral)), scale(up, 0.55)));
+    const sample = interpolatePathSample(path, 1.5 + row * config.startRowGap);
+    const lateral = (column - (config.startSlotsPerRow - 1) / 2) * columnGap;
+    startSlots.push(
+      add(
+        add(sample.position, scale(sample.side, lateral)),
+        scale(sample.up, config.marbleRadius + 0.08),
+      ),
+    );
   }
 
+  const finishProgress = totalDistance - 4;
+  const finishSample = interpolatePathSample(path, finishProgress);
   return Object.freeze({
     config,
     boxes: Object.freeze(boxes),
-    pegs: Object.freeze(pegs),
+    bumpers: Object.freeze(bumpers),
+    surface: Object.freeze({
+      vertices: Object.freeze(surfaceVertices),
+      indices: Object.freeze(surfaceIndices),
+      material: TRACK_MATERIAL,
+    }),
+    path: Object.freeze(path),
     startSlots: Object.freeze(startSlots),
-    finishY: config.finishY,
+    finishProgress,
+    finishLine: Object.freeze({
+      center: finishSample.position,
+      tangent: finishSample.tangent,
+      side: finishSample.side,
+      up: finishSample.up,
+      halfWidth: config.trackHalfWidth,
+    }),
   });
 }

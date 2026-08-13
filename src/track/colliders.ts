@@ -25,17 +25,32 @@ function attachBoxCollider(world: RAPIER.World, box: TrackBox): void {
 }
 
 export function attachTrackColliders(world: RAPIER.World, track: TrackDefinition): void {
+  const surfaceBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(track.surface.vertices),
+      new Uint32Array(track.surface.indices),
+    )
+      .setRestitution(track.surface.material.restitution)
+      .setFriction(track.surface.material.friction),
+    surfaceBody,
+  );
+
   for (const box of track.boxes) {
     attachBoxCollider(world, box);
   }
 
-  for (const peg of track.pegs) {
+  for (const bumper of track.bumpers) {
     const rigidBody = world.createRigidBody(
-      RAPIER.RigidBodyDesc.fixed().setTranslation(peg.center[0], peg.center[1], peg.center[2]),
+      RAPIER.RigidBodyDesc.fixed().setTranslation(
+        bumper.center[0],
+        bumper.center[1],
+        bumper.center[2],
+      ),
     );
-    const collider = RAPIER.ColliderDesc.ball(peg.radius)
-      .setRestitution(peg.material.restitution)
-      .setFriction(peg.material.friction);
+    const collider = RAPIER.ColliderDesc.ball(bumper.radius)
+      .setRestitution(bumper.material.restitution)
+      .setFriction(bumper.material.friction);
 
     world.createCollider(collider, rigidBody);
   }

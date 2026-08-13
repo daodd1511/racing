@@ -10,7 +10,12 @@ import type {
   TransformFrame,
 } from "../race/types";
 import { attachTrackColliders } from "../track/colliders";
-import { createTrackDefinition, DEFAULT_TRACK_CONFIG } from "../track/definition";
+import {
+  createTrackDefinition,
+  DEFAULT_TRACK_CONFIG,
+  type TrackDefinition,
+} from "../track/definition";
+import { hasCrossedFinish, measureTrackProgress } from "../track/progress";
 import { assertRapierInitialized } from "./initializeRapier";
 
 interface MarbleBody {
@@ -52,9 +57,11 @@ function createMarbleBodies(
   for (let marbleIndex = 0; marbleIndex < rosterSize; marbleIndex += 1) {
     const slot = track.startSlots[slotByMarbleIndex[marbleIndex]];
     const jitter = (random() - 0.5) * 0.05;
+    const releaseDirection = track.path[0].tangent;
     const body = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(slot[0], slot[1] + jitter, slot[2])
+        .setLinvel(releaseDirection[0] * 3.5, releaseDirection[1] * 3.5, releaseDirection[2] * 3.5)
         .setLinearDamping(0.06)
         .setAngularDamping(0.06)
         .setCcdEnabled(true),
@@ -62,7 +69,7 @@ function createMarbleBodies(
     const collider = world.createCollider(
       RAPIER.ColliderDesc.ball(DEFAULT_TRACK_CONFIG.marbleRadius)
         .setRestitution(0.34)
-        .setFriction(0.28)
+        .setFriction(0.12)
         .setDensity(2.4)
         .setActiveEvents(
           RAPIER.ActiveEvents.COLLISION_EVENTS | RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS,
@@ -111,6 +118,7 @@ function recordContactEvents(
 function createFinalRanking(
   finishFrameByMarbleIndex: readonly (number | null)[],
   finalFrame: TransformFrame,
+  track: TrackDefinition,
 ): number[] {
   return Array.from(
     { length: finishFrameByMarbleIndex.length },
@@ -131,17 +139,10 @@ function createFinalRanking(
       return 1;
     }
 
-    const leftPosition = finalFrame.transforms[left].position;
-    const rightPosition = finalFrame.transforms[right].position;
-    const leftDistanceSquared = leftPosition[0] ** 2 + leftPosition[1] ** 2 + leftPosition[2] ** 2;
-    const rightDistanceSquared =
-      rightPosition[0] ** 2 + rightPosition[1] ** 2 + rightPosition[2] ** 2;
+    const leftProgress = measureTrackProgress(track, finalFrame.transforms[left].position);
+    const rightProgress = measureTrackProgress(track, finalFrame.transforms[right].position);
 
-    return (
-      leftPosition[1] - rightPosition[1] ||
-      leftDistanceSquared - rightDistanceSquared ||
-      left - right
-    );
+    return rightProgress - leftProgress || left - right;
   });
 }
 
@@ -204,7 +205,7 @@ export function simulateRace(
       for (let marbleIndex = 0; marbleIndex < transforms.length; marbleIndex += 1) {
         if (
           finishFrameByMarbleIndex[marbleIndex] === null &&
-          transforms[marbleIndex].position[1] < track.finishY
+          hasCrossedFinish(track, transforms[marbleIndex].position)
         ) {
           finishFrameByMarbleIndex[marbleIndex] = frameIndex;
           finishOrder.push(marbleIndex);
@@ -224,7 +225,9 @@ export function simulateRace(
               contactEvents: Object.freeze(contactEvents),
               finishFrameByMarbleIndex: Object.freeze([...finishFrameByMarbleIndex]),
               finishOrder: Object.freeze([...finishOrder]),
-              finalRanking: Object.freeze(createFinalRanking(finishFrameByMarbleIndex, frame)),
+              finalRanking: Object.freeze(
+                createFinalRanking(finishFrameByMarbleIndex, frame, track),
+              ),
               selectedMarbleIndex,
               selectionFrameIndex: frameIndex,
               simulationDurationSeconds: simulationTimeSeconds,

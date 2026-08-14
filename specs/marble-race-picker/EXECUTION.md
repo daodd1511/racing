@@ -7,13 +7,13 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 6 — pending
+- Current phase: 6 — in-progress
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: done
 - Phase 4 — Race audio: done
 - Phase 5 — Obstacle raceway refactor: done-with-debt
-- Phase 6 — GitHub Pages deployment: pending
+- Phase 6 — GitHub Pages deployment: in-progress
 - Verification debt: Phase 5's `0.05` sphere-to-surface gap enforcement
   (`src/simulation/trackStress.test.ts`, currently `0.6`) is deferred to
   `specs/raceway-obstacles/PLAN.md` Phase A — see that phase's open item.
@@ -182,7 +182,7 @@ Consumes: pnpm scripts `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm lint
 
 Fresh review: required — GitHub Actions deployment changes CI infrastructure
 
-- [ ] Configure relative production asset paths and deterministic `dist/` output in `vite.config.ts` for GitHub Pages repository-subpath hosting.
+- [x] Configure relative production asset paths and deterministic `dist/` output in `vite.config.ts` for GitHub Pages repository-subpath hosting.
 - [ ] Add `.github/workflows/deploy-pages.yml` with `pnpm/action-setup@v4`, `actions/setup-node@v4` pnpm caching, `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and `pnpm build`; upload `dist/` and deploy Pages on pushes to `main` with the minimum required Pages permissions.
 - [ ] Document local commands, Pages repository settings, First/Last semantics, local-only data, and screen-share audio behavior in `README.md`.
 

@@ -185,10 +185,11 @@ Fresh review: required — GitHub Actions deployment changes CI infrastructure
 - [x] Configure relative production asset paths and deterministic `dist/` output in `vite.config.ts` for GitHub Pages repository-subpath hosting.
 - [x] Add `.github/workflows/deploy-pages.yml` with `pnpm/action-setup@v4`, `actions/setup-node@v4` pnpm caching, `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and `pnpm build`; upload `dist/` and deploy Pages on pushes to `main` with the minimum required Pages permissions.
 - [x] Document local commands, Pages repository settings, First/Last semantics, local-only data, and screen-share audio behavior in `README.md`.
+- [x] (amended 2026-08-14, fresh-review correction) Scope `.github/workflows/deploy-pages.yml` permissions per job instead of workflow-wide, so the `build` job (which runs `pnpm install`/`pnpm build`, i.e. third-party install/build scripts) holds only `contents: read` rather than the `pages: write`/`id-token: write` only the `deploy` job needs; add `persist-credentials: false` to the build job's checkout.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Open the deployed Pages URL directly and after refresh; confirm assets load from the repository subpath and a complete first-mode and last-mode race works without network transmission of roster data.
@@ -197,7 +198,7 @@ Fresh review: required — GitHub Actions deployment changes CI infrastructure
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `pnpm lint`
-- [ ] `pnpm format:check`
-- [ ] `pnpm test`
-- [ ] `pnpm build`
+- [x] `pnpm lint`
+- [x] `pnpm format:check`
+- [x] `pnpm test`
+- [x] `pnpm build`

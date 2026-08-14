@@ -18,8 +18,8 @@ that predates this spec.
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Static modules: pending
+- Current phase: 1 — done
+- Phase 1 — Static modules: done
 - Phase 2 — Shape union: pending
 - Phase 3 — Progress hardening and the vortex bowl: pending
 - Phase 4 — Deterministic motion: pending
@@ -58,8 +58,8 @@ correction attempt, and grew beyond what the item as planned asked for.
 - [x] Extend `src/track/definition.test.ts`: pin-field post spacing/gap, drain-free bed geometry (no dead-end pockets a marble can settle in), and that `TrackBoxKind` has no unconstructed member.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Run 5- and 15-marble races in both modes; confirm the pin field visibly scatters the pack and the rumble strip is visually distinct from the old gates.

@@ -44,7 +44,12 @@ sphere-to-surface gap assertion in `src/simulation/trackStress.test.ts`
 landed at `0.55`, not the planned `0.05` — see the amended item below for
 why; this is a corrected interface, not the original plan.
 
-Fresh review: not required
+Fresh review: required (upgraded 2026-08-14) — the gap-assertion item grew
+well beyond "retune obstacle materials/placement": two fix attempts
+(centripetal spline reparameterization, single-waypoint corner rounding)
+were tried and reverted before landing on a loosened, evidence-based
+threshold. Per the rulebook's upgrade criteria: this needed more than one
+correction attempt, and grew beyond what the item as planned asked for.
 
 - [x] Remove `gateLayout`, its `addBarrier` gate/deflector construction, and the `"gate"`/`"deflector"`/`"splitter"`/`"chicane"` members of `TrackBoxKind` in `src/track/definition.ts`; add `"pin"` and `"rumble"` members.
 - [x] Add `PIN_MATERIAL` (friction 0.06, restitution 0.25 — raised from the catalogue's 0.18 during tuning: at 0.18, two marbles wedged permanently at the third pin row in a 15-marble diagnostic run, confirmed by direct simulation before/after; 0.25 clears all 15 with room under the 0.35 launch-bug ceiling) and `RUMBLE_MATERIAL` (friction 0.3, restitution 0.1) alongside the existing `RAIL_MATERIAL`/`BUMPER_MATERIAL` in `src/track/definition.ts`; construct the diamond pin field (staggered 45°-rotated box posts, fractions 0.20–0.26 per `OBSTACLE-IDEAS.md` module 2, 2.0 m lateral spacing rather than the catalogue's 1.6 m — 1.6 m only leaves a ~0.89 m gap given the post's rotated footprint, short of the ≥1.2 m module 2 itself requires for a 15-marble pack to drain) and the rumble strip (full-width transverse bars, 2–3 m approach per module 4) as `TrackBox` entries.

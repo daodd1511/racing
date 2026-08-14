@@ -18,9 +18,9 @@ that predates this spec.
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — done
 - Phase 1 — Static modules: done
-- Phase 2 — Shape union: pending
+- Phase 2 — Shape union: done
 - Phase 3 — Progress hardening and the vortex bowl: pending
 - Phase 4 — Deterministic motion: pending
 - Phase 5 — Tuning and coverage: pending
@@ -98,8 +98,8 @@ what the items as planned asked for.
 - [x] Amend `src/simulation/trackStress.test.ts` with the wave section's per-fraction clearance allowance (1.2 m for distance 100–120, vs. the global 0.55 m from Phase 1). Finding: the wave section produces real air time up to 1.01 m (measured across a 10-seed, 15-marble scan, not assumed) — an order of magnitude over the global bound. It had been silently passing only because the specific fixed CASES seeds happened not to hit it hard; the assertion is restructured from a single global max to a zone-aware `worstClearanceExcess` (limit varies by progress) so this can't happen again elsewhere. The global `0.55` bound itself is unchanged.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Run 5- and 15-marble races; confirm cylinder posts deflect visibly differently from the old box posts and the wave section is visually distinct with marbles staying grounded across it.

@@ -7,13 +7,13 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 6 — in-progress
+- Current phase: 6 — done (spec complete)
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: done
 - Phase 4 — Race audio: done
 - Phase 5 — Obstacle raceway refactor: done-with-debt
-- Phase 6 — GitHub Pages deployment: in-progress
+- Phase 6 — GitHub Pages deployment: done
 - Verification debt: Phase 5's `0.05` sphere-to-surface gap enforcement
   (`src/simulation/trackStress.test.ts`, currently `0.6`) is deferred to
   `specs/raceway-obstacles/PLAN.md` Phase A — see that phase's open item.

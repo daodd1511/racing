@@ -141,27 +141,50 @@ function distanceToSurface(point: readonly number[]): number {
   return nearest;
 }
 
-function maximumClearanceFromTrack(
+// Global bound (Phase 1) for most of the course. The wave section (Phase 2,
+// distance 100-120, OBSTACLE-IDEAS.md module 8) gets its own, wider bound:
+// its 0.3 m sine humps produce genuine, expected air time — measured up to
+// 1.01 m across a 10-seed scan of the 15-marble roster, not assumed. This is
+// the module doing its job (compressing/stretching the field), not a defect,
+// so it is a keyed exception for that distance range specifically, not a
+// relaxation of the global bound everywhere else.
+const GLOBAL_CLEARANCE_LIMIT = 0.55;
+const WAVE_SECTION_DISTANCE_RANGE: readonly [number, number] = [100, 120];
+const WAVE_SECTION_CLEARANCE_LIMIT = 1.2;
+
+function clearanceLimitAt(progress: number): number {
+  return progress >= WAVE_SECTION_DISTANCE_RANGE[0] && progress <= WAVE_SECTION_DISTANCE_RANGE[1]
+    ? WAVE_SECTION_CLEARANCE_LIMIT
+    : GLOBAL_CLEARANCE_LIMIT;
+}
+
+function worstClearanceExcess(
   frame: TransformFrame,
   finishFrameByMarbleIndex: readonly (number | null)[],
-): { readonly clearance: number; readonly marbleIndex: number; readonly progress: number } {
+): {
+  readonly excess: number;
+  readonly clearance: number;
+  readonly limit: number;
+  readonly marbleIndex: number;
+  readonly progress: number;
+} {
   return frame.transforms.reduce(
-    (highest, transform, marbleIndex) => {
+    (worst, transform, marbleIndex) => {
       const finishFrame = finishFrameByMarbleIndex[marbleIndex];
       if (finishFrame !== null && frame.index > finishFrame) {
-        return highest;
+        return worst;
       }
       const progress = measureTrackProgress(track, transform.position);
       const courseLength = track.path.at(-1)?.distance ?? 0;
       if (progress < courseLength * 0.16 || progress > courseLength * 0.94) {
-        return highest;
+        return worst;
       }
-      const surfaceGap = distanceToSurface(transform.position) - DEFAULT_TRACK_CONFIG.marbleRadius;
-      return surfaceGap > highest.clearance
-        ? { clearance: surfaceGap, marbleIndex, progress }
-        : highest;
+      const clearance = distanceToSurface(transform.position) - DEFAULT_TRACK_CONFIG.marbleRadius;
+      const limit = clearanceLimitAt(progress);
+      const excess = clearance - limit;
+      return excess > worst.excess ? { excess, clearance, limit, marbleIndex, progress } : worst;
     },
-    { clearance: 0, marbleIndex: -1, progress: 0 },
+    { excess: Number.NEGATIVE_INFINITY, clearance: 0, limit: GLOBAL_CLEARANCE_LIMIT, marbleIndex: -1, progress: 0 },
   );
 }
 
@@ -231,42 +254,27 @@ describe("default track completion coverage", () => {
         .filter((_, index) => index % 90 === 0)
         .map((frame) => ({
           frame,
-          ...maximumClearanceFromTrack(frame, recording.finishFrameByMarbleIndex),
+          ...worstClearanceExcess(frame, recording.finishFrameByMarbleIndex),
         }));
-      const highestClearance = clearanceObservations.reduce((highest, observation) =>
-        observation.clearance > highest.clearance ? observation : highest,
+      const worstObservation = clearanceObservations.reduce((worst, observation) =>
+        observation.excess > worst.excess ? observation : worst,
       );
-      // 0.55 m, not a tighter number. Two numbers matter here and this
-      // assertion only ever sees the coarser one — keep them straight:
+      // Each observation is checked against the zone-specific limit at its
+      // own progress (0.55 m globally, 1.2 m inside the wave section) via
+      // `excess = clearance - limit`; asserting `excess <= 0` catches a
+      // violation anywhere without loosening the bound anywhere else.
       //
-      // - What this assertion actually samples (every 90th frame, as
-      //   coded above): 0.269 m for the 5-marble CASES, 0.335 m for the
-      //   15-marble CASES, both around progress fraction 0.185-0.188 —
-      //   just past the rumble strip (fractions 0.185-0.195), still
-      //   descending from residual air time caught clearing the bars
-      //   (rumble boxes are already 2-4 m behind by the sampled frame;
-      //   pin-field boxes, fractions 0.20-0.26, are 3-4 m ahead and not
-      //   yet reached — neither is the nearest object at the peak).
-      //   Comfortable margin under 0.55 m either way.
-      // - The true physical peak, found only by scanning every frame
-      //   (not what this assertion checks, but the honest worst case):
-      //   0.41 m for the 5-marble roster, at course fraction ~0.68 —
-      //   COURSE_WAYPOINTS index 8, the sharpest of four ~70-74 degree
-      //   turns (indices 2, 5, 8, 9) that give the course its S-curve
-      //   character. A marble fast enough over one leaves the surface
-      //   briefly, the way a car catches air cresting a hill taken too
-      //   fast — not a defect. 0.46 m for the 15-marble roster; margin
-      //   above that true peak is real but not large (0.09 m).
-      //
-      // Rounding all four sharp turns to close the gap further would
-      // reshape the course's visual character and was explicitly
-      // declined in favour of this looser, evidence-based bound. See
-      // specs/raceway-obstacles/EXECUTION.md Phase 1 for the full
-      // investigation, including two reverted fix attempts.
+      // Outside the wave section, 0.55 m accommodates two independent,
+      // understood sources of clearance, neither a defect: sharp course
+      // turns (waypoints 2, 5, 8, 9, ~70-74°, measured up to 0.41-0.46 m —
+      // see specs/raceway-obstacles/EXECUTION.md Phase 1) and, now, the
+      // wave section's own genuine air time (measured up to 1.01 m across
+      // a 10-seed scan — the module doing its job, not a defect). See
+      // Phase 2 in the same file for that investigation.
       expect(
-        highestClearance.clearance,
-        `maximum obstacle-section gap at frame ${highestClearance.frame.index}`,
-      ).toBeLessThan(0.55);
+        worstObservation.excess,
+        `clearance ${worstObservation.clearance.toFixed(3)} exceeds the ${worstObservation.limit}m limit at progress ${worstObservation.progress.toFixed(1)}, frame ${worstObservation.frame.index}`,
+      ).toBeLessThanOrEqual(0);
     },
     15_000,
   );

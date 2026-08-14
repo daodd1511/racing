@@ -263,6 +263,25 @@ function trackHalfWidthAtDistance(config: TrackConfig, distance: number): number
   return config.trackHalfWidth + apronFraction * 0.9;
 }
 
+// Wave section (OBSTACLE-IDEAS.md module 8): the bed rolls in three sine
+// humps over a 20 m stretch. Placed at distance 100 m — well past the pin
+// field (ends ~67 m) and well before where Phase 3 plans the vortex bowl
+// (late in the course, before the finish straight). Exactly 3 full periods
+// over the stretch means the displacement is zero at both boundaries, so
+// there's no seam/kink where the wave section meets flat bed on either side.
+const WAVE_START_DISTANCE = 100;
+const WAVE_LENGTH_METERS = 20;
+const WAVE_AMPLITUDE = 0.3;
+const WAVE_HUMP_COUNT = 3;
+
+function waveDisplacement(distance: number): number {
+  const offset = distance - WAVE_START_DISTANCE;
+  if (offset < 0 || offset > WAVE_LENGTH_METERS) {
+    return 0;
+  }
+  return WAVE_AMPLITUDE * Math.sin((2 * Math.PI * WAVE_HUMP_COUNT * offset) / WAVE_LENGTH_METERS);
+}
+
 function assertTrackConfig(config: TrackConfig): void {
   if (Object.values(config).some((value) => !Number.isFinite(value) || value <= 0)) {
     throw new RangeError("Track configuration values must be positive finite numbers");
@@ -283,12 +302,16 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   const path = createPath(config);
   const boxes: TrackBox[] = [];
 
+  const wavedPosition = (sample: TrackPathSample): Vector3 =>
+    add(sample.position, scale(sample.up, waveDisplacement(sample.distance)));
+
   const surfaceVertices: number[] = [];
   const surfaceIndices: number[] = [];
   for (const sample of path) {
     const halfWidth = trackHalfWidthAtDistance(config, sample.distance);
-    const right = add(sample.position, scale(sample.side, halfWidth));
-    const left = add(sample.position, scale(sample.side, -halfWidth));
+    const basePosition = wavedPosition(sample);
+    const right = add(basePosition, scale(sample.side, halfWidth));
+    const left = add(basePosition, scale(sample.side, -halfWidth));
     surfaceVertices.push(...right, ...left);
   }
   for (let index = 0; index < path.length - 1; index += 1) {
@@ -306,12 +329,13 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
     const segmentLength = end.distance - start.distance;
     const halfWidth = trackHalfWidthAtDistance(config, centerSample.distance);
     const rotation = quaternionFromBasis(centerSample.side, centerSample.up, centerSample.tangent);
+    const railBasePosition = wavedPosition(centerSample);
     for (const direction of [-1, 1]) {
       boxes.push({
         kind: "side-rail",
         center: add(
           add(
-            centerSample.position,
+            railBasePosition,
             scale(centerSample.side, direction * (halfWidth - config.railThickness / 2)),
           ),
           scale(centerSample.up, config.railHeight / 2),

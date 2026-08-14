@@ -244,6 +244,17 @@ Delete `gateLayout` and the deflector pair. Add `"pin"` and `"rumble"` to
 rumble strip as a 2–3 m approach. Extend `definition.test.ts` for post spacing,
 drain-free bed geometry, and that no dead `TrackBoxKind` remains.
 
+Carries forward Phase 5's open item (`marble-race-picker/EXECUTION.md`,
+amended 2026-08-13, fresh-review correction): enforce a maximum 0.05 m
+sphere-to-surface gap in `src/simulation/trackStress.test.ts`. Deferred here
+rather than fixed on Phase 5's own branch because the ~0.24–0.29 m clearance
+measured against `main` traces to contact with the `gate` boxes this phase
+deletes — tuning their contact physics before deletion would be wasted work.
+Tighten `trackStress.test.ts:236` from `0.6` to `0.05` once the pin field and
+rumble strip replace the gates, and confirm the new obstacles do not reproduce
+the launch behavior. If clearance is still above 0.05 after replacement, that
+is this phase's obstacle physics to fix, not a test-only change.
+
 ### Phase B — Shape union
 
 Turn `TrackBox` into a shape union across `definition.ts`, `colliders.ts` and

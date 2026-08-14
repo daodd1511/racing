@@ -7,14 +7,18 @@ from and opens its PR against its immediate predecessor without waiting for merg
 
 ## STATUS
 
-- Current phase: 5 — in-progress
+- Current phase: 6 — pending
 - Phase 1 — Simulation foundation: done
 - Phase 2 — Race replay and tuning: done
 - Phase 3 — Picker application and persistence: done
 - Phase 4 — Race audio: done
-- Phase 5 — Obstacle raceway refactor: in-progress
+- Phase 5 — Obstacle raceway refactor: done-with-debt
 - Phase 6 — GitHub Pages deployment: pending
-- Verification debt: none
+- Verification debt: Phase 5's `0.05` sphere-to-surface gap enforcement
+  (`src/simulation/trackStress.test.ts`, currently `0.6`) is deferred to
+  `specs/raceway-obstacles/PLAN.md` Phase A — see that phase's open item.
+  Further obstacle modules (splitter, chicane, narrowing gate) are out of this
+  spec's scope entirely; tracked in `specs/raceway-obstacles/`, not here.
 
 ## Phase 1 — Simulation foundation
 
@@ -148,12 +152,12 @@ Fresh review: required — core simulation geometry, ranking, and camera behavio
 - [x] Update `src/ui/createRaceView.ts`, `src/styles/race.css`, and `src/dev/racePreview.ts` for a full-width course view, compact overlaid leaderboard, and retained seed/mode tuning controls without changing lineup or result-dialog behavior.
 - [x] Tune `DEFAULT_TRACK_CONFIG` so 5- and 15-marble fixed-seed and retry runs complete inside 60 simulated seconds, remain contained, reach the lower obstacle modules, and demonstrate position changes across the bumper, splitter/merge, or chicane sections.
 - [x] Replace vertical-course assertions in `src/track/definition.test.ts`, `src/simulation/simulateRace.test.ts`, and `src/simulation/trackStress.test.ts`; add `src/track/progress.test.ts` and camera-target coverage for projection, first-mode leader following, last-mode trailer following, smooth target changes, finish order, containment, and representative overtakes.
-- [ ] (amended 2026-08-13) Replace launch-prone spherical bumpers in `src/track/definition.ts`, `src/track/colliders.ts`, and `src/render/createRaceScene.ts` with track-normal posts; retune marble, surface, rail, and obstacle materials plus start contact in `src/simulation/simulateRace.ts`; interpolate centreline sampling in `src/track/progress.ts`; and add coverage proving marbles stay grounded while obstacles still create overtakes.
-- [ ] (amended 2026-08-13, fresh-review correction) Increase triangle-mesh path sampling in `src/track/definition.ts`, enforce a maximum `0.05` sphere-to-surface gap, and bind overtake coverage in `src/simulation/trackStress.test.ts` to the post-slalom module boundaries.
-- [ ] (amended 2026-08-13) Extend the raceway with further grounded obstacle modules; raise the launch speed while retaining containment and stable rolling; change replay presentation to one minute; replace all single-colour marble styles with distinctive patterned designs; and add camera-facing roster name tags that follow each marble in `src/track/definition.ts`, `src/simulation/simulateRace.ts`, `src/replay/createReplayController.ts`, `src/render/marbleStyles.ts`, `src/render/createRaceScene.ts`, `src/ui/createRaceView.ts`, and their coverage.
-- [ ] (amended 2026-08-13) Remove artificial launch velocity, movement recovery, containment correction, and fixed one-minute replay timing from `src/simulation/simulateRace.ts` and `src/replay/createReplayController.ts`; use a longer, steeper, grounded track and low-profile deflectors in `src/track/definition.ts` so gravity and collisions alone produce the race duration and speed; raise the physical safety ceiling in `src/race/config.ts`; and update physics and replay coverage accordingly.
-- [ ] (amended 2026-08-13) Replace the launch-prone track-normal slalom posts with tall angled deflector gates and a tall splitter divider in `src/track/definition.ts`, `src/track/colliders.ts`, and `src/render/createRaceScene.ts`; update raceway and overtake coverage from post slalom to gate-run boundaries.
-- [ ] (amended 2026-08-13) Restore a full physical obstacle sequence—staggered gate lanes, continuous splitter, chicane, and narrowing gate—using only track-aligned box colliders in `src/track/definition.ts` and `src/render/createRaceScene.ts`; put every marble on one common start line and add corresponding `src/track/definition.test.ts` coverage.
+- [x] (amended 2026-08-13; superseded 2026-08-14) Replace launch-prone spherical bumpers in `src/track/definition.ts`, `src/track/colliders.ts`, and `src/render/createRaceScene.ts` with track-normal posts; retune marble, surface, rail, and obstacle materials plus start contact in `src/simulation/simulateRace.ts`; interpolate centreline sampling in `src/track/progress.ts`; and add coverage proving marbles stay grounded while obstacles still create overtakes. Posts shipped, then replaced by gates in the item below; further obstacle work moved to `specs/raceway-obstacles/PLAN.md`.
+- [ ] (amended 2026-08-13, fresh-review correction; scope moved 2026-08-14) Enforce a maximum `0.05` sphere-to-surface gap in `src/simulation/trackStress.test.ts` (currently `0.6`; measured clearance against `main` is ~0.24–0.29 m, traced to contact with the `gate` boxes). Deferred to `specs/raceway-obstacles/PLAN.md` Phase A, which deletes those gates — tuning their contact physics before deletion is wasted work. Left open here as debt; closes when Phase A tightens the assertion and confirms the replacement obstacles don't reproduce the launch behavior.
+- [x] (amended 2026-08-13; superseded 2026-08-14) Extend the raceway with further grounded obstacle modules; raise the launch speed while retaining containment and stable rolling; change replay presentation to one minute; replace all single-colour marble styles with distinctive patterned designs; and add camera-facing roster name tags that follow each marble in `src/track/definition.ts`, `src/simulation/simulateRace.ts`, `src/replay/createReplayController.ts`, `src/render/marbleStyles.ts`, `src/render/createRaceScene.ts`, `src/ui/createRaceView.ts`, and their coverage. Patterned marble styles and name tags shipped; launch speed and fixed one-minute replay timing were both reversed by the item below; further obstacle modules moved to `specs/raceway-obstacles/PLAN.md`.
+- [x] (amended 2026-08-13) Remove artificial launch velocity, movement recovery, containment correction, and fixed one-minute replay timing from `src/simulation/simulateRace.ts` and `src/replay/createReplayController.ts`; use a longer, steeper, grounded track and low-profile deflectors in `src/track/definition.ts` so gravity and collisions alone produce the race duration and speed; raise the physical safety ceiling in `src/race/config.ts`; and update physics and replay coverage accordingly.
+- [x] (amended 2026-08-13; superseded 2026-08-14) Replace the launch-prone track-normal slalom posts with tall angled deflector gates and a tall splitter divider in `src/track/definition.ts`, `src/track/colliders.ts`, and `src/render/createRaceScene.ts`; update raceway and overtake coverage from post slalom to gate-run boundaries. Gates shipped; splitter divider never built — moved to `specs/raceway-obstacles/PLAN.md`.
+- [x] (amended 2026-08-13; superseded 2026-08-14) Restore a full physical obstacle sequence—staggered gate lanes, continuous splitter, chicane, and narrowing gate—using only track-aligned box colliders in `src/track/definition.ts` and `src/render/createRaceScene.ts`; put every marble on one common start line and add corresponding `src/track/definition.test.ts` coverage. Staggered gate lanes and common start line shipped; splitter, chicane, and narrowing gate never built — `TrackBoxKind` still declares the unused `"splitter"`/`"chicane"` literals — all moved to `specs/raceway-obstacles/PLAN.md`, whose Phase A also removes the dead literals.
 
 **Phase gate (hard):**
 - [x] `pnpm typecheck`
@@ -162,9 +166,11 @@ Fresh review: required — core simulation geometry, ranking, and camera behavio
 **Review checklist (user, at PR review):**
 - [ ] Run five and fifteen marbles in `first` mode and confirm the view reads as a downhill race track, obstacles visibly change positions, all marbles remain inside the rails, and the elevated camera follows the current leader through the finish.
 - [ ] Run five and fifteen marbles in `last` mode and confirm the camera follows the current trailing marble without abrupt snapping while the race continues until that marble crosses the finish line.
-- [ ] Confirm the start grid, S-curves, bumper slalom, splitter/merge, chicane, narrowing gate, and finish straight are visually distinct at 1080p and the overlaid leaderboard remains readable.
+- [ ] Confirm the start grid, S-curves, staggered gate lanes, and finish straight are visually distinct at 1080p and the overlaid leaderboard remains readable. (Splitter, chicane, and narrowing gate are not built; see `specs/raceway-obstacles/PLAN.md`.)
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.
+
+**Verification debt carried past this phase:** the 0.05 m sphere-to-surface gap item above stays unchecked; it is not phase-blocking here because closing it means tuning obstacles this phase already knows are being deleted. See STATUS.
 
 ## Phase 6 — GitHub Pages deployment
 

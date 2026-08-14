@@ -186,12 +186,14 @@ Fresh review: required — GitHub Actions deployment changes CI infrastructure
 - [x] Add `.github/workflows/deploy-pages.yml` with `pnpm/action-setup@v4`, `actions/setup-node@v4` pnpm caching, `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and `pnpm build`; upload `dist/` and deploy Pages on pushes to `main` with the minimum required Pages permissions.
 - [x] Document local commands, Pages repository settings, First/Last semantics, local-only data, and screen-share audio behavior in `README.md`.
 - [x] (amended 2026-08-14, fresh-review correction) Scope `.github/workflows/deploy-pages.yml` permissions per job instead of workflow-wide, so the `build` job (which runs `pnpm install`/`pnpm build`, i.e. third-party install/build scripts) holds only `contents: read` rather than the `pages: write`/`id-token: write` only the `deploy` job needs; add `persist-credentials: false` to the build job's checkout.
+- [x] (amended 2026-08-14, re-review correction) Add `pages: read` to the `build` job's permissions — the prior correction's `contents: read`-only scope would likely fail the `actions/configure-pages@v5` step, which calls `repos.getPages()` unconditionally and errors without Pages read access. Not confirmed against a live Actions run; flagged in the phase's review checklist below for confirmation on first deploy.
 
 **Phase gate (hard):**
 - [x] `pnpm typecheck`
 - [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
+- [ ] Confirm the `Deploy Pages` workflow run is green end to end on the first push to `main` — specifically that the `build` job's `configure-pages` step succeeds with only `contents: read` + `pages: read`. Neither fresh-review pass could execute the workflow live; this is unconfirmed static analysis, not proven.
 - [ ] Open the deployed Pages URL directly and after refresh; confirm assets load from the repository subpath and a complete first-mode and last-mode race works without network transmission of roster data.
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.

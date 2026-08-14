@@ -184,7 +184,7 @@ Fresh review: required — GitHub Actions deployment changes CI infrastructure
 
 - [x] Configure relative production asset paths and deterministic `dist/` output in `vite.config.ts` for GitHub Pages repository-subpath hosting.
 - [x] Add `.github/workflows/deploy-pages.yml` with `pnpm/action-setup@v4`, `actions/setup-node@v4` pnpm caching, `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and `pnpm build`; upload `dist/` and deploy Pages on pushes to `main` with the minimum required Pages permissions.
-- [ ] Document local commands, Pages repository settings, First/Last semantics, local-only data, and screen-share audio behavior in `README.md`.
+- [x] Document local commands, Pages repository settings, First/Last semantics, local-only data, and screen-share audio behavior in `README.md`.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`

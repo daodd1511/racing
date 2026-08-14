@@ -193,7 +193,7 @@ Fresh review: required — GitHub Actions deployment changes CI infrastructure
 - [x] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
-- [ ] Confirm the `Deploy Pages` workflow run is green end to end on the first push to `main` — specifically that the `build` job's `configure-pages` step succeeds with only `contents: read` + `pages: read`. Neither fresh-review pass could execute the workflow live; this is unconfirmed static analysis, not proven.
+- [x] Confirm the `Deploy Pages` workflow run is green end to end on the first push to `main` — specifically that the `build` job's `configure-pages` step succeeds with only `contents: read` + `pages: read`. Confirmed 2026-08-14: run 31781053498 green end to end after the repo was made public and Pages enabled (the first failure was `Get Pages site failed` — Pages wasn't enabled yet, not a permissions defect).
 - [ ] Open the deployed Pages URL directly and after refresh; confirm assets load from the repository subpath and a complete first-mode and last-mode race works without network transmission of roster data.
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.

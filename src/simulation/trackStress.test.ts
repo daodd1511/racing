@@ -230,17 +230,26 @@ describe("default track completion coverage", () => {
       const highestClearance = clearanceObservations.reduce((highest, observation) =>
         observation.clearance > highest.clearance ? observation : highest,
       );
-      // 0.55 m, not a tighter number: the course has four waypoints (2, 5, 8,
-      // 9 in COURSE_WAYPOINTS) with a comparably sharp ~70-72 degree turn —
-      // the "S-curve" character the course is designed around. A marble fast
-      // enough over one of these leaves the surface briefly, the way a car
-      // catches air cresting a hill taken too fast; this is understood,
-      // physically legitimate, and localized to those four turns specifically
-      // (confirmed by direct simulation, not assumed). Rounding all four
-      // waypoints to close this further would reshape the course's visual
-      // character and was explicitly declined in favour of this looser,
-      // evidence-based bound. See specs/raceway-obstacles/EXECUTION.md
-      // Phase 1 for the investigation.
+      // 0.55 m, not a tighter number — two independent, understood sources of
+      // clearance, neither a defect:
+      // 1. The course has four waypoints (2, 5, 8, 9 in COURSE_WAYPOINTS)
+      //    with a comparably sharp ~70-74 degree turn, the "S-curve"
+      //    character the course is designed around. A marble fast enough
+      //    over one of these leaves the surface briefly, the way a car
+      //    catches air cresting a hill taken too fast. Confirmed the peak
+      //    for the 5-marble roster (0.41 m, at waypoint 8).
+      // 2. For the 15-marble roster, the peak (0.46 m) instead traces to the
+      //    pin field itself — marbles bouncing through consecutive rows
+      //    briefly separate from the bed between contacts, not a single
+      //    crest. This is the field doing its job (scattering the pack) at
+      //    a cost in vertical clearance, not the course-turn phenomenon.
+      // Rounding the four sharp turns to close (1) further would reshape
+      // the course's visual character and was explicitly declined; margin
+      // above the observed 0.46 m is real but not large (0.09 m) — a future
+      // change to pin restitution/spacing or the seed pool could move this
+      // and should be re-diagnosed against both sources above, not assumed
+      // to be the course turns. See specs/raceway-obstacles/EXECUTION.md
+      // Phase 1 for the full investigation.
       expect(
         highestClearance.clearance,
         `maximum obstacle-section gap at frame ${highestClearance.frame.index}`,

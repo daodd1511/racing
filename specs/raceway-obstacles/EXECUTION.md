@@ -39,15 +39,17 @@ carried forward from its Phase 5.
 Consumes: none — this phase starts from `main` after `marble-race-picker`
 Phase 6 merged.
 Produces: trimmed `TrackBoxKind` (`"side-rail" | "pin" | "rumble"`),
-`PIN_MATERIAL`, `RUMBLE_MATERIAL` in `src/track/definition.ts`; the `0.05`
-sphere-to-surface gap assertion in `src/simulation/trackStress.test.ts`.
+`PIN_MATERIAL`, `RUMBLE_MATERIAL` in `src/track/definition.ts`. The
+sphere-to-surface gap assertion in `src/simulation/trackStress.test.ts`
+landed at `0.55`, not the planned `0.05` — see the amended item below for
+why; this is a corrected interface, not the original plan.
 
 Fresh review: not required
 
 - [x] Remove `gateLayout`, its `addBarrier` gate/deflector construction, and the `"gate"`/`"deflector"`/`"splitter"`/`"chicane"` members of `TrackBoxKind` in `src/track/definition.ts`; add `"pin"` and `"rumble"` members.
 - [x] Add `PIN_MATERIAL` (friction 0.06, restitution 0.25 — raised from the catalogue's 0.18 during tuning: at 0.18, two marbles wedged permanently at the third pin row in a 15-marble diagnostic run, confirmed by direct simulation before/after; 0.25 clears all 15 with room under the 0.35 launch-bug ceiling) and `RUMBLE_MATERIAL` (friction 0.3, restitution 0.1) alongside the existing `RAIL_MATERIAL`/`BUMPER_MATERIAL` in `src/track/definition.ts`; construct the diamond pin field (staggered 45°-rotated box posts, fractions 0.20–0.26 per `OBSTACLE-IDEAS.md` module 2, 2.0 m lateral spacing rather than the catalogue's 1.6 m — 1.6 m only leaves a ~0.89 m gap given the post's rotated footprint, short of the ≥1.2 m module 2 itself requires for a 15-marble pack to drain) and the rumble strip (full-width transverse bars, 2–3 m approach per module 4) as `TrackBox` entries.
 - [x] Update `TRACK_COLORS` in `src/render/createRaceScene.ts` to match the trimmed `TrackBoxKind` — remove `gate`/`splitter`/`chicane`/`deflector`, add `pin`/`rumble`. (The compiler enforces this: `TRACK_COLORS` is `Record<TrackBox["kind"], number>`.)
-- [ ] Tighten the sphere-to-surface gap assertion in `src/simulation/trackStress.test.ts:236` from `0.6` to `0.05` (per PLAN.md → "Phase A"). If it fails against the new pin/rumble geometry, fix the obstacle materials/placement, not the number.
+- [x] Investigate the sphere-to-surface gap in `src/simulation/trackStress.test.ts:236`. Finding (amended 2026-08-14): the deferred premise was wrong — the ~0.24–0.29 m clearance measured against `main` does not trace to gate contact. Direct simulation traces the true peak (0.41 m, full-frame scan) to a genuine crest-launch at course fraction ≈0.68 (`COURSE_WAYPOINTS` index 8), the single sharpest turn in the course (72°, global max curvature by a wide margin) — a marble fast enough leaves the surface there, the way a car catches air over a hilltop. Tried and reverted: centripetal Catmull-Rom parameterization (the standard fix for spline overshoot) barely moved the peak (0.1226→0.1186 at the identical point — this isn't an overshoot artifact, it's a real geometric corner) and introduced an unrelated regression (a hard outer-rail clip near waypoint 2 that stalled a 15-marble `last`-mode run). Tried and reverted: rounding waypoint 8's corner alone — the peak just moved to waypoint 5's near-identical 72.1° turn; the course has four comparably sharp turns (waypoints 2, 5, 8, 9), so closing this to 0.05 requires reshaping all four, which the user declined as materially bigger than this phase's scope. Resolution, at the user's direction: loosened the assertion to `0.55` (with a comment recording the above) rather than reshaping the course. Deleting all diagnostic scratch files was verified (`git status` clean of them) before this commit.
 - [x] Extend `src/track/definition.test.ts`: pin-field post spacing/gap, drain-free bed geometry (no dead-end pockets a marble can settle in), and that `TrackBoxKind` has no unconstructed member.
 
 **Phase gate (hard):**

@@ -230,10 +230,21 @@ describe("default track completion coverage", () => {
       const highestClearance = clearanceObservations.reduce((highest, observation) =>
         observation.clearance > highest.clearance ? observation : highest,
       );
+      // 0.55 m, not a tighter number: the course has four waypoints (2, 5, 8,
+      // 9 in COURSE_WAYPOINTS) with a comparably sharp ~70-72 degree turn —
+      // the "S-curve" character the course is designed around. A marble fast
+      // enough over one of these leaves the surface briefly, the way a car
+      // catches air cresting a hill taken too fast; this is understood,
+      // physically legitimate, and localized to those four turns specifically
+      // (confirmed by direct simulation, not assumed). Rounding all four
+      // waypoints to close this further would reshape the course's visual
+      // character and was explicitly declined in favour of this looser,
+      // evidence-based bound. See specs/raceway-obstacles/EXECUTION.md
+      // Phase 1 for the investigation.
       expect(
         highestClearance.clearance,
         `maximum obstacle-section gap at frame ${highestClearance.frame.index}`,
-      ).toBeLessThan(0.6);
+      ).toBeLessThan(0.55);
     },
     15_000,
   );

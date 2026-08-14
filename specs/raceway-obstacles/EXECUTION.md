@@ -80,7 +80,14 @@ Produces: `TrackBox` as a discriminated union on a `shape` field
 switches in `attachBoxCollider` (`src/track/colliders.ts`) and the mesh
 factory (`src/render/createRaceScene.ts`).
 
-Fresh review: not required
+Fresh review: required (upgraded 2026-08-14) — the cylinder-pin and
+wave-section items each grew well beyond "swap the shape"/"add a sine
+profile": a multi-attempt jamming investigation (spacing, three restitution
+values, an isolation test disproving shape as the cause) and a discovered,
+previously-hidden safety-assertion gap (wave clearance measured at 1.01 m
+against a 0.55 m bound that only passed by seed luck). Per the rulebook's
+upgrade criteria: needed more than one correction attempt, and grew beyond
+what the items as planned asked for.
 
 - [x] Convert `TrackBox` to a discriminated union with a `shape` field (`{ kind: "cuboid"; halfExtents: Vector3 }` | `{ kind: "cylinder"; radius: number; halfHeight: number }` | `{ kind: "ball"; radius: number }`) in `src/track/definition.ts`.
 - [x] Update `attachBoxCollider` in `src/track/colliders.ts` to switch on `box.shape.kind` and construct the matching `RAPIER.ColliderDesc` (`cuboid`/`cylinder`/`ball`).

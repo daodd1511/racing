@@ -5,7 +5,7 @@ export interface TrackMaterial {
   readonly friction: number;
 }
 
-export type TrackBoxKind = "side-rail" | "gate" | "splitter" | "chicane" | "deflector";
+export type TrackBoxKind = "side-rail" | "pin" | "rumble";
 export interface TrackBox {
   readonly kind: TrackBoxKind;
   readonly center: Vector3;
@@ -70,7 +70,8 @@ export const DEFAULT_TRACK_CONFIG: TrackConfig = Object.freeze({
 
 const TRACK_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0, friction: 0.1 });
 const RAIL_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.03, friction: 0.11 });
-const BUMPER_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0, friction: 0.04 });
+const PIN_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.25, friction: 0.06 });
+const RUMBLE_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.1, friction: 0.3 });
 const WORLD_UP: Vector3 = [0, 1, 0];
 
 const COURSE_WAYPOINTS: readonly Vector3[] = Object.freeze([
@@ -317,51 +318,64 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   }
 
   const totalDistance = path.at(-1)?.distance ?? 0;
-  const addBarrier = (
-    kind: Exclude<TrackBoxKind, "side-rail">,
-    fraction: number,
-    direction: -1 | 1,
-    halfWidth: number,
-    lateralOffset: number,
-    angle: number,
-  ): void => {
+
+  // Diamond pin field (OBSTACLE-IDEAS.md module 2): staggered rows of
+  // 45°-rotated posts. Fractions 0.20–0.26 sit well past the start apron
+  // (which tapers out by distance 36 of ~255 total), so the full
+  // `config.trackHalfWidth` is available at every row.
+  const addPinPost = (fraction: number, lateralOffset: number): void => {
     const sample = interpolatePathSample(path, totalDistance * fraction);
-    const barrierAxis = normalize(add(sample.side, scale(sample.tangent, direction * angle)));
-    const barrierForward = normalize(cross(barrierAxis, sample.up));
+    const halfExtents: Vector3 = [0.25, 0.45, 0.25];
+    const spinAngle = Math.PI / 4;
+    const spunSide = rotateAroundAxis(sample.side, sample.up, spinAngle);
+    const spunTangent = rotateAroundAxis(sample.tangent, sample.up, spinAngle);
     boxes.push({
-      kind,
+      kind: "pin",
       center: add(
         add(sample.position, scale(sample.side, lateralOffset)),
-        scale(sample.up, config.railHeight * 0.52),
+        scale(sample.up, halfExtents[1]),
       ),
-      rotation: quaternionFromBasis(barrierAxis, sample.up, barrierForward),
-      halfExtents: [halfWidth, config.railHeight * 0.52, config.railThickness],
-      material: BUMPER_MATERIAL,
+      rotation: quaternionFromBasis(spunSide, sample.up, spunTangent),
+      halfExtents,
+      material: PIN_MATERIAL,
     });
   };
 
-  const gateLayout: readonly [number, -1 | 1][] = [
-    [0.18, -1],
-    [0.25, 1],
-    [0.32, -1],
-    [0.47, 1],
-    [0.54, -1],
-    [0.68, 1],
-    [0.76, -1],
+  // 2.0 m lateral spacing, not the catalogue's 1.6 m: a post's 45°-rotated
+  // footprint is ~0.71 m wide, so 1.6 m spacing leaves only a ~0.89 m gap —
+  // short of the ≥1.2 m a 15-marble pack needs to drain instead of clogging.
+  const evenRowOffsets: readonly number[] = [-4, -2, 0, 2, 4];
+  const oddRowOffsets: readonly number[] = [-3, -1, 1, 3];
+  const pinFieldRows: readonly [number, readonly number[]][] = [
+    [0.2, evenRowOffsets],
+    [0.22, oddRowOffsets],
+    [0.24, evenRowOffsets],
+    [0.26, oddRowOffsets],
   ];
-  for (const [fraction, direction] of gateLayout) {
-    addBarrier("gate", fraction, direction, 0.95, direction * 2, 10);
+  for (const [fraction, lateralOffsets] of pinFieldRows) {
+    for (const lateralOffset of lateralOffsets) {
+      addPinPost(fraction, lateralOffset);
+    }
   }
 
-  for (const direction of [-1, 1] as const) {
-    addBarrier(
-      "deflector",
-      0.92,
-      direction,
-      0.32,
-      direction * (config.trackHalfWidth - 0.32),
-      0.55,
-    );
+  // Rumble strip (OBSTACLE-IDEAS.md module 4): full-width transverse bars,
+  // placed as a short approach immediately before the pin field.
+  const addRumbleBar = (fraction: number): void => {
+    const sample = interpolatePathSample(path, totalDistance * fraction);
+    const halfWidth = trackHalfWidthAtDistance(config, sample.distance) - config.railThickness;
+    const halfExtents: Vector3 = [halfWidth, 0.05, 0.12];
+    boxes.push({
+      kind: "rumble",
+      center: add(sample.position, scale(sample.up, halfExtents[1])),
+      rotation: quaternionFromBasis(sample.side, sample.up, sample.tangent),
+      halfExtents,
+      material: RUMBLE_MATERIAL,
+    });
+  };
+
+  const rumbleFractions: readonly number[] = [0.185, 0.19, 0.195];
+  for (const fraction of rumbleFractions) {
+    addRumbleBar(fraction);
   }
 
   const startSlots: Vector3[] = [];

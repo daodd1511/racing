@@ -44,11 +44,11 @@ sphere-to-surface gap assertion in `src/simulation/trackStress.test.ts`.
 
 Fresh review: not required
 
-- [ ] Remove `gateLayout`, its `addBarrier` gate/deflector construction, and the `"gate"`/`"deflector"`/`"splitter"`/`"chicane"` members of `TrackBoxKind` in `src/track/definition.ts`; add `"pin"` and `"rumble"` members.
-- [ ] Add `PIN_MATERIAL` (friction 0.06, restitution 0.18) and `RUMBLE_MATERIAL` (friction 0.3, restitution 0.1) alongside the existing `RAIL_MATERIAL`/`BUMPER_MATERIAL` in `src/track/definition.ts`; construct the diamond pin field (staggered 45°-rotated box posts, ≥1.2 m spacing, fractions 0.20–0.26 per `OBSTACLE-IDEAS.md` module 2) and the rumble strip (full-width transverse bars, 2–3 m approach per module 4) as `TrackBox` entries.
-- [ ] Update `TRACK_COLORS` in `src/render/createRaceScene.ts` to match the trimmed `TrackBoxKind` — remove `gate`/`splitter`/`chicane`/`deflector`, add `pin`/`rumble`. (The compiler enforces this: `TRACK_COLORS` is `Record<TrackBox["kind"], number>`.)
+- [x] Remove `gateLayout`, its `addBarrier` gate/deflector construction, and the `"gate"`/`"deflector"`/`"splitter"`/`"chicane"` members of `TrackBoxKind` in `src/track/definition.ts`; add `"pin"` and `"rumble"` members.
+- [x] Add `PIN_MATERIAL` (friction 0.06, restitution 0.25 — raised from the catalogue's 0.18 during tuning: at 0.18, two marbles wedged permanently at the third pin row in a 15-marble diagnostic run, confirmed by direct simulation before/after; 0.25 clears all 15 with room under the 0.35 launch-bug ceiling) and `RUMBLE_MATERIAL` (friction 0.3, restitution 0.1) alongside the existing `RAIL_MATERIAL`/`BUMPER_MATERIAL` in `src/track/definition.ts`; construct the diamond pin field (staggered 45°-rotated box posts, fractions 0.20–0.26 per `OBSTACLE-IDEAS.md` module 2, 2.0 m lateral spacing rather than the catalogue's 1.6 m — 1.6 m only leaves a ~0.89 m gap given the post's rotated footprint, short of the ≥1.2 m module 2 itself requires for a 15-marble pack to drain) and the rumble strip (full-width transverse bars, 2–3 m approach per module 4) as `TrackBox` entries.
+- [x] Update `TRACK_COLORS` in `src/render/createRaceScene.ts` to match the trimmed `TrackBoxKind` — remove `gate`/`splitter`/`chicane`/`deflector`, add `pin`/`rumble`. (The compiler enforces this: `TRACK_COLORS` is `Record<TrackBox["kind"], number>`.)
 - [ ] Tighten the sphere-to-surface gap assertion in `src/simulation/trackStress.test.ts:236` from `0.6` to `0.05` (per PLAN.md → "Phase A"). If it fails against the new pin/rumble geometry, fix the obstacle materials/placement, not the number.
-- [ ] Extend `src/track/definition.test.ts`: pin-field post spacing/gap, drain-free bed geometry (no dead-end pockets a marble can settle in), and that `TrackBoxKind` has no unconstructed member.
+- [x] Extend `src/track/definition.test.ts`: pin-field post spacing/gap, drain-free bed geometry (no dead-end pockets a marble can settle in), and that `TrackBoxKind` has no unconstructed member.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`

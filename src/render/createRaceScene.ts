@@ -13,10 +13,8 @@ export interface RaceScene {
 
 const TRACK_COLORS: Record<TrackBox["kind"], number> = {
   "side-rail": 0xf04f2e,
-  gate: 0x42d6c8,
-  splitter: 0x2faaa2,
-  chicane: 0xf6c944,
-  deflector: 0xf6c944,
+  pin: 0x42d6c8,
+  rumble: 0xf6c944,
 };
 
 function createPatternTexture(style: MarbleStyle): THREE.CanvasTexture {
@@ -246,12 +244,7 @@ export function createRaceScene(
     );
     const material = new THREE.MeshStandardMaterial({
       color: TRACK_COLORS[box.kind],
-      emissive:
-        box.kind === "side-rail"
-          ? 0x351008
-          : box.kind === "gate" || box.kind === "splitter"
-            ? 0x063d42
-            : 0x493400,
+      emissive: box.kind === "side-rail" ? 0x351008 : box.kind === "pin" ? 0x063d42 : 0x493400,
       emissiveIntensity: 0.45,
       roughness: 0.42,
       metalness: 0.2,

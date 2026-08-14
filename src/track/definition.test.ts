@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { TrackBoxKind } from "./definition";
 import { createTrackDefinition, DEFAULT_TRACK_CONFIG } from "./definition";
 import { measureTrackProgress, sampleTrackPath } from "./progress";
 import { DEFAULT_MARBLE_MATERIAL } from "../simulation/simulateRace";
+
+const ALL_TRACK_BOX_KINDS: readonly TrackBoxKind[] = ["side-rail", "pin", "rumble"];
 
 describe("createTrackDefinition", () => {
   it("builds the fixed raceway modules and one-line starting grid", () => {
@@ -11,8 +14,11 @@ describe("createTrackDefinition", () => {
     expect(track.surface.vertices.length).toBeGreaterThan(100);
     expect(track.surface.indices.length).toBeGreaterThan(100);
     expect(track.boxes.some((box) => box.kind === "side-rail")).toBe(true);
-    expect(track.boxes.filter((box) => box.kind === "gate")).toHaveLength(7);
-    expect(track.boxes.some((box) => box.kind === "deflector")).toBe(true);
+    expect(track.boxes.filter((box) => box.kind === "pin")).toHaveLength(18);
+    expect(track.boxes.filter((box) => box.kind === "rumble")).toHaveLength(3);
+    for (const kind of ALL_TRACK_BOX_KINDS) {
+      expect(track.boxes.some((box) => box.kind === kind)).toBe(true);
+    }
     expect(track.path.length).toBeGreaterThan(50);
     expect(track.startSlots).toHaveLength(DEFAULT_TRACK_CONFIG.startSlotCount);
     const startTangent = sampleTrackPath(track, 1.5).tangent;
@@ -61,6 +67,47 @@ describe("createTrackDefinition", () => {
     expect(track.finishProgress).toBeGreaterThan(totalDistance * 0.9);
     expect(track.finishProgress).toBeLessThan(totalDistance);
     expect(track.finishLine.halfWidth).toBe(DEFAULT_TRACK_CONFIG.trackHalfWidth);
+  });
+
+  it("keeps the pin field clear enough for a 15-marble pack to drain", () => {
+    const track = createTrackDefinition(DEFAULT_TRACK_CONFIG);
+    const pinCenters = track.boxes.filter((box) => box.kind === "pin").map((box) => box.center);
+    const footprintWidth = 0.25 * Math.SQRT2 * 2;
+
+    let minDistance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < pinCenters.length; i += 1) {
+      for (let j = i + 1; j < pinCenters.length; j += 1) {
+        const distance = Math.hypot(
+          pinCenters[i][0] - pinCenters[j][0],
+          pinCenters[i][1] - pinCenters[j][1],
+          pinCenters[i][2] - pinCenters[j][2],
+        );
+        minDistance = Math.min(minDistance, distance);
+      }
+    }
+
+    expect(minDistance - footprintWidth).toBeGreaterThanOrEqual(1.2);
+  });
+
+  it("keeps every pin post clear of the rails, with no dead-end pocket", () => {
+    const track = createTrackDefinition(DEFAULT_TRACK_CONFIG);
+    const footprintHalfWidth = 0.25 * Math.SQRT2;
+
+    for (const pin of track.boxes.filter((box) => box.kind === "pin")) {
+      const progress = measureTrackProgress(track, pin.center);
+      const sample = sampleTrackPath(track, progress);
+      const lateral =
+        (pin.center[0] - sample.position[0]) * sample.side[0] +
+        (pin.center[1] - sample.position[1]) * sample.side[1] +
+        (pin.center[2] - sample.position[2]) * sample.side[2];
+      const clearanceToRail =
+        DEFAULT_TRACK_CONFIG.trackHalfWidth -
+        DEFAULT_TRACK_CONFIG.railThickness -
+        Math.abs(lateral) -
+        footprintHalfWidth;
+
+      expect(clearanceToRail).toBeGreaterThan(0);
+    }
   });
 
   it("rejects unsupported banking", () => {

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raceway obstacle ideas</title>
+<style>
+  :root {
+    --ink: #17243b;
+    --muted: #5c6a80;
+    --line: #d8dee8;
+    --bed: #ffe7a3;
+    --rail: #f04f2e;
+    --accent: #0e7c86;
+    --paper: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 72px;
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink); background: #f7f8fa;
+  }
+  main { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 8px; max-width: 70ch; }
+  .source { color: var(--muted); font-size: 13px; margin: 0 0 36px; }
+  h2 {
+    font-size: 14px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--accent); margin: 44px 0 4px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  h2 span { color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); margin-top: 20px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px 16px 14px; }
+  .card h3 { font-size: 16px; margin: 12px 0 6px; }
+  .card h3 b { color: var(--muted); font-weight: 600; margin-right: 6px; }
+  .card p { margin: 0; font-size: 14px; color: var(--muted); }
+  .card p.spec { margin-top: 8px; font-size: 12.5px; color: #7a869a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  svg { display: block; width: 100%; height: auto; background: #fbfcfd; border-radius: 6px; }
+  .key { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--muted); margin: 18px 0 0; }
+  .key i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; background: var(--paper); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  td:first-child { font-weight: 600; }
+  .note { background: #fff8e6; border: 1px solid #f0dca6; border-radius: 10px; padding: 14px 16px; margin-top: 22px; font-size: 14px; }
+  .note ol { margin: 8px 0 0; padding-left: 20px; }
+  .note li { margin-bottom: 5px; }
+  @media print { body { background: #fff; padding: 0; } .card { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Raceway obstacle ideas</h1>
+  <p class="lede">Every diagram is a plan view — looking straight down at the 11 m-wide track bed, marbles rolling left to right. The current course has one obstacle shape repeated nine times; these are fifteen alternatives, grouped by what they cost to build.</p>
+  <p class="source">Source: <code>specs/marble-race-picker/OBSTACLE-IDEAS.md</code>, derived from <code>src/track/definition.ts</code> · 14 Aug 2026</p>
+
+  <div class="key">
+    <span><i style="background:var(--bed)"></i>track bed (11 m wide)</span>
+    <span><i style="background:var(--rail)"></i>side rails</span>
+    <span><i style="background:var(--accent)"></i>obstacle</span>
+    <span><i style="background:#17243b"></i>marble</span>
+  </div>
+
+  <!-- ============ shared defs ============ -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#8b97a8"/>
+      </marker>
+      <g id="bedg">
+        <rect x="0" y="14" width="340" height="112" fill="#ffe7a3"/>
+        <rect x="0" y="10" width="340" height="6" fill="#f04f2e"/>
+        <rect x="0" y="124" width="340" height="6" fill="#f04f2e"/>
+      </g>
+    </defs>
+  </svg>
+
+  <h2>Tier 1 <span>— box colliders only, buildable today</span></h2>
+  <div class="grid">
+
+    <!-- 1 funnel -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Two walls angle inward narrowing the bed to a throat, marbles queue and pass single file">
+        <use href="#bedg"/>
+        <path d="M20 20 L170 58 L320 58 L320 44 L175 44 L20 8 Z" fill="#0e7c86"/>
+        <path d="M20 120 L170 82 L320 82 L320 96 L175 96 L20 132 Z" fill="#0e7c86"/>
+        <circle cx="34" cy="42" r="7" fill="#17243b"/><circle cx="52" cy="96" r="7" fill="#17243b"/>
+        <circle cx="70" cy="62" r="7" fill="#17243b"/><circle cx="96" cy="88" r="7" fill="#17243b"/>
+        <circle cx="128" cy="66" r="7" fill="#17243b"/>
+        <circle cx="196" cy="70" r="7" fill="#17243b"/><circle cx="240" cy="70" r="7" fill="#17243b"/>
+        <circle cx="284" cy="70" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>1</b>Funnel choke <span style="color:#c8402a;font-size:11px;font-weight:600;letter-spacing:.06em">NOT SCHEDULED</span></h3>
+      <p>Walls squeeze 11 m down to a 2.2 m throat. The spread-out field is forced into a single-file queue, so who exits first is decided by contact, not by lane. Cut from the build order; the vortex bowl now does the queueing.</p>
+      <p class="spec">2 walls/side · 18° · throat ≥ 2.2 m · at 30% &amp; 62%</p>
+    </div>
+
+    <!-- 2 pin field -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Staggered grid of diamond posts scattering marble paths">
+        <use href="#bedg"/>
+        <g fill="#0e7c86">
+          <g transform="translate(120,40) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(120,70) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(120,100) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(165,55) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(165,85) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(165,25) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(165,115) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(210,40) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(210,70) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(210,100) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(255,55) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+          <g transform="translate(255,85) rotate(45)"><rect x="-9" y="-9" width="18" height="18"/></g>
+        </g>
+        <path d="M40 70 C80 70 100 46 118 32 C150 24 170 40 186 55 C205 78 230 92 250 104 C270 112 290 116 320 118" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+        <circle cx="34" cy="70" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>2</b>Diamond pin field</h3>
+      <p>A Plinko board: posts turned 45° so each hit splits a marble left or right. Three or four rows deep and any lane advantage is gone.</p>
+      <p class="spec">0.5 m posts · 1.6 m spacing · gaps ≥ 1.2 m · at 20–26%</p>
+    </div>
+
+    <!-- 3 friction patches -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="A pale ice lane and a dark mud lane side by side, marble on ice pulls ahead">
+        <use href="#bedg"/>
+        <rect x="90" y="26" width="170" height="38" fill="#bfe4f2"/>
+        <rect x="90" y="78" width="170" height="38" fill="#6b543c"/>
+        <text x="175" y="50" text-anchor="middle" font-size="13" fill="#17243b" font-family="sans-serif">ICE · low friction</text>
+        <text x="175" y="102" text-anchor="middle" font-size="13" fill="#fff2dc" font-family="sans-serif">MUD · high friction</text>
+        <circle cx="300" cy="45" r="7" fill="#17243b"/>
+        <circle cx="200" cy="97" r="7" fill="#17243b"/>
+        <path d="M310 45 l16 0" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+        <path d="M210 97 l8 0" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+      </svg>
+      <h3><b>3</b>Ice &amp; mud patches <span style="color:#c8402a;font-size:11px;font-weight:600;letter-spacing:.06em">NOT SCHEDULED</span></h3>
+      <p>Flat panels flush with the bed — nothing to hit. One lane is fast, the neighbouring lane is slow, and no marble chooses which it lands in. Cut from the build order: an invisible lane advantage reads poorly on camera.</p>
+      <p class="spec">friction 0.01 vs 0.85 · 3.2 × 8 m · at 42%</p>
+    </div>
+
+    <!-- 4 rumble -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Row of low transverse bars across the full bed width">
+        <use href="#bedg"/>
+        <g fill="#0e7c86">
+          <rect x="100" y="16" width="8" height="108"/><rect x="126" y="16" width="8" height="108"/>
+          <rect x="152" y="16" width="8" height="108"/><rect x="178" y="16" width="8" height="108"/>
+          <rect x="204" y="16" width="8" height="108"/><rect x="230" y="16" width="8" height="108"/>
+        </g>
+        <path d="M30 70 L96 70 l6 -12 l14 24 l14 -24 l14 24 l14 -24 l14 24 l14 -24 l14 20 L320 66" fill="none" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+        <circle cx="24" cy="70" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>4</b>Rumble strip</h3>
+      <p>Cattle-grid bars only 5 cm tall. Nothing gets blocked; the whole pack gets shaken so clean rolling lines break up before the next module.</p>
+      <p class="spec">0.05 m tall · full width · 1.1 m apart</p>
+    </div>
+
+    <!-- 5 lane comb -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Long walls split the bed into five channels with different exits">
+        <use href="#bedg"/>
+        <g fill="#0e7c86">
+          <rect x="90" y="35" width="150" height="5"/><rect x="90" y="58" width="150" height="5"/>
+          <rect x="90" y="81" width="150" height="5"/><rect x="90" y="104" width="150" height="5"/>
+        </g>
+        <rect x="240" y="63" width="70" height="16" fill="#6b543c"/>
+        <path d="M240 27 L300 27 L316 45" fill="none" stroke="#0e7c86" stroke-width="5"/>
+        <text x="272" y="76" text-anchor="middle" font-size="11" fill="#fff2dc" font-family="sans-serif">mud</text>
+        <text x="286" y="22" text-anchor="middle" font-size="11" fill="#5c6a80" font-family="sans-serif">kink</text>
+        <text x="286" y="122" text-anchor="middle" font-size="11" fill="#5c6a80" font-family="sans-serif">open</text>
+        <circle cx="40" cy="70" r="7" fill="#17243b"/><circle cx="60" cy="46" r="7" fill="#17243b"/>
+        <circle cx="150" cy="94" r="7" fill="#17243b"/><circle cx="180" cy="47" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>5</b>Lane comb, unequal exits</h3>
+      <p>Five parallel channels, each dumping into something different. Viewers can see which lane is winning before the marbles get there.</p>
+      <p class="spec">12 m long · channels ≥ 1.5 m · at 52%</p>
+    </div>
+
+    <!-- 6 staircase - side view -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Side view of five descending steps, fast marble skips two, slow marble drops into each riser">
+        <path d="M20 40 H100 V62 H170 V84 H240 V106 H320 V132 H20 Z" fill="#ffe7a3" stroke="#e0c477"/>
+        <path d="M40 32 C90 30 120 34 150 46 C190 60 230 70 300 80" fill="none" stroke="#0e7c86" stroke-width="2" stroke-dasharray="5 4"/>
+        <path d="M40 32 L96 34 L104 56 L166 58 L174 79 L236 80 L244 100 L316 102" fill="none" stroke="#8b97a8" stroke-width="2"/>
+        <circle cx="40" cy="32" r="7" fill="#17243b"/>
+        <text x="300" y="72" text-anchor="end" font-size="11" fill="#0e7c86" font-family="sans-serif">fast: skips risers</text>
+        <text x="250" y="122" text-anchor="end" font-size="11" fill="#5c6a80" font-family="sans-serif">slow: hits every one</text>
+        <text x="22" y="18" font-size="11" fill="#5c6a80" font-family="sans-serif">▼ side view</text>
+      </svg>
+      <h3><b>6</b>Staircase drop</h3>
+      <p>The only side-view here. Five 0.22 m steps: a fast marble carries across two, a slow one falls into every riser and loses more — it stretches the pack out.</p>
+      <p class="spec">drop ≤ 0.25 m · 2.5 m tread · bed geometry change</p>
+    </div>
+  </div>
+
+  <h2>Tier 2 <span>— needs a shape union on TrackBox (one refactor unlocks all four)</span></h2>
+  <div class="grid">
+
+    <!-- 7 cylinder posts -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Round posts deflecting marbles by how far off-centre they strike">
+        <use href="#bedg"/>
+        <g fill="#0e7c86">
+          <circle cx="140" cy="42" r="14"/><circle cx="140" cy="98" r="14"/>
+          <circle cx="200" cy="70" r="14"/><circle cx="260" cy="42" r="14"/><circle cx="260" cy="98" r="14"/>
+        </g>
+        <path d="M30 56 C90 56 110 50 126 40 C140 32 160 30 200 44" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+        <path d="M30 84 C90 84 112 92 128 102 C150 116 190 118 250 116" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+        <circle cx="24" cy="56" r="7" fill="#17243b"/><circle cx="24" cy="84" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>7</b>Cylinder bumper posts</h3>
+      <p>Same scatter as the pins, but round: the deflection angle varies smoothly with how far off-centre the hit lands, instead of splitting two ways.</p>
+      <p class="spec">r 0.4 m · restitution 0.2 · replaces module 2</p>
+    </div>
+
+    <!-- 8 wave -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Side view of the bed rolling in sine humps">
+        <path d="M10 96 C50 52 90 52 130 96 C170 140 210 140 250 96 C280 64 305 62 330 78 L330 134 L10 134 Z" fill="#ffe7a3" stroke="#e0c477"/>
+        <circle cx="70" cy="60" r="8" fill="#17243b"/>
+        <circle cx="210" cy="126" r="8" fill="#17243b"/>
+        <text x="22" y="24" font-size="11" fill="#5c6a80" font-family="sans-serif">▼ side view</text>
+        <path d="M40 34 L300 34" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="170" y="28" text-anchor="middle" font-size="11" fill="#5c6a80" font-family="sans-serif">0.3 m humps over 20 m</text>
+      </svg>
+      <h3><b>8</b>Wave section</h3>
+      <p>No barrier at all — the bed itself rolls. Marbles bunch on the climbs and stretch on the drops, and the chase camera pitches over each crest.</p>
+      <p class="spec">amplitude 0.3 m · rails must follow the displacement</p>
+    </div>
+
+    <!-- 9 vortex -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Track opens into a circular banked bowl, marbles spiral to a drain and exit">
+        <rect x="0" y="48" width="100" height="44" fill="#ffe7a3"/>
+        <rect x="240" y="48" width="100" height="44" fill="#ffe7a3"/>
+        <circle cx="170" cy="70" r="62" fill="#ffe7a3" stroke="#f04f2e" stroke-width="5"/>
+        <circle cx="170" cy="70" r="14" fill="#0e7c86"/>
+        <path d="M112 52 C150 20 216 44 214 84 C212 116 172 126 152 106 C136 90 148 68 168 70" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 3"/>
+        <circle cx="72" cy="60" r="7" fill="#17243b"/><circle cx="88" cy="82" r="7" fill="#17243b"/>
+        <circle cx="278" cy="70" r="7" fill="#17243b"/>
+        <text x="170" y="74" text-anchor="middle" font-size="10" fill="#fff" font-family="sans-serif">drain</text>
+      </svg>
+      <h3><b>9</b>Vortex bowl</h3>
+      <p>An 8 m banked bowl. Marbles spiral the rim and exit in an order unrelated to the one they entered in — the biggest shuffle available, best right before the finish.</p>
+      <p class="spec">scheduled: Phase C · centreline coils into a spiral so progress still advances</p>
+    </div>
+
+    <!-- 10 hanging balls -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Side view of spheres hanging from a gantry clipping the tops of marbles">
+        <rect x="20" y="16" width="300" height="7" fill="#5c6a80"/>
+        <g stroke="#5c6a80" stroke-width="3">
+          <path d="M110 22 V56"/><path d="M190 22 V56"/><path d="M270 22 V56"/>
+        </g>
+        <g fill="#0e7c86">
+          <circle cx="110" cy="76" r="20"/><circle cx="190" cy="76" r="20"/><circle cx="270" cy="76" r="20"/>
+        </g>
+        <rect x="0" y="104" width="340" height="24" fill="#ffe7a3"/>
+        <circle cx="60" cy="96" r="9" fill="#17243b"/>
+        <text x="22" y="140" font-size="11" fill="#5c6a80" font-family="sans-serif">▼ side view — ball clips the marble's upper half</text>
+      </svg>
+      <h3><b>10</b>Hanging balls</h3>
+      <p>Spheres slung low from a gantry. They only touch the top of a passing marble, which sends it skittering sideways rather than stopping it.</p>
+      <p class="spec">r 0.55 m · centre 0.7 m above bed · static variant of 12</p>
+    </div>
+  </div>
+
+  <h2>Tier 3 <span>— needs deterministic motion (a pure function of frame index) or sensor logic</span></h2>
+  <div class="grid">
+
+    <!-- 11 windmill -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Four-blade paddle rotating across the bed, releasing marbles in batches">
+        <use href="#bedg"/>
+        <g stroke="#0e7c86" stroke-width="9" stroke-linecap="round">
+          <path d="M180 70 L180 20"/><path d="M180 70 L180 120"/>
+          <path d="M180 70 L134 70"/><path d="M180 70 L226 70"/>
+        </g>
+        <circle cx="180" cy="70" r="11" fill="#0e7c86"/>
+        <path d="M206 32 A44 44 0 0 1 218 62" fill="none" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+        <circle cx="60" cy="52" r="7" fill="#17243b"/><circle cx="82" cy="88" r="7" fill="#17243b"/>
+        <circle cx="104" cy="62" r="7" fill="#17243b"/><circle cx="126" cy="96" r="7" fill="#17243b"/>
+        <circle cx="292" cy="70" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>11</b>Windmill paddle</h3>
+      <p>Blades sweep the bed continuously. Marbles arrive in a stream and leave in batches; catch a blade on the wrong face and you get swept backwards.</p>
+      <p class="spec">ω ≈ 1.6 rad/s · angle = f(frameIndex), never wall-clock</p>
+    </div>
+
+    <!-- 12 pendulum -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Paddle swinging across the bed like a metronome">
+        <use href="#bedg"/>
+        <circle cx="170" cy="16" r="7" fill="#5c6a80"/>
+        <path d="M170 16 L120 118" stroke="#0e7c86" stroke-width="10" stroke-linecap="round"/>
+        <path d="M170 16 L220 118" stroke="#0e7c86" stroke-width="6" stroke-linecap="round" opacity="0.25"/>
+        <path d="M170 16 L170 124" stroke="#0e7c86" stroke-width="6" stroke-linecap="round" opacity="0.25"/>
+        <path d="M112 128 A70 70 0 0 1 228 128" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 4"/>
+        <circle cx="50" cy="60" r="7" fill="#17243b"/><circle cx="70" cy="96" r="7" fill="#17243b"/>
+        <circle cx="286" cy="70" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>12</b>Pendulum gate</h3>
+      <p>A timing gate. The swing repeats exactly the same way every race; when a marble arrives does not — so neighbours get very different treatment.</p>
+      <p class="spec">period 2.4 s · ±0.9 rad · sin(frameIndex · dt)</p>
+    </div>
+
+    <!-- 13 traffic gates -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Three full-width gates on staggered cycles, some down and some raised">
+        <use href="#bedg"/>
+        <rect x="110" y="16" width="10" height="108" fill="#c8402a"/>
+        <rect x="190" y="16" width="10" height="108" fill="#0e7c86" opacity="0.22"/>
+        <rect x="270" y="16" width="10" height="108" fill="#c8402a"/>
+        <text x="115" y="136" text-anchor="middle" font-size="10" fill="#c8402a" font-family="sans-serif">down</text>
+        <text x="195" y="136" text-anchor="middle" font-size="10" fill="#0e7c86" font-family="sans-serif">raised</text>
+        <text x="275" y="136" text-anchor="middle" font-size="10" fill="#c8402a" font-family="sans-serif">down</text>
+        <circle cx="60" cy="50" r="7" fill="#17243b"/><circle cx="82" cy="86" r="7" fill="#17243b"/>
+        <circle cx="96" cy="62" r="7" fill="#17243b"/>
+        <circle cx="150" cy="44" r="7" fill="#17243b"/><circle cx="232" cy="92" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>13</b>Traffic-light gates</h3>
+      <p>Three barriers rising and falling on staggered cycles, splitting the field into waves. In <code>last</code> mode it visibly strands the stragglers.</p>
+      <p class="spec">ramp ≥ 0.4 s or Rapier resolves the overlap explosively</p>
+    </div>
+
+    <!-- 14 boost pads -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Flat chevron pads on the bed, orange boost and violet drag, no geometry above the surface">
+        <use href="#bedg"/>
+        <g fill="#e8730c">
+          <path d="M100 30 l16 14 l-16 14 l-8 0 l16 -14 l-16 -14 z"/>
+          <path d="M124 30 l16 14 l-16 14 l-8 0 l16 -14 l-16 -14 z"/>
+          <path d="M148 30 l16 14 l-16 14 l-8 0 l16 -14 l-16 -14 z"/>
+        </g>
+        <g fill="#7b4bc4">
+          <path d="M164 82 l-16 14 l16 14 l8 0 l-16 -14 l16 -14 z"/>
+          <path d="M140 82 l-16 14 l16 14 l8 0 l-16 -14 l16 -14 z"/>
+          <path d="M116 82 l-16 14 l16 14 l8 0 l-16 -14 l16 -14 z"/>
+        </g>
+        <circle cx="240" cy="44" r="7" fill="#17243b"/><path d="M250 44 l22 0" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+        <circle cx="186" cy="96" r="7" fill="#17243b"/><path d="M196 96 l6 0" stroke="#8b97a8" stroke-width="2" marker-end="url(#ar)"/>
+      </svg>
+      <h3><b>14</b>Boost &amp; drag pads</h3>
+      <p>Sensor zones, not solids: an impulse is applied while a marble is inside. The only module here that can speed the race up if duration runs long.</p>
+      <p class="spec">setSensor(true) + applyImpulse along the tangent</p>
+    </div>
+
+    <!-- 15 turntable -->
+    <div class="card">
+      <svg viewBox="0 0 340 140" role="img" aria-label="Flush spinning disc set into the bed dragging marbles sideways into a rail">
+        <use href="#bedg"/>
+        <circle cx="170" cy="70" r="52" fill="#8fd3d8" stroke="#0e7c86" stroke-width="3"/>
+        <path d="M170 30 A40 40 0 0 1 206 54" fill="none" stroke="#0e7c86" stroke-width="3" marker-end="url(#ar)"/>
+        <circle cx="150" cy="46" r="7" fill="#17243b"/>
+        <path d="M60 70 C100 70 130 62 148 50" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 3"/>
+        <path d="M158 42 C190 26 210 22 250 20" fill="none" stroke="#8b97a8" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+        <circle cx="54" cy="70" r="7" fill="#17243b"/>
+      </svg>
+      <h3><b>15</b>Rotating turntable</h3>
+      <p>A disc set flush into the bed, spinning slowly. It drags whatever lands on it sideways into a rail or across a lane divider. Calm to watch, vicious.</p>
+      <p class="spec">ω ≈ 1.2 rad/s · friction 0.6 · flush within a millimetre</p>
+    </div>
+  </div>
+
+  <h2>Build order</h2>
+  <table>
+    <thead><tr><th>Step</th><th>Modules</th><th>Why this order</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>Diamond pin field, rumble strip</td><td>Biggest change in race character, zero architectural cost</td></tr>
+      <tr><td>B</td><td>Shape union → cylinder posts, wave section</td><td>One refactor, then two modules land cheaply</td></tr>
+      <tr><td>C</td><td>Progress hardening → vortex bowl</td><td>Widest blast radius: it rewrites what ranking and the camera read</td></tr>
+      <tr><td>D</td><td>Motion function → windmill, traffic gates</td><td>New machinery; needs the frame-index contract first</td></tr>
+      <tr><td>E</td><td>Tuning and coverage</td><td>Last, so it runs against finished geometry</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Three constraints that decide the tiers</strong>
+    <ol>
+      <li>The replay records marble transforms only, so any moving part must be a pure function of frame index shared by the simulation and the renderer — otherwise playback desyncs from the race that was run.</li>
+      <li>Colliders are cuboid-only today. Everything round costs one discriminated-union refactor across <code>definition.ts</code>, <code>colliders.ts</code> and <code>createRaceScene.ts</code>.</li>
+      <li><code>trackStress.test.ts</code> asserts marbles stay under 0.6 m above the bed and inside <code>halfWidth + 1.2</code>. Modules 6, 8 and 9 break that by design and need a per-section allowance, not a global relaxation.</li>
+    </ol>
+  </div>
+</main>
+</body>
+</html>

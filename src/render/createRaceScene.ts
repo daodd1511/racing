@@ -17,6 +17,21 @@ const TRACK_COLORS: Record<TrackBox["kind"], number> = {
   rumble: 0xf6c944,
 };
 
+function meshGeometryForShape(shape: TrackBox["shape"]): THREE.BufferGeometry {
+  switch (shape.kind) {
+    case "cuboid":
+      return new THREE.BoxGeometry(
+        shape.halfExtents[0] * 2,
+        shape.halfExtents[1] * 2,
+        shape.halfExtents[2] * 2,
+      );
+    case "cylinder":
+      return new THREE.CylinderGeometry(shape.radius, shape.radius, shape.halfHeight * 2, 20);
+    case "ball":
+      return new THREE.SphereGeometry(shape.radius, 20, 16);
+  }
+}
+
 function createPatternTexture(style: MarbleStyle): THREE.CanvasTexture {
   const surface = document.createElement("canvas");
   surface.width = 256;
@@ -237,11 +252,7 @@ export function createRaceScene(
   materials.push(surfaceMaterial);
 
   for (const box of track.boxes) {
-    const geometry = new THREE.BoxGeometry(
-      box.halfExtents[0] * 2,
-      box.halfExtents[1] * 2,
-      box.halfExtents[2] * 2,
-    );
+    const geometry = meshGeometryForShape(box.shape);
     const material = new THREE.MeshStandardMaterial({
       color: TRACK_COLORS[box.kind],
       emissive: box.kind === "side-rail" ? 0x351008 : box.kind === "pin" ? 0x063d42 : 0x493400,

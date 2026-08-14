@@ -2,6 +2,21 @@ import RAPIER from "@dimforge/rapier3d-compat";
 
 import type { TrackBox, TrackDefinition } from "./definition";
 
+function colliderDescForShape(box: TrackBox): RAPIER.ColliderDesc {
+  switch (box.shape.kind) {
+    case "cuboid":
+      return RAPIER.ColliderDesc.cuboid(
+        box.shape.halfExtents[0],
+        box.shape.halfExtents[1],
+        box.shape.halfExtents[2],
+      );
+    case "cylinder":
+      return RAPIER.ColliderDesc.cylinder(box.shape.halfHeight, box.shape.radius);
+    case "ball":
+      return RAPIER.ColliderDesc.ball(box.shape.radius);
+  }
+}
+
 function attachBoxCollider(world: RAPIER.World, box: TrackBox): void {
   const rigidBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.fixed()
@@ -13,11 +28,7 @@ function attachBoxCollider(world: RAPIER.World, box: TrackBox): void {
         w: box.rotation[3],
       }),
   );
-  const collider = RAPIER.ColliderDesc.cuboid(
-    box.halfExtents[0],
-    box.halfExtents[1],
-    box.halfExtents[2],
-  )
+  const collider = colliderDescForShape(box)
     .setRestitution(box.material.restitution)
     .setFriction(box.material.friction);
 

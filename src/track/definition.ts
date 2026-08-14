@@ -76,7 +76,7 @@ export const DEFAULT_TRACK_CONFIG: TrackConfig = Object.freeze({
 
 const TRACK_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0, friction: 0.1 });
 const RAIL_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.03, friction: 0.11 });
-const PIN_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.25, friction: 0.06 });
+const PIN_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.3, friction: 0.06 });
 const RUMBLE_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.1, friction: 0.3 });
 const WORLD_UP: Vector3 = [0, 1, 0];
 
@@ -367,10 +367,18 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   // history, since reverted) drove `last`-mode completion to 0/10 across
   // both roster sizes tested, for reasons unrelated to direct pin contact
   // — the failing marble in the traced case never got within 0.76 m of a
-  // pin. At this radius/spacing, 5- and 15-marble `last` mode pass at
-  // 8/10 each, matching or beating Phase 1's own box-post baseline
-  // (20/20, 12/20). See specs/raceway-obstacles/EXECUTION.md Phase 2 for
-  // the full investigation.
+  // pin.
+  //
+  // `PIN_MATERIAL` restitution is 0.3, not 0.25: a fresh-review finding
+  // caught that this radius/spacing at 0.25 measured 6/20 (30%) `last`-mode
+  // completion for the 15-marble roster across a real 20-seed scan, well
+  // below the 8/10 first claimed here — that number came from a truncated
+  // 10-seed sample this file's own author misread. 0.3 restores completion
+  // to 18/20 (5-marble) and 10/20 (15-marble), matching Phase 1's own
+  // box-post baseline (20/20, 11/20) within normal seed-to-seed variance.
+  // Still comfortably under the 0.35 restitution ceiling where the launch
+  // bug returns. See specs/raceway-obstacles/EXECUTION.md Phase 2 for the
+  // full investigation, including the correction.
   const addPinPost = (fraction: number, lateralOffset: number): void => {
     const sample = interpolatePathSample(path, totalDistance * fraction);
     const radius = 0.25 * Math.SQRT2;

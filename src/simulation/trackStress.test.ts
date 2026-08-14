@@ -230,26 +230,33 @@ describe("default track completion coverage", () => {
       const highestClearance = clearanceObservations.reduce((highest, observation) =>
         observation.clearance > highest.clearance ? observation : highest,
       );
-      // 0.55 m, not a tighter number — two independent, understood sources of
-      // clearance, neither a defect:
-      // 1. The course has four waypoints (2, 5, 8, 9 in COURSE_WAYPOINTS)
-      //    with a comparably sharp ~70-74 degree turn, the "S-curve"
-      //    character the course is designed around. A marble fast enough
-      //    over one of these leaves the surface briefly, the way a car
-      //    catches air cresting a hill taken too fast. Confirmed the peak
-      //    for the 5-marble roster (0.41 m, at waypoint 8).
-      // 2. For the 15-marble roster, the peak (0.46 m) instead traces to the
-      //    pin field itself — marbles bouncing through consecutive rows
-      //    briefly separate from the bed between contacts, not a single
-      //    crest. This is the field doing its job (scattering the pack) at
-      //    a cost in vertical clearance, not the course-turn phenomenon.
-      // Rounding the four sharp turns to close (1) further would reshape
-      // the course's visual character and was explicitly declined; margin
-      // above the observed 0.46 m is real but not large (0.09 m) — a future
-      // change to pin restitution/spacing or the seed pool could move this
-      // and should be re-diagnosed against both sources above, not assumed
-      // to be the course turns. See specs/raceway-obstacles/EXECUTION.md
-      // Phase 1 for the full investigation.
+      // 0.55 m, not a tighter number. Two numbers matter here and this
+      // assertion only ever sees the coarser one — keep them straight:
+      //
+      // - What this assertion actually samples (every 90th frame, as
+      //   coded above): 0.269 m for the 5-marble CASES, 0.335 m for the
+      //   15-marble CASES, both around progress fraction 0.185-0.188 —
+      //   just past the rumble strip (fractions 0.185-0.195), still
+      //   descending from residual air time caught clearing the bars
+      //   (rumble boxes are already 2-4 m behind by the sampled frame;
+      //   pin-field boxes, fractions 0.20-0.26, are 3-4 m ahead and not
+      //   yet reached — neither is the nearest object at the peak).
+      //   Comfortable margin under 0.55 m either way.
+      // - The true physical peak, found only by scanning every frame
+      //   (not what this assertion checks, but the honest worst case):
+      //   0.41 m for the 5-marble roster, at course fraction ~0.68 —
+      //   COURSE_WAYPOINTS index 8, the sharpest of four ~70-74 degree
+      //   turns (indices 2, 5, 8, 9) that give the course its S-curve
+      //   character. A marble fast enough over one leaves the surface
+      //   briefly, the way a car catches air cresting a hill taken too
+      //   fast — not a defect. 0.46 m for the 15-marble roster; margin
+      //   above that true peak is real but not large (0.09 m).
+      //
+      // Rounding all four sharp turns to close the gap further would
+      // reshape the course's visual character and was explicitly
+      // declined in favour of this looser, evidence-based bound. See
+      // specs/raceway-obstacles/EXECUTION.md Phase 1 for the full
+      // investigation, including two reverted fix attempts.
       expect(
         highestClearance.clearance,
         `maximum obstacle-section gap at frame ${highestClearance.frame.index}`,

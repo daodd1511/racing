@@ -18,10 +18,23 @@ that predates this spec.
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — parked (2026-08-15)
 - Phase 1 — Static modules: done
 - Phase 2 — Shape union: done
-- Phase 3 — Progress hardening and the vortex bowl: pending
+- Phase 3 — Progress hardening and the vortex bowl: parked — the
+  monotone-progress mechanism (item 1) is done and committed cleanly. The
+  bowl geometry (item 2) is not: six independently-verified fixes landed
+  (fraction-drift, curvature sampling, Catmull-Rom "before"-reference
+  mismatch, banking-ceiling discontinuity, a buffer transition span, and
+  correcting genuinely self-intersecting bed geometry at full width), none
+  resolved race completion (0/10 across seeds 0-9). This reads as a
+  structural mismatch — a correctly-narrow, meaningfully-banked spiral
+  doesn't reliably hold even a solo marble — not a fixable parameter.
+  Parked on the `raceway-obstacles/phase-3-vortex-bowl` branch (commit
+  `bb66cf9`, `WIP: parked 2026-08-15`) at the user's direction, to
+  reconsider the bowl's mechanism at the plan level rather than continue
+  iterating on parameters. Next step: revisit via `spec-plan`, not a resumed
+  `spec-phase` session — this needs a design decision, not more execution.
 - Phase 4 — Deterministic motion: pending
 - Phase 5 — Tuning and coverage: pending
 - Verification debt: none

@@ -10,12 +10,13 @@ import type {
   TransformFrame,
 } from "../race/types";
 import { attachTrackColliders } from "../track/colliders";
+import { createTrackDefinition, DEFAULT_TRACK_CONFIG } from "../track/definition";
 import {
-  createTrackDefinition,
-  DEFAULT_TRACK_CONFIG,
-  type TrackDefinition,
-} from "../track/definition";
-import { hasCrossedFinish, measureTrackProgress } from "../track/progress";
+  createProgressTracker,
+  hasCrossedFinish,
+  measureTrackProgress,
+  type ProgressTracker,
+} from "../track/progress";
 import { assertRapierInitialized } from "./initializeRapier";
 
 interface MarbleBody {
@@ -115,8 +116,7 @@ function recordContactEvents(
 
 function createFinalRanking(
   finishFrameByMarbleIndex: readonly (number | null)[],
-  finalFrame: TransformFrame,
-  track: TrackDefinition,
+  progressTracker: ProgressTracker,
 ): number[] {
   return Array.from(
     { length: finishFrameByMarbleIndex.length },
@@ -137,8 +137,10 @@ function createFinalRanking(
       return 1;
     }
 
-    const leftProgress = measureTrackProgress(track, finalFrame.transforms[left].position);
-    const rightProgress = measureTrackProgress(track, finalFrame.transforms[right].position);
+    // Best progress ever reached, not just wherever the final frame happens
+    // to catch them — the tracker's clamped value, not a fresh reading.
+    const leftProgress = progressTracker.currentProgress(left);
+    const rightProgress = progressTracker.currentProgress(right);
 
     return rightProgress - leftProgress || left - right;
   });
@@ -168,6 +170,7 @@ export function simulateRace(
     () => null,
   );
   const finishOrder: number[] = [];
+  const progressTracker = createProgressTracker(roster.length);
 
   try {
     world.timestep = DEFAULT_RACE_CONFIG.fixedTimeStepSeconds;
@@ -190,6 +193,12 @@ export function simulateRace(
         transforms: Object.freeze(transforms),
       });
       frames.push(frame);
+      for (let marbleIndex = 0; marbleIndex < transforms.length; marbleIndex += 1) {
+        progressTracker.update(
+          marbleIndex,
+          measureTrackProgress(track, transforms[marbleIndex].position),
+        );
+      }
       contactEvents.push(
         ...recordContactEvents(
           eventQueue,
@@ -224,7 +233,7 @@ export function simulateRace(
               finishFrameByMarbleIndex: Object.freeze([...finishFrameByMarbleIndex]),
               finishOrder: Object.freeze([...finishOrder]),
               finalRanking: Object.freeze(
-                createFinalRanking(finishFrameByMarbleIndex, frame, track),
+                createFinalRanking(finishFrameByMarbleIndex, progressTracker),
               ),
               selectedMarbleIndex,
               selectionFrameIndex: frameIndex,

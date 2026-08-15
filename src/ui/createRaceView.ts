@@ -7,7 +7,7 @@ import {
   DEFAULT_TRACK_CONFIG,
   type TrackDefinition,
 } from "../track/definition";
-import { measureTrackProgress } from "../track/progress";
+import { createProgressTracker, measureTrackProgress, type ProgressTracker } from "../track/progress";
 
 export interface RaceView {
   start(): void;
@@ -58,15 +58,29 @@ function createLineup(roster: readonly string[], styles: readonly MarbleStyle[])
   return lineup;
 }
 
+// Playback only ever moves forward through frames (createReplayController has
+// no scrubbing), so a running-max tracker updated once per newly-reached
+// frame stays valid — see src/track/progress.ts's ProgressTracker for why
+// this must be clamped at all (tight radii, i.e. the vortex bowl, make small
+// projection errors read as backward movement, which would flicker the
+// leaderboard).
 function rankAtFrame(
   recording: RaceRecording,
   track: TrackDefinition,
+  progressTracker: ProgressTracker,
   frameIndex: number,
 ): readonly number[] {
   const frame = recording.frames[frameIndex];
 
   if (frame === undefined) {
     return recording.finalRanking;
+  }
+
+  for (let marbleIndex = 0; marbleIndex < recording.roster.length; marbleIndex += 1) {
+    const position = frame.transforms[marbleIndex]?.position;
+    if (position !== undefined) {
+      progressTracker.update(marbleIndex, measureTrackProgress(track, position));
+    }
   }
 
   return Array.from({ length: recording.roster.length }, (_, marbleIndex) => marbleIndex).sort(
@@ -86,15 +100,8 @@ function rankAtFrame(
         return 1;
       }
 
-      const leftPosition = frame.transforms[left]?.position;
-      const rightPosition = frame.transforms[right]?.position;
-
-      if (leftPosition === undefined || rightPosition === undefined) {
-        return left - right;
-      }
-
-      const leftProgress = measureTrackProgress(track, leftPosition);
-      const rightProgress = measureTrackProgress(track, rightPosition);
+      const leftProgress = progressTracker.currentProgress(left);
+      const rightProgress = progressTracker.currentProgress(right);
 
       return rightProgress - leftProgress || left - right;
     },
@@ -180,9 +187,10 @@ export function createRaceView(
   let started = false;
   let disposed = false;
   const completionListeners = new Set<() => void>();
+  const progressTracker = createProgressTracker(recording.roster.length);
 
   function updateLeaderboard(frameIndex: number): void {
-    const ranking = rankAtFrame(recording, track, frameIndex);
+    const ranking = rankAtFrame(recording, track, progressTracker, frameIndex);
     const completed = new Set(
       recording.finishOrder.filter((marbleIndex) => {
         const finishFrame = recording.finishFrameByMarbleIndex[marbleIndex];

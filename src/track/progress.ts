@@ -79,6 +79,39 @@ export function measureTrackProgress(track: TrackDefinition, position: Vector3):
   return nearestProgress;
 }
 
+export interface ProgressTracker {
+  /** Records a freshly measured progress reading and returns the clamped
+   * (non-decreasing) value: `max(previousProgress, rawProgress)`. */
+  update(marbleIndex: number, rawProgress: number): number;
+  /** The most recent clamped value for a marble, without taking a new
+   * reading. Returns 0 for a marble that has never been updated. */
+  currentProgress(marbleIndex: number): number;
+}
+
+// Tight radii (the vortex bowl, in particular) make small projection errors
+// in `measureTrackProgress` read as backward movement — a marble that hasn't
+// actually reversed can measure a lower progress on one frame than the last.
+// A leaderboard, camera target, or finish ranking built on raw readings would
+// flicker backwards. This clamp is the general safety net PLAN.md calls for:
+// callers needing a monotone reading track it themselves via a
+// `ProgressTracker`, one per race, keyed by marble index — `measureTrackProgress`
+// itself stays pure. Safe only for callers that visit frames in non-decreasing
+// order (true of both the live simulation loop and forward-only replay
+// playback; neither supports scrubbing backward).
+export function createProgressTracker(marbleCount: number): ProgressTracker {
+  const maxProgressByMarble = new Array<number>(marbleCount).fill(0);
+  return {
+    update(marbleIndex, rawProgress) {
+      const clamped = Math.max(maxProgressByMarble[marbleIndex] ?? 0, rawProgress);
+      maxProgressByMarble[marbleIndex] = clamped;
+      return clamped;
+    },
+    currentProgress(marbleIndex) {
+      return maxProgressByMarble[marbleIndex] ?? 0;
+    },
+  };
+}
+
 export function sampleTrackPath(track: TrackDefinition, progress: number): TrackPathSample {
   const bounded = Math.max(0, Math.min(track.path.at(-1)?.distance ?? 0, progress));
   let upperIndex = track.path.findIndex((sample) => sample.distance >= bounded);

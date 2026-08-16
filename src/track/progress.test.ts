@@ -103,3 +103,32 @@ describe("createProgressTracker", () => {
     }
   });
 });
+
+describe("measureTrackProgress inside the vortex bowl", () => {
+  it("advances progress monotonically with descent depth from rim to drain", () => {
+    const bowl = track.bowl;
+    const samples = 10;
+    let previous = Number.NEGATIVE_INFINITY;
+
+    for (let step = 0; step <= samples; step += 1) {
+      const y = bowl.rimY - (bowl.rimY - bowl.drainY) * (step / samples);
+      const position = [bowl.center[0], y, bowl.center[2]] as const;
+      const progress = measureTrackProgress(track, position);
+
+      expect(progress).toBeGreaterThanOrEqual(previous);
+      previous = progress;
+    }
+    expect(previous).toBeCloseTo(bowl.entryDistance + bowl.bridgeLength, 1);
+  });
+
+  it("resumes normal nearest-segment projection once clear of the bowl", () => {
+    const bowl = track.bowl;
+    const exitDistance = bowl.entryDistance + bowl.bridgeLength;
+    const farSample = track.path.find((sample) => sample.distance > exitDistance + 10);
+
+    expect(farSample).toBeDefined();
+    const progress = measureTrackProgress(track, farSample!.position);
+
+    expect(progress).toBeCloseTo(farSample!.distance, 1);
+  });
+});

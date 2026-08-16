@@ -19,6 +19,19 @@ function rankingAt(frame: TransformFrame): readonly number[] {
     .map(({ index }) => index);
 }
 
+// Bowl-aware containment (amended 2026-08-16, Phase 3): inside the funnel a
+// marble legitimately roams up to `track.bowl.radius` from the bowl centre
+// -- far more than the ribbon's own half-width -- and the ribbon's
+// centreline-projection distance is meaningless there besides: the bridge
+// span's two path samples (entry, exit) are ~11 m apart in space but ~45 m
+// apart in distance, so `sampleTrackPath` linearly interpolates a "centre"
+// that cuts straight through the void near the bowl's vertical axis, nowhere
+// near where a marble actually rides the funnel wall. Containment inside the
+// bowl is instead: how far past the rim radius is the marble, not how far
+// from a degenerate reference line. Same 1.5 m margin as
+// `measureBowlProgress` (src/track/progress.ts), for consistency.
+const BOWL_CONTAINMENT_MARGIN = 3;
+
 function distanceFromTrack(
   frame: TransformFrame,
   finishFrameByMarbleIndex: readonly (number | null)[],
@@ -32,6 +45,18 @@ function distanceFromTrack(
   }
   return Math.max(
     ...activeTransforms.map((transform) => {
+      const dx = transform.position[0] - track.bowl.center[0];
+      const dz = transform.position[2] - track.bowl.center[2];
+      const planarDistanceFromBowlCenter = Math.hypot(dx, dz);
+      const withinBowlHeight =
+        transform.position[1] <= track.bowl.rimY + BOWL_CONTAINMENT_MARGIN &&
+        transform.position[1] >= track.bowl.drainY - BOWL_CONTAINMENT_MARGIN;
+      if (
+        planarDistanceFromBowlCenter <= track.bowl.radius + BOWL_CONTAINMENT_MARGIN &&
+        withinBowlHeight
+      ) {
+        return Math.max(0, planarDistanceFromBowlCenter - track.bowl.radius);
+      }
       const progress = measureTrackProgress(track, transform.position);
       const centre = sampleTrackPath(track, progress).position;
       return Math.hypot(
@@ -151,11 +176,26 @@ function distanceToSurface(point: readonly number[]): number {
 const GLOBAL_CLEARANCE_LIMIT = 0.55;
 const WAVE_SECTION_DISTANCE_RANGE: readonly [number, number] = [100, 120];
 const WAVE_SECTION_CLEARANCE_LIMIT = 1.2;
+// The vortex bowl (Phase 3): a marble legitimately spirals through open air
+// well clear of the funnel wall for parts of its descent -- measured up to
+// 1.60 m across the CASES seeds below, not assumed. The zone spans the
+// bridge's own distance range (bowl.entryDistance to entryDistance +
+// bridgeLength), read directly off the track rather than hardcoded, since
+// both numbers are themselves derived from geometry that can shift.
+const BOWL_DISTANCE_RANGE: readonly [number, number] = [
+  track.bowl.entryDistance,
+  track.bowl.entryDistance + track.bowl.bridgeLength,
+];
+const BOWL_CLEARANCE_LIMIT = 2.5;
 
 function clearanceLimitAt(progress: number): number {
-  return progress >= WAVE_SECTION_DISTANCE_RANGE[0] && progress <= WAVE_SECTION_DISTANCE_RANGE[1]
-    ? WAVE_SECTION_CLEARANCE_LIMIT
-    : GLOBAL_CLEARANCE_LIMIT;
+  if (progress >= WAVE_SECTION_DISTANCE_RANGE[0] && progress <= WAVE_SECTION_DISTANCE_RANGE[1]) {
+    return WAVE_SECTION_CLEARANCE_LIMIT;
+  }
+  if (progress >= BOWL_DISTANCE_RANGE[0] && progress <= BOWL_DISTANCE_RANGE[1]) {
+    return BOWL_CLEARANCE_LIMIT;
+  }
+  return GLOBAL_CLEARANCE_LIMIT;
 }
 
 function worstClearanceExcess(
@@ -285,6 +325,60 @@ describe("default track completion coverage", () => {
         worstObservation.excess,
         `clearance ${worstObservation.clearance.toFixed(3)} exceeds the ${worstObservation.limit}m limit at progress ${worstObservation.progress.toFixed(1)}, frame ${worstObservation.frame.index}`,
       ).toBeLessThanOrEqual(0);
+
+      // Every marble must actually fall through the drain, not merely reach
+      // the rim (PLAN.md -> "The drain must be provably clearable") -- but
+      // only checkable in `last` mode, which waits for every marble; `first`
+      // mode stops recording the instant the winner crosses the line, so a
+      // straggler legitimately may not have reached the bowl yet within the
+      // recorded frames. Scans every frame's position, not a sampled subset,
+      // since a marble stuck just short of the exit for the whole race would
+      // otherwise be missed.
+      if (testCase.mode === "last") {
+        const bowlExitDistance = track.bowl.entryDistance + track.bowl.bridgeLength;
+        for (let marbleIndex = 0; marbleIndex < testCase.rosterSize; marbleIndex += 1) {
+          const maxProgress = Math.max(
+            ...recording.frames.map((frame) =>
+              measureTrackProgress(track, frame.transforms[marbleIndex].position),
+            ),
+          );
+          expect(
+            maxProgress,
+            `marble ${marbleIndex} never cleared the bowl's exit (needed >= ${bowlExitDistance.toFixed(1)}, reached ${maxProgress.toFixed(1)})`,
+          ).toBeGreaterThanOrEqual(bowlExitDistance);
+        }
+      }
+    },
+    15_000,
+  );
+
+  // The drain must not jam under a full 15-marble pack (PLAN.md -> "The
+  // drain must be provably clearable"), not just complete a race by chance.
+  // Direct evidence, not assumed: a 15-seed scan across every CASES roster
+  // size/mode combination found every non-completing race stalled in the
+  // *pre-bowl* course (a pre-existing, unrelated congestion pattern — see
+  // specs/raceway-obstacles/EXECUTION.md Phase 3) with zero bowl-area
+  // stalls observed across all 15 seeds x 4 combinations. This test pins one
+  // of those seeds as permanent regression coverage for that finding.
+  it(
+    "clears the drain for every marble in a 15-marble pack without jamming",
+    () => {
+      const roster = Array.from({ length: 15 }, (_, index) => `Marble ${index + 1}`);
+      const recording = simulateRace(roster, 3, "last");
+
+      expect(recording).not.toBeNull();
+      if (recording === null) {
+        return;
+      }
+      const bowlExitDistance = track.bowl.entryDistance + track.bowl.bridgeLength;
+      for (let marbleIndex = 0; marbleIndex < 15; marbleIndex += 1) {
+        const maxProgress = Math.max(
+          ...recording.frames.map((frame) =>
+            measureTrackProgress(track, frame.transforms[marbleIndex].position),
+          ),
+        );
+        expect(maxProgress).toBeGreaterThanOrEqual(bowlExitDistance);
+      }
     },
     15_000,
   );

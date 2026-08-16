@@ -28,8 +28,16 @@ function rankingAt(frame: TransformFrame): readonly number[] {
 // that cuts straight through the void near the bowl's vertical axis, nowhere
 // near where a marble actually rides the funnel wall. Containment inside the
 // bowl is instead: how far past the rim radius is the marble, not how far
-// from a degenerate reference line. Same 1.5 m margin as
-// `measureBowlProgress` (src/track/progress.ts), for consistency.
+// from a degenerate reference line.
+//
+// Deliberately looser than measureBowlProgress's own margin (1 m,
+// src/track/progress.ts) -- the two guard different things. That margin
+// bounds how far a position can sit from the volume before its progress
+// reading reverts to nearest-segment projection, and a wide margin there
+// risks corrupting a position that was never really inside the bowl. This
+// one just tolerates a marble's normal physical drift past the rim radius
+// before flagging it as having left the track outright, where a tighter
+// bound would produce false positives on ordinary bowl-edge motion.
 const BOWL_CONTAINMENT_MARGIN = 3;
 
 function distanceFromTrack(

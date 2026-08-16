@@ -18,25 +18,32 @@ that predates this spec.
 
 ## STATUS
 
-- Current phase: 3 — parked (2026-08-15)
+- Current phase: 3 — in-progress (re-planned 2026-08-15)
 - Phase 1 — Static modules: done
 - Phase 2 — Shape union: done
-- Phase 3 — Progress hardening and the vortex bowl: parked — the
-  monotone-progress mechanism (item 1) is done and committed cleanly. The
-  bowl geometry (item 2) is not: six independently-verified fixes landed
-  (fraction-drift, curvature sampling, Catmull-Rom "before"-reference
-  mismatch, banking-ceiling discontinuity, a buffer transition span, and
-  correcting genuinely self-intersecting bed geometry at full width), none
-  resolved race completion (0/10 across seeds 0-9). This reads as a
-  structural mismatch — a correctly-narrow, meaningfully-banked spiral
-  doesn't reliably hold even a solo marble — not a fixable parameter.
-  Parked on the `raceway-obstacles/phase-3-vortex-bowl` branch (commit
-  `bb66cf9`, `WIP: parked 2026-08-15`) at the user's direction, to
-  reconsider the bowl's mechanism at the plan level rather than continue
-  iterating on parameters. Next step: revisit via `spec-plan`, not a resumed
-  `spec-phase` session — this needs a design decision, not more execution.
+- Phase 3 — Progress hardening and the vortex bowl: in-progress — item 1
+  (monotone-progress mechanism) is done and committed cleanly. Item 2 (bowl
+  geometry) was parked 2026-08-15 after six independently-verified fixes to a
+  tight descending-spiral centreline still left it unable to complete even a
+  solo-marble race (0/10 across seeds 0-9) — a structural mismatch, not a
+  fixable parameter (parked commit `bb66cf9` on
+  `raceway-obstacles/phase-3-vortex-bowl`). Re-planned the same day per
+  PLAN.md → "The bowl is a real funnel, bridged out of the centreline": the
+  bowl is now a real funnel (revolved cone emitted into the existing
+  `TrackSurface` trimesh, ~3-marble-diameter centre drain) with a virtual
+  bridge span and a depth-advancing bounding-volume case in
+  `measureTrackProgress`, replacing the spiral-ribbon approach outright.
+  Checklist items 2-8 rewritten to match; the parked spiral code
+  (`generateSpiralWaypoints`/`BOWL_*`/`RETURN_LOOP_*`/`FINISH_STRAIGHT_*`)
+  is superseded and gets removed as part of item 2, not carried forward.
+  Resume via `spec-phase` from item 2.
 - Phase 4 — Deterministic motion: pending
-- Phase 5 — Tuning and coverage: pending
+- Phase 5 — Obstacle distribution: pending (added 2026-08-15 — obstacles are
+  all hand-placed and cluster in 20 m of a ~255 m course; sits before tuning
+  because it moves every one of them. Also carries the ≥0.15 grade assertion,
+  the regression guard for the 0.067-grade finish straight that made marbles
+  visibly decelerate into the line.)
+- Phase 6 — Tuning and coverage: pending (was Phase 5)
 - Verification debt: none
 
 ## Phase 1 — Static modules
@@ -129,26 +136,34 @@ if it's descoped mid-phase, stop and ask rather than quietly shipping the
 spec without it.
 
 Consumes: `TrackBox` shape union, `attachBoxCollider` switch (Phase 2).
-Produces: monotone-progress mechanism in `src/track/progress.ts`; coiled
-`COURSE_WAYPOINTS` spiral forming the vortex bowl in
-`src/track/definition.ts`; the bowl's exit-fraction constant, consumed by
-Phase 5's tuning coverage.
+Produces: monotone-progress mechanism in `src/track/progress.ts`; revolved
+funnel triangles in the existing `TrackSurface` trimesh, bowl bounding volume,
+and virtual bridge span in `src/track/definition.ts`; a depth-advancing
+bounding-volume case in `measureTrackProgress` (`src/track/progress.ts`); the
+bowl's exit-fraction constant, consumed by Phase 5's tuning coverage.
+`trackHalfWidthAtDistance` reverts to `(config, distance)` — the two-parameter
+signature — across all 5 call sites when the spiral's bed narrowing is removed.
 
 Fresh review: required — this rewrites the measurement the live leaderboard,
 camera target, final ranking, and finish detection all read (PLAN.md →
-"The bowl is a spiral centreline, not an exception to the centreline").
+"The bowl is a real funnel, bridged out of the centreline").
 
 - [x] Add a monotone-progress mechanism in `src/track/progress.ts` — `createProgressTracker()`, a stateful wrapper clamping each marble's progress to `max(previousProgress, measureTrackProgress(...))`, keyed by marble index. `measureTrackProgress` itself stays pure. Wired into `src/simulation/simulateRace.ts` (a per-frame update loop added for every marble; `createFinalRanking` now reads the tracker's clamped value instead of a fresh reading off the final frame) and `src/ui/createRaceView.ts` (`rankAtFrame` updates the tracker for every marble before sorting). Both consumers only ever visit frames in non-decreasing order (simulation's own loop; replay has no scrubbing, confirmed by reading `createReplayController.ts`), which is what makes a single running-max tracker safe for each. Coverage in `src/track/progress.test.ts`: direct clamp-mechanism tests (forced dip, independent marbles, zero start) plus an end-to-end test walking the *existing* (pre-spiral) course with lateral wobble, proving non-decreasing output before anything depends on it. Scope note: `cameraTarget.ts` also reads progress per-frame and PLAN.md names it as a corrupted consumer, but it wasn't in this item's file list and wiring it would need a public-interface change to `cameraTarget.ts`/`createRaceScene.ts` not required for this item's own coverage — left unwired; flagged here rather than silently expanded or silently dropped.
-- [ ] Coil `COURSE_WAYPOINTS` in `src/track/definition.ts` into a descending spiral of ~2.5 turns forming the 8 m vortex bowl (`OBSTACLE-IDEAS.md` module 9); raise `samplesPerSpan` and `maximumBankRadians` locally for the spiral's waypoint spans only (not the global `DEFAULT_TRACK_CONFIG` values); slope the bowl floor toward the drain so no flat resting point exists.
-- [ ] Build the bowl's rim wall using the Phase 2 shape union; size the drain opening to ≥ 6 marble diameters (`DEFAULT_TRACK_CONFIG.marbleRadius * 2 * 6`) so it is provably clearable (PLAN.md → "The drain must be provably clearable").
-- [ ] Add coverage: `src/track/definition.test.ts` for spiral mesh continuity (no degenerate/faceted triangles at the tightest radius) and drain sizing; `src/simulation/trackStress.test.ts` asserting progress is non-decreasing for every marble across a 15-marble run in both modes, every marble's progress passes the bowl's exit fraction, and containment holds through the coil.
+- [ ] (revised 2026-08-15 — supersedes the parked spiral approach) Remove the coiled-spiral `COURSE_WAYPOINTS` construction from `src/track/definition.ts` (parked commit `bb66cf9`): `generateSpiralWaypoints`, `SpiralWaypoints`, `BOWL_RADIUS`/`BOWL_TURNS`/`BOWL_SAMPLES_PER_TURN`/`BOWL_DROP`/`BOWL_SAMPLES_PER_SPAN`/`BOWL_MAXIMUM_BANK_RADIANS`/`BANK_CEILING_TRANSITION_SAMPLES`/`BOWL_HALF_WIDTH`/`BOWL_WIDTH_TRANSITION_METERS`, `RETURN_LOOP_*`, `FINISH_STRAIGHT_*`, `BUFFER_*`, `isBowlSpan`/`samplesForSpan`/`sampleIndexAtSpanStart`, and the bowl branches in `createPath` (the `virtualPointBeforeEntry` `before`-reference case and the `bowlBankBlend` ceiling blend). Revert `trackHalfWidthAtDistance` to `(config, distance)` at all 5 call sites — the bed no longer narrows anywhere. Superseded by PLAN.md → "The bowl is a real funnel, bridged out of the centreline".
+- [ ] Emit the funnel as a revolved cone appended to the existing `TrackSurface` trimesh in `createTrackDefinition` (`src/track/definition.ts`) — extra entries in the same `surfaceVertices`/`surfaceIndices` arrays, indices offset by the ribbon's existing vertex count. Not `TrackBox` panels: the surface trimesh already feeds both `RAPIER.ColliderDesc.trimesh` (`src/track/colliders.ts`) and `THREE.Float32BufferAttribute` (`src/render/createRaceScene.ts`), so physics and render stay in sync for free and there are no azimuthal seam lips to catch a marble (PLAN.md → "Funnel geometry: revolved triangles in the existing trimesh, not panels"). Ring and radial segment counts must keep the facet chord well under `DEFAULT_TRACK_CONFIG.marbleRadius` (0.35 m). Circular centre drain at ~3 marble diameters (2.1 m), exit chute dropping away steeply enough that gravity always has somewhere to take a marble.
+- [ ] Add a virtual bridge span to the centreline in `src/track/definition.ts`: two new waypoints — bowl entry (at the rim, where the ribbon ends) and bowl exit (below the drain, where the ribbon resumes) — with no path samples generated between them. Both geometry loops in `createTrackDefinition` must skip this waypoint pair: the surface-index loop (`definition.ts:561`) and the side-rail loop (`definition.ts:569`, whose `segmentLength / 2 + 0.35` half-extent would otherwise build a rail box the full length of the bridge, floating through the funnel). `attachTrackColliders` needs no change — it only consumes `surface` and `boxes`. The span's distance cost is derived from the funnel's physical diameter and drop, not the straight-line waypoint distance, so downstream `totalDistance`-derived placement (pin field, rumble strip, the bowl's own exit-fraction constant) stays consistent.
+- [ ] Give the bowl a bounding volume (centre, radius, rim Y, drain Y) in `src/track/definition.ts`, and add a case to `measureTrackProgress` in `src/track/progress.ts`: a position inside the volume returns `bridgeEntryDistance + bridgeSpanLength * clamp01((rimY - y) / (rimY - drainY))` — advancing with descent depth, *not* a flat value, which would tie every marble in the bowl and let the marble-index tiebreak in `createFinalRanking`/`rankAtFrame` re-sort the leaderboard into roster order (PLAN.md → "Progress while inside the bowl"). A position outside the volume is unchanged. Add the bowl's exit-fraction constant, consumed by Phase 5.
+- [ ] Add a build-time assertion in `src/track/definition.test.ts`: no path sample outside the bridge span lies within the bowl's bounding volume, with margin. The course doubles back in XZ while descending, and a ribbon segment inside the volume would teleport a marble there to the bridge distance — which the monotone tracker then makes permanent and unrecoverable (PLAN.md → "The bounding volume must not swallow unrelated track").
+- [ ] Add coverage: `src/track/definition.test.ts` for funnel facet-chord size and drain sizing; `src/track/progress.test.ts` for the bounding-volume case (depth advances progress monotonically from rim to drain; at/after the exit point normal projection resumes); `src/simulation/trackStress.test.ts` asserting progress is non-decreasing for every marble across a 15-marble run in both modes, every marble's progress passes the bowl's exit fraction (measured past the exit point, not merely reaching the rim), and containment holds at the rim and through the exit chute.
+- [ ] Add the bowl's progress zone to `clearanceLimitAt` in `src/simulation/trackStress.test.ts`. The clearance assertion measures distance to the *surface* trimesh; with the funnel emitted into that same trimesh the measurement stays meaningful, but a marble airborne over the drain still needs a zone allowance rather than the global 0.55 m bound. Set it from a measured worst case across a seed scan, as Phase 2 did for the wave section — never by loosening the global bound.
+- [ ] Prove the drain does not jam: a worst-case simultaneous-arrival test (15 marbles entering the bowl together) in `src/simulation/trackStress.test.ts`. PLAN.md → "The drain must be provably clearable" sizes the drain at ~3 marble diameters over the original 6-diameter floor, on the reasoning that a gravity-fed funnel feeds single-file rather than arching like a level pinch — that reasoning is explicitly *not* taken on faith. A jam is a phase-blocking result: raise the diameter until it clears rather than shipping a timeout risk.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`
 - [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
 
 **Review checklist (user, at PR review):**
-- [ ] Run 15-marble races in both modes; confirm no marble stalls in the bowl, the leaderboard doesn't flicker backwards, and the bowl visibly reorders the field.
+- [ ] Run 15-marble races in both modes; confirm marbles visibly spin around the funnel before dropping through the drain, no marble stalls in the bowl, the leaderboard holds steady (not backwards) while a marble is inside it, and the bowl visibly reorders the field.
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.
 
@@ -183,21 +198,52 @@ Fresh review: not required
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.
 
-## Phase 5 — Tuning and coverage
+## Phase 5 — Obstacle distribution
 
-Branch: `raceway-obstacles/phase-5-tuning` (`gh stack add`)
+Branch: `raceway-obstacles/phase-5-obstacle-distribution` (`gh stack add`)
 
-PLAN.md → "Phase E". Final phase: retunes against the finished geometry
+PLAN.md → "Phase E". Every obstacle currently sits at a hand-written distance
+and they cluster in 20 m of a ~255 m course. This moves all of them, so it
+must land before tuning or Phase 6's work is thrown away.
+
+Consumes: all obstacle modules (Phases 1–4).
+Produces: `distributeObstacles(courseLength)` in
+`src/track/obstacleLayout.ts` (new file — placement is a distinct concern from
+`definition.ts`'s geometry construction, and keeping it separate lets it be
+tested without building a track); the per-module separation constants.
+
+Fresh review: not required
+
+- [ ] Add `src/track/obstacleLayout.ts` exporting `distributeObstacles(courseLength: number): readonly ObstaclePlacement[]`, where `ObstaclePlacement` is `{ module: "pin" | "rumble" | "wave" | "windmill" | "gate"; distance: number }`. Pure function of course length — no `Math.random`, no seed parameter (PLAN.md → "Obstacles are distributed, not hand-placed" defers per-race variation deliberately). Spreads every scheduled module across the full course at a materially higher density than today's single cluster, honouring per-module minimum separation and excluding the start apron (distance < 36) and the finish straight.
+- [ ] Replace the hand-placed constants in `createTrackDefinition` (`src/track/definition.ts`) — `pinFieldRows`, `rumbleDistances`, `WAVE_START_DISTANCE`, and Phase 4's windmill/gate distances — with a single pass over `distributeObstacles(totalDistance)`.
+- [ ] Add a build-time grade assertion in `src/track/definition.test.ts`: every span of `COURSE_WAYPOINTS`, including the funnel exit chute and any generated section, holds a grade ≥ 0.15 (PLAN.md → "No section of track may fall below a 0.15 grade"). This is the regression guard for the 0.067-grade finish straight that made marbles visibly decelerate into the line.
+- [ ] Add coverage in `src/track/obstacleLayout.test.ts`: no two modules overlap, per-module minimum separation holds, nothing lands on the start apron or finish straight, and the layout is identical across repeated calls (determinism).
+
+**Phase gate (hard):**
+- [ ] `pnpm typecheck`
+- [ ] `pnpm exec vitest related --run --passWithNoTests <changed files>`
+
+**Review checklist (user, at PR review):**
+- [ ] Run 5- and 15-marble races; confirm obstacles appear across the whole course rather than one early cluster, and no long stretch of empty bed remains.
+
+**On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review checklist goes into the PR description.
+
+## Phase 6 — Tuning and coverage
+
+Branch: `raceway-obstacles/phase-6-tuning` (`gh stack add`)
+
+PLAN.md → "Phase F". Final phase: retunes against the finished geometry
 rather than tuning incrementally against modules that later phases still
 change.
 
-Consumes: all obstacle modules (Phases 1–4).
+Consumes: all obstacle modules (Phases 1–4) and the distributed layout
+(Phase 5).
 Produces: retuned `DEFAULT_TRACK_CONFIG` and obstacle placement/material
 constants in `src/track/definition.ts`; module-bound overtake coverage.
 
 Fresh review: not required
 
-- [ ] Retune `DEFAULT_TRACK_CONFIG` and obstacle placement/material constants in `src/track/definition.ts` so 5- and 15-marble fixed-seed runs in both `first` and `last` mode land within the 40–120 s window (`DEFAULT_RACE_CONFIG.maximumSimulationSeconds`).
+- [ ] Retune `DEFAULT_TRACK_CONFIG`, obstacle material constants in `src/track/definition.ts`, and `distributeObstacles`' density/separation constants in `src/track/obstacleLayout.ts` so 5- and 15-marble fixed-seed runs in both `first` and `last` mode land within the 40–120 s window (`DEFAULT_RACE_CONFIG.maximumSimulationSeconds`). Tune density here, not placement-by-hand — Phase 5 made placement a function.
 - [ ] Rebind the overtake/ranking-change assertion in `src/simulation/trackStress.test.ts` — currently checks only that ranking changes *somewhere* across the whole course — to specific module boundaries (pin field, bowl, windmill/gates), per PLAN.md → "Overtake coverage becomes tautological".
 
 **Phase gate (hard):**

@@ -118,45 +118,91 @@ with matching switches in `src/track/colliders.ts` and the mesh factory in
 `TrackBoxKind`. One refactor unlocks the cylinder posts, the wave section and
 the bowl's rim wall.
 
-### The bowl is a spiral centreline, not an exception to the centreline
+### The bowl is a real funnel, bridged out of the centreline
 
-This is the decision the whole bowl rests on, so it is stated before the
-geometry. `measureTrackProgress` projects a marble onto the nearest segment of
-the centreline polyline and returns cumulative distance. Feed it an open bowl
-and it returns garbage: a marble circling the rim projects onto whichever
-segment happens to be nearest, so progress oscillates instead of advancing.
-That single number drives the live leaderboard in `createRaceView`, the camera
-target in `createCameraTarget`, the final ranking in `createFinalRanking`, and
-the containment assertions in `trackStress.test.ts`. Corrupting it corrupts all
-four.
+**Revised 2026-08-15.** The original plan routed the bowl's geometry itself
+through the centreline as a tight descending spiral, specifically to avoid
+forking `measureTrackProgress`. Six independently-verified fixes to that
+spiral (curvature sampling, banking-ceiling discontinuity, a buffer transition
+span, correct-width self-intersection, and more — see
+`specs/raceway-obstacles/EXECUTION.md`'s Phase 3 park note) still left it
+unable to reliably complete even a solo-marble race once narrowed to a safe,
+meaningfully-banked width. That was a structural mismatch, not a tuning
+problem: a tight helical chute is not what "marbles spool around a bowl and
+drop through a centre hole" looks like, and building it as a ribbon was
+fighting the shape the whole time.
 
-Three options were considered. Freezing progress while a marble is inside the
-bowl is rejected — it blanks the leaderboard during the most dramatic ten
-seconds of the race. A per-marble monotone clamp,
-`progress = max(previousProgress, measured)`, is rejected as the primary
-mechanism because it makes rim-circling read as total stasis, though it is kept
-as a general safety net (below).
+The bowl is now built as what it actually is: **an open, cone-shaped funnel
+with a drain hole at its centre.** A marble enters at the rim, loses energy to
+friction as it spirals inward and downward across the funnel surface, and
+eventually drops through the hole into a short chute that reconnects to the
+centreline below. A frictional cone has no stable orbit — every orbit loses
+energy, so the radius can only shrink — which is why this retains far less
+readily than the banked spiral chute it replaces.
 
-The chosen mechanism: **route the centreline itself through the bowl as a
-descending spiral of two and a half turns.** The bowl stops being an exception —
-it is a section of track whose centreline happens to coil. Progress advances
-monotonically along the spiral, the camera's tangent look-ahead sweeps the bowl
-correctly for free, and finish detection and ranking need no special case. What
-this costs is honesty about what the bowl is: marbles are not free to wander an
-open dish, they are in a wide banked chute that coils. That is a fair trade for
-not forking the progress model, and on camera the two are hard to tell apart.
+**Funnel geometry: revolved triangles in the existing trimesh, not panels.**
+`TrackSurface` is already `{ vertices, indices }` handed straight to
+`RAPIER.ColliderDesc.trimesh` (`src/track/colliders.ts`) and to
+`THREE.Float32BufferAttribute` (`src/render/createRaceScene.ts`). A revolved
+cone is therefore *just more triangles appended to those two arrays* — no new
+mesh source, no new collider kind, no `TrackBox` entries, and it renders for
+free from the same data the physics uses. This supersedes an earlier revision
+of this section that specified a ring of tilted cuboid panels: tiling a cone
+from flat slabs puts a vertical ridge at every azimuthal seam, so an orbiting
+marble crosses a washboard for its entire descent, and the upward-facing seam
+lip gets *worse* with more panels, not better. Faceting is part of what killed
+the spiral; the revolved surface has no seams to catch on. Ring and radial
+segment counts are chosen so the facet chord stays well under the marble
+radius (0.35 m).
 
-`COURSE_WAYPOINTS` gains the spiral turns, so `createPath`'s Catmull-Rom
-sampling and `trackHalfWidthAtDistance` need to survive a tight radius:
-`samplesPerSpan` rises for those spans, and `maximumBankRadians` (currently
-0.08) must lift locally to bank the rim — the wall does the containment work,
-not friction. The bowl floor slopes toward the drain so no marble can settle at
-the low point.
+**Progress while inside the bowl.** `measureTrackProgress`'s nearest-segment
+projection cannot be fed an open, non-ribbon surface — a marble circling the
+rim projects onto whichever centreline segment happens to be nearest, and
+progress oscillates. The centreline gets a single **virtual bridge span**: one
+span whose control points are the bowl's entry point (rim, where the ribbon
+ends) and exit point (below the drain, where the ribbon resumes), with a
+distance cost derived from the funnel's physical diameter and drop rather than
+the straight-line waypoint distance. No path samples are generated between
+them, and neither the surface-index loop nor the side-rail loop in
+`createTrackDefinition` builds ribbon geometry across the pair.
 
-The monotone clamp still ships, applied globally in `src/track/progress.ts`.
-Tight radii make small projection errors read as backward movement anywhere on
-the course, not only in the bowl, and a leaderboard that flickers backwards
-looks broken whatever the cause.
+While a marble is inside the bowl's bounding volume, `measureTrackProgress`
+returns a value that **advances with descent depth**, not a flat one:
+
+```
+f = clamp01((rimY - y) / (rimY - drainY))
+progress = bridgeEntryDistance + bridgeSpanLength * f
+```
+
+A flat value was considered and rejected. `createFinalRanking` and
+`rankAtFrame` both break ties on marble index, so a constant would tie every
+marble in the bowl and silently re-sort the leaderboard into roster order —
+the same "blank the leaderboard during the most dramatic ten seconds" defect
+the original spiral design was chosen to avoid, merely wearing a different
+hat. Depth is the right measure because a marble resting on a cone has its
+depth rigidly coupled to its radius, so `f` is a genuine read of how close it
+is to dropping: the marble ranked first is the one the viewer can see is
+about to go through the hole. Residual wobble in `y` is absorbed by the
+monotone tracker.
+
+Past the exit point, `measureTrackProgress` resumes normal nearest-segment
+projection on the post-bowl ribbon.
+
+**The bounding volume must not swallow unrelated track.** The volume test is
+pure geometry with no notion of which part of the course a marble is on, and
+the course doubles back in XZ repeatedly while descending (`x` swings −8→+10
+four times across `PRE_BOWL_WAYPOINTS`). A ribbon segment passing through the
+bowl's footprint would teleport a marble there to the bridge distance, and the
+monotone tracker would then make that jump permanent and unrecoverable. A
+build-time assertion (not a runtime guard) rejects this: no path sample
+outside the bridge span may lie within the bowl volume, with margin.
+
+`createProgressTracker` (`src/track/progress.ts`, shipped in Phase 3 item 1,
+already wired into `simulateRace`, `createRaceView`, and `createFinalRanking`)
+stays applied globally, not only across the bridge span — tight radii
+elsewhere on the course make small projection errors read as backward movement
+too, and a leaderboard that flickers backwards looks broken whatever the
+cause.
 
 ### The drain must be provably clearable
 
@@ -165,10 +211,83 @@ timeout: `simulateRace` returns `null` at 120 s and `simulateWithRetry` silently
 burns a seed and runs the whole thing again. In `last` mode, where the race
 waits for the final marble, a sticky drain is fatal rather than cosmetic.
 
-The drain is sized at no less than six marble diameters, the exit chute drops
-away from the bowl floor so gravity always has somewhere to take a marble, and
-coverage asserts that in a 15-marble run every marble's progress passes the
-bowl's exit fraction — not merely that the race finished.
+**Drain sizing, revised 2026-08-15.** The original six-marble-diameter floor
+described a *bed pinch* in the spiral chute — a place marbles arrive at abreast
+and can arch across. Carried onto a funnel hole it is actively wrong: six
+diameters is 4.2 m, which in an 8 m bowl leaves a 1.9 m ledge, so marbles drop
+almost straight through with no spiral at all. That deletes the module's entire
+visual premise (marbles circling, then slipping through) to satisfy a rule
+about a different failure mode.
+
+A gravity-fed funnel drain feeds marbles in single file down a converging
+surface, so it does not arch the way a level pinch does. The drain is sized at
+**~3 marble diameters (2.1 m, ≈26 % of an 8 m bowl)**, leaving a real
+spiralling ledge. This number is *not* assumed safe on that reasoning: because
+it overrides a stated safety floor, Phase C measures it directly with a
+worst-case simultaneous-arrival test (15 marbles entering the bowl together)
+and treats a jam as a phase-blocking result, not a tuning nit. If it jams, the
+diameter goes up until it does not, and the visual loses to the timeout risk.
+
+The exit chute drops away from the bowl floor so gravity always has somewhere
+to take a marble, and coverage asserts that in a 15-marble run every marble's
+progress passes the bowl's exit fraction — measured past the exit point, not
+merely reaching the rim, and not merely that the race finished.
+
+### No section of track may fall below a 0.15 grade
+
+Found the hard way (2026-08-15). The parked spiral WIP appended a finish
+straight at 1 m of drop over 15 m — a grade of 0.067 — and marbles visibly
+decelerated on the approach to the line, the most-watched ten metres of the
+race. The cause is not subtle once measured: track friction is 0.1 and marble
+friction 0.12, so at `tan θ = 0.067` the slope sits *below* the friction
+coefficient and gravity can no longer overcome contact friction. The marble
+stops accelerating and starts coasting down.
+
+For reference, the hand-authored course runs at a mean grade of 0.227 and
+never drops below 0.171:
+
+| Section | Grade |
+| --- | --- |
+| Course mean (wp0→wp10) | 0.227 |
+| Shallowest normal span | 0.171 |
+| Return loop (parked WIP) | 0.159 |
+| Finish straight (parked WIP) | 0.067 |
+
+So: **every span of track keeps a grade of at least 0.15**, and new geometry
+should target the course's own 0.17 floor rather than the bare minimum. This
+binds the funnel's exit chute in particular — "drops away steeply enough that
+gravity always has somewhere to take a marble" is otherwise a vibe, and this
+is the number that makes it checkable. Coverage asserts it over every span at
+build time, so a shallow section can never ship silently again.
+
+### Obstacles are distributed, not hand-placed
+
+Every obstacle currently sits at a literal distance written into
+`createTrackDefinition`, chosen while that module was being proven. The
+result, measured on the current course: the three rumble bars (47.9–50.5 m)
+and all four pin rows (51.7–67.3 m) occupy a single 20 m cluster on a ~255 m
+course, with the wave section at 100–120 m the only other feature. Roughly
+three quarters of the race is empty bed. That is not a tuning miss — nothing
+ever spread them out, because each was placed where it could be tested.
+
+Obstacle placement becomes a function of course length rather than a table of
+constants: `distributeObstacles(courseLength)` returns the placement list,
+spacing instances of every scheduled module across the whole course with
+per-module minimum separation (so a pin field never lands inside the wave
+section, and no module lands on the start apron or the finish straight).
+Density rises well beyond today's seven-obstacle cluster.
+
+**The layout stays identical between races for now.** `createTrackDefinition`
+gains no seed parameter in this spec. Per-race variation is a genuinely
+attractive follow-up and the fairness story survives it — every marble in a
+race faces the same course, so varying the course across races biases nobody
+— but it is deferred deliberately, because it touches replay: `simulateRace`
+and `createRaceView` build the track from `DEFAULT_TRACK_CONFIG`
+independently, and a seeded course must reach both from `recording.seed` or
+the replay renders marbles against a track they never raced on. Recordings
+persisted before such a change would need the generator versioned. Building
+the distributor first and making it seed-driven afterwards keeps that risk
+out of the phase that does the hard part.
 
 ### Materials
 
@@ -221,17 +340,23 @@ global threshold does not move and the assertion is not deleted.
 
 ## Out of scope
 
-- A second mesh source. The bowl is built as a coiled section of the existing
-  swept ribbon; if that proves untenable in Phase C, the spec stops and the
-  question comes back to the user rather than a revolved-mesh path being
-  invented mid-phase.
-- Track authoring, editor UI, or per-race obstacle randomisation — the course
-  is fixed geometry; only the marbles vary.
+- Imported mesh assets or a second collider source for the funnel. Its
+  revolved cone is emitted as triangles into the *existing* `TrackSurface`
+  trimesh (see "The bowl is a real funnel, bridged out of the centreline") —
+  no asset pipeline, no new primitive, no second mesh path to keep in sync.
+- Track authoring or editor UI.
+- **Per-race obstacle randomisation** — deferred, not rejected (see "Obstacles
+  are distributed, not hand-placed"). This spec builds the distributor and
+  keeps the layout identical between races; `createTrackDefinition` gains no
+  seed parameter here. Making it seed-driven is a follow-up, and the reason it
+  is not folded in is replay: a seeded course must reach both `simulateRace`
+  and `createRaceView` from `recording.seed`, and persisted recordings need
+  the generator versioned.
 - Any change to selection, persistence, audio, or the result dialog.
 
 ## Implementation map
 
-Five phases, each independently mergeable and each leaving the race playable.
+Six phases, each independently mergeable and each leaving the race playable.
 The ordering principle: the change with the widest blast radius — the bowl and
 the progress work under it — lands in the middle, early enough that everything
 after it is tuned against final geometry, late enough that the cheap modules
@@ -268,13 +393,22 @@ clearance assertion with the wave section's allowance.
 The spec's centre of gravity, and the one phase that should be expected to
 overrun. Land the monotone progress clamp in `src/track/progress.ts` first,
 with coverage, on the *existing* course — so the safety net is proven before
-anything depends on it. Then coil `COURSE_WAYPOINTS` into the spiral, raise
-`samplesPerSpan` and local `maximumBankRadians` for those spans, slope the
-floor to the drain, and build the rim wall from the Phase B shape union.
+anything depends on it (done: `createProgressTracker`, shipped and wired
+into `simulateRace`/`createRaceView`/`createFinalRanking`).
+
+Then build the funnel itself: a revolved cone emitted into the existing
+`TrackSurface` trimesh with a ~3-marble-diameter centre drain, and a virtual
+bridge span in the centreline (entry at the rim, exit below the drain) so
+`measureTrackProgress` has a defined, depth-advancing answer for any position
+inside the bowl's bounding volume, resuming normal projection past the exit.
 
 Coverage: progress is non-decreasing for every marble across a 15-marble run;
-every marble clears the bowl's exit fraction in both modes; the leaderboard
-order changes across the bowl; containment holds through the coil.
+every marble clears the bowl's exit fraction in both modes (i.e. actually
+falls through the drain, not merely reaches the rim); a 15-marble
+simultaneous-arrival test proves the drain does not jam; the build-time
+assertion proves no non-bridge path sample lies inside the bowl volume; the
+leaderboard order changes across the bowl; containment holds at the rim and
+through the exit chute.
 
 Fresh review: required — this rewrites the measurement that ranking, camera and
 finish detection all read.
@@ -287,10 +421,23 @@ Ship the windmill and the traffic-light gates on it, the latter with the
 ≥ 0.4 s ramp. Coverage: the two call sites agree at sampled frames, and a fixed
 seed produces an identical recording across runs.
 
-### Phase E — Tuning and coverage
+### Phase E — Obstacle distribution
+
+Replace the hand-placed distance constants with `distributeObstacles`, spread
+every scheduled module across the full course at a real density, and assert
+the 0.15 minimum grade over every span. Lands *before* tuning on purpose: this
+moves every obstacle on the course, so tuning against the old layout would be
+thrown away.
+
+Coverage: no module overlaps another or the start apron / finish straight;
+per-module minimum separation holds; every span's grade clears 0.15.
+
+### Phase F — Tuning and coverage
 
 Retune so 5- and 15-marble runs in both modes land in the 40–120 s window
-against the finished geometry. Rebind the overtake assertion to module
-boundaries so it stops being tautological. Manual review at 1080p: every module
-visually distinct, all marbles inside the rails, leaderboard readable, and the
-bowl legible as the race's decisive moment.
+against the finished geometry — the distributed layout from Phase E, not the
+clustered one. Rebind the overtake assertion to module boundaries so it stops
+being tautological. Manual review at 1080p: every module visually distinct,
+all marbles inside the rails, leaderboard readable, no visible deceleration
+anywhere (least of all the run to the line), and the bowl legible as the
+race's decisive moment.

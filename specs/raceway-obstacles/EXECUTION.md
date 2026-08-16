@@ -18,12 +18,11 @@ that predates this spec.
 
 ## STATUS
 
-- Current phase: 3 — in-progress, checklist complete, gate green, fresh
-  review pending (2026-08-16)
+- Current phase: 3 — done (2026-08-16)
 - Phase 1 — Static modules: done
 - Phase 2 — Shape union: done
-- Phase 3 — Progress hardening and the vortex bowl: checklist complete.
-  Item 1 (monotone-progress mechanism) done since 2026-08-15. Item 2 (bowl
+- Phase 3 — Progress hardening and the vortex bowl: done. Item 1
+  (monotone-progress mechanism) done since 2026-08-15. Item 2 (bowl
   geometry) was parked the same day after six fixes to a tight descending
   spiral still left it at 0/10 completion — a structural mismatch, not a
   fixable parameter — then re-planned as a real funnel per PLAN.md → "The
@@ -42,8 +41,11 @@ that predates this spec.
   combination found every 15-marble/`last` completion failure traces to a
   pre-existing pre-bowl congestion pattern, zero bowl-area stalls — the bowl
   itself is sound; remaining full-race failures are Phase 6 (tuning)'s to
-  address. Fresh review required (already recorded) and not yet run — that
-  is the one remaining step before this phase can close.
+  address. Fresh review: initial pass found two P2s (indirect-only test
+  coverage for six of seven empirically-found defects, judged advisory/
+  non-blocking by the reviewer; a stale margin-comment, fixed in commit
+  `953755c`). Re-review after the fix: no findings. Commits: `fb75e96`,
+  `39f021b`, `953755c`.
 - Phase 4 — Deterministic motion: pending
 - Phase 5 — Obstacle distribution: pending (added 2026-08-15 — obstacles are
   all hand-placed and cluster in 20 m of a ~255 m course; sits before tuning

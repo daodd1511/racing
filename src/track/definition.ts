@@ -42,21 +42,6 @@ export interface TrackFinishLine {
   readonly halfWidth: number;
 }
 
-// The vortex bowl's bounding volume, consumed by `measureTrackProgress`
-// (src/track/progress.ts) to give a defined, depth-advancing progress
-// reading to any position inside the funnel — see this file's "Vortex bowl"
-// section for how `center`/`radius`/`rimY`/`drainY` are derived, and
-// PLAN.md -> "Progress while inside the bowl" for why depth, not a flat
-// value, is what's returned.
-export interface TrackBowl {
-  readonly center: Vector3;
-  readonly radius: number;
-  readonly rimY: number;
-  readonly drainY: number;
-  readonly entryDistance: number;
-  readonly bridgeLength: number;
-}
-
 export interface TrackConfig {
   readonly trackHalfWidth: number;
   readonly trackThickness: number;
@@ -76,8 +61,6 @@ export interface TrackDefinition {
   readonly startSlots: readonly Vector3[];
   readonly finishProgress: number;
   readonly finishLine: TrackFinishLine;
-  readonly bowl: TrackBowl;
-  readonly bowlExitFraction: number;
 }
 
 export const DEFAULT_TRACK_CONFIG: TrackConfig = Object.freeze({
@@ -97,7 +80,27 @@ const PIN_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.3, friction: 
 const RUMBLE_MATERIAL: TrackMaterial = Object.freeze({ restitution: 0.1, friction: 0.3 });
 const WORLD_UP: Vector3 = [0, 1, 0];
 
+// Found by watching real races, not assumed: the original course turned
+// almost immediately after the start grid (wp0 -> wp1's straight run is only
+// ~16.5 m), leaving no room for the 15-wide starting pack to jostle
+// laterally before the first turn locked in whichever side happened to be
+// on the turn's inside. `LEAD_IN_WAYPOINT` extends the same straight-line
+// heading as wp0->wp1 (pure +z, no turn) 24 m further back -- but at a
+// shallower grade (0.15, the documented floor -- see "No section of track
+// may fall below a 0.15 grade") than wp0->wp1's own 0.25, not a continuation
+// of it. Tried at the same 0.25 grade first: marbles arrived at the first
+// turn (wp1->wp2) carrying enough extra built-up speed to launch clear of
+// the 0.55 m global clearance bound and, at one seed, stall a 15-marble
+// race outright (both found by re-running the test suite, not assumed).
+// The shallow lead-in adds distance to jostle in without adding speed.
+// Every fixed-distance obstacle below (pin field, rumble strip, wave
+// section) is shifted by `LEAD_IN_LENGTH_METERS` so each still lands in the
+// exact curvature context it was originally tuned against.
+const LEAD_IN_LENGTH_METERS = 24;
+const LEAD_IN_WAYPOINT: Vector3 = [0, 33.6, -32];
+
 const PRE_BOWL_WAYPOINTS: readonly Vector3[] = Object.freeze([
+  LEAD_IN_WAYPOINT,
   [0, 30, -8],
   [0, 26, 8],
   [9, 20, 24],
@@ -118,208 +121,38 @@ function headingXZ(from: Vector3, to: Vector3): readonly [number, number] {
   return [dx / planarLength, dz / planarLength];
 }
 
-// Vortex bowl (OBSTACLE-IDEAS.md module 9): a real, open funnel — a revolved
-// cone frustum appended straight into the ribbon's own `TrackSurface`
-// trimesh, not a second mesh/collider source, and not routed through the
-// centreline as tight-radius ribbon geometry (PLAN.md -> "The bowl is a real
-// funnel, bridged out of the centreline" -- supersedes the parked
-// spiral-centreline attempt, commit bb66cf9, which could not reliably
-// complete a race once narrowed to a safe, meaningfully-banked width; that
-// was a structural mismatch between the shape being built and the shape
-// being asked for, not a tuning problem).
-//
-// A marble entering with tangential velocity naturally spirals inward on a
-// frictional cone before dropping through the centre hole -- the same
-// physics a coin funnel relies on -- so no explicit spiral groove is needed;
-// the cone's own geometry produces the "spin around, then slip through"
-// behaviour.
-// The funnel is ONE continuous surface from its outer top down to the drain,
-// not discrete wall/lip/cone stages. That three-stage construction was tried
-// first and failed: two rings meeting at a sharp interior angle (vertical
-// wall into a sloped lip) forms a physical V-notch a marble can sit
-// stationary in, exactly like a ball resting in the corner where a wall
-// meets a floor -- found empirically, not assumed (traced directly: all 5
-// marbles came to rest exactly at the wall/lip seam, unmoving for 60+s). A
-// single smoothstep-based radius profile (`smootherstep`, cubic ease) has a
-// continuous tangent everywhere: near-flat-in-radius (wall-like) at the very
-// top, near-flat again at the very bottom, steepest in the middle -- the
-// same "gentle near the rim, steep near the drain" shape as a real funnel,
-// with no ring anywhere where the surface's own angle jumps.
-const BOWL_RIM_RADIUS = 7; // radius at the funnel's very top, where the approach ribbon lands
-const BOWL_DRAIN_RADIUS = 1.05; // ~3 marble diameters -- see "Drain sizing" below
-const BOWL_DROP = 11.5; // total vertical span, top of funnel -> drain
-const BOWL_RADIAL_SEGMENTS = 192; // facet chord at the rim: 2*7*sin(pi/192) =~ 0.229 m, well under marbleRadius (0.35 m) itself, not just the diameter
-const BOWL_RING_SEGMENTS = 20; // vertical rings sampling the smoothstep profile
-
-// Approach from wp10 to the rim, continuing wp10's own heading exactly (zero
-// net turn), so -- unlike the parked spiral -- this needs no buffer span to
-// avoid a curvature discontinuity: there isn't one.
-const BOWL_APPROACH_LENGTH = 10;
-const BOWL_APPROACH_GRADE = 0.2; // clears the 0.15 floor (PLAN.md -> "No section of track may fall below a 0.15 grade") with margin
-
-// The approach ribbon meets the rim *tangentially* -- bowlEntryPoint is the
-// one point on that straight strip exactly on the BOWL_RIM_RADIUS circle,
-// but every other point across the ribbon's width is strictly farther out
-// (the tangent-line property: at BOWL_SAFE_HALF_WIDTH off centre, distance
-// from the bowl centre is sqrt(7^2 + 3.3^2) =~ 7.74 m, a 0.74 m excess no
-// amount of narrowing eliminates). BOWL_RIM_RADIUS is sized generously
-// enough that this excess lands well inside the funnel's own near-flat cap
-// near the top of the smoothstep profile, rather than needing a separate
-// wall (found empirically -- see the note above on why a separate wall
-// creates its own notch problem).
-const BOWL_APPROACH_TAPER_METERS = 15;
-const BOWL_SAFE_HALF_WIDTH = 3.3;
-
-// Widens the exit-chute ribbon right under the drain, tapering back to
-// normal width over BOWL_CATCH_TAPER_METERS. See trackHalfWidthAtDistance.
-const BOWL_CATCH_TAPER_METERS = 20;
-const BOWL_CATCH_HALF_WIDTH = 6.5;
-// Radius of the circular catch disc under the drain (see its construction
-// site in createTrackDefinition) -- comfortably beyond BOWL_RIM_RADIUS so a
-// marble exiting in any direction, not just along the approach heading,
-// still lands on solid geometry. Tilted, not flat, at BOWL_CATCH_DISC_GRADE
-// along the approach heading -- see the construction site for why.
-const BOWL_CATCH_DISC_RADIUS = 10;
-const BOWL_CATCH_DISC_GRADE = 0.3;
-
-// The virtual bridge span's distance cost (PLAN.md -> "Progress while inside
-// the bowl"): not the straight-line distance between the entry and exit
-// waypoints, but an approximation of what a marble actually travels --
-// several shrinking orbits between the rim (BOWL_RIM_RADIUS) and drain
-// (BOWL_DRAIN_RADIUS) plus the BOWL_DROP descent. Sized so the bowl reads as
-// the course's longest, slowest module without dominating total race
-// duration.
-const BOWL_BRIDGE_DISTANCE_METERS = 45;
-const BOWL_EXIT_NUDGE_METERS = 0.6; // small forward offset so the exit waypoint's heading isn't degenerate directly under the drain
-// Vertical gap between the drain hole and the ribbon that catches a falling
-// marble (found empirically, not assumed): an earlier version placed the
-// exit waypoint at the *same* elevation as the drain, so the catch ribbon
-// was coplanar with the hole -- a single degenerate point of contact, not a
-// surface a falling marble could actually land on. Every marble free-fell
-// forever (traced directly: Y still descending past -14,000 at the 120 s
-// cap). This drop puts real, unambiguous distance between the hole and the
-// catch surface so gravity has time to carry the marble onto it.
-//
-// Kept small deliberately, not generous: a 5 m version of this gap let
-// marbles reach ~10 m/s of pure free-fall before ever touching the catch
-// ribbon, on top of whatever speed the funnel itself had already built up --
-// fast and steep enough that they tunnelled straight through the thin
-// catch trimesh without registering a collision at all (found empirically:
-// widening the catch ribbon's width had zero effect on the failure, and a
-// bit-identical trajectory before and after that change is itself the
-// evidence -- the marble was never touching the ribbon's plane long enough
-// to be affected by its width). A short gap still resolves the coplanar
-// degenerate case above without building dangerous velocity first.
-const BOWL_EXIT_CATCH_DROP_METERS = 1.5;
-
-// Continues past the drain to the finish line. Both segments hold a 0.2
-// grade -- not the 0.067 the parked WIP's finish straight used, which sat
-// below the 0.1/0.12 friction coefficients and visibly decelerated marbles
-// into the line (PLAN.md -> "No section of track may fall below a 0.15
-// grade").
-const FINISH_STRETCH_SEGMENT_LENGTH = 15;
+// Finish straight: the vortex bowl (OBSTACLE-IDEAS.md module 9) is pulled
+// for the presentation build -- it never got its physical feel right, and a
+// visible, working finish line matters more right now. Reconnecting to the
+// bowl is a refactor to pick back up later (see specs/raceway-obstacles/),
+// not a decision made here. Continues wp10's own heading and a course-typical
+// grade (0.2 -- the pre-bowl course averages 0.227, never below 0.171; see
+// PLAN.md -> "No section of track may fall below a 0.15 grade") straight to
+// the finish line.
+const FINISH_STRETCH_SEGMENT_LENGTH = 18;
 const FINISH_STRETCH_SEGMENT_GRADE = 0.2;
-const FINISH_STRETCH_SEGMENT_COUNT = 2;
+const FINISH_STRETCH_SEGMENT_COUNT = 3;
 
-const bowlApproachOrigin = PRE_BOWL_WAYPOINTS.at(-1) as Vector3;
-const bowlApproachHeading = headingXZ(PRE_BOWL_WAYPOINTS.at(-2) as Vector3, bowlApproachOrigin);
-
-const bowlCenter: Vector3 = [
-  bowlApproachOrigin[0] + bowlApproachHeading[0] * BOWL_APPROACH_LENGTH,
-  bowlApproachOrigin[1] - BOWL_APPROACH_LENGTH * BOWL_APPROACH_GRADE,
-  bowlApproachOrigin[2] + bowlApproachHeading[1] * BOWL_APPROACH_LENGTH,
-];
-const bowlRimY = bowlCenter[1];
-const bowlDrainY = bowlRimY - BOWL_DROP;
-
-// Where the ribbon ends -- on the rim, on the near side facing the incoming
-// approach.
-const bowlEntryPoint: Vector3 = [
-  bowlCenter[0] - bowlApproachHeading[0] * BOWL_RIM_RADIUS,
-  bowlRimY,
-  bowlCenter[2] - bowlApproachHeading[1] * BOWL_RIM_RADIUS,
-];
-// Where the ribbon resumes -- genuinely below the drain, not coplanar with
-// it (see BOWL_EXIT_CATCH_DROP_METERS).
-const bowlExitPoint: Vector3 = [
-  bowlCenter[0] + bowlApproachHeading[0] * BOWL_EXIT_NUDGE_METERS,
-  bowlDrainY - BOWL_EXIT_CATCH_DROP_METERS,
-  bowlCenter[2] + bowlApproachHeading[1] * BOWL_EXIT_NUDGE_METERS,
-];
+const finishApproachOrigin = PRE_BOWL_WAYPOINTS.at(-1) as Vector3;
+const finishApproachHeading = headingXZ(PRE_BOWL_WAYPOINTS.at(-2) as Vector3, finishApproachOrigin);
 
 const finishStretchWaypoints: Vector3[] = [];
 {
-  let cursor = bowlExitPoint;
+  let cursor = finishApproachOrigin;
   for (let segment = 0; segment < FINISH_STRETCH_SEGMENT_COUNT; segment += 1) {
     cursor = [
-      cursor[0] + bowlApproachHeading[0] * FINISH_STRETCH_SEGMENT_LENGTH,
+      cursor[0] + finishApproachHeading[0] * FINISH_STRETCH_SEGMENT_LENGTH,
       cursor[1] - FINISH_STRETCH_SEGMENT_LENGTH * FINISH_STRETCH_SEGMENT_GRADE,
-      cursor[2] + bowlApproachHeading[1] * FINISH_STRETCH_SEGMENT_LENGTH,
+      cursor[2] + finishApproachHeading[1] * FINISH_STRETCH_SEGMENT_LENGTH,
     ];
     finishStretchWaypoints.push(cursor);
   }
 }
 
-// Found empirically, not assumed: `createPath`'s generic before/after
-// indexing (span +-1/+-2 into COURSE_WAYPOINTS) reaches straight across the
-// single-sample bridge span for the spans immediately adjacent to it. Span
-// 10 (wp10 -> entry)'s "after" reference becomes `bowlExitPoint` -- a point
-// ~35 m down on the far side of the funnel -- and span 12 (exit -> finish1)'s
-// "before" reference becomes `bowlEntryPoint`, equally displaced the other
-// way. Both distort that span's Catmull-Rom curve badly (traced directly:
-// marbles arriving at the approach span stall and settle at rest near wp10's
-// own height, never reaching the rim). Both approach and exit-chute segments
-// are meant to be straight lines (constant heading and grade), so the fix is
-// a synthetic reference that continues each one collinearly -- reflecting
-// the segment's own other endpoint across the point adjacent to the bridge,
-// the same technique (a synthetic "before"/"after" drawn from the local
-// family, not the far side of the bridge) the parked spiral used for this
-// exact class of bug, generalized to both sides of the gap.
-const bowlApproachVirtualAfter: Vector3 = [
-  2 * bowlEntryPoint[0] - bowlApproachOrigin[0],
-  2 * bowlEntryPoint[1] - bowlApproachOrigin[1],
-  2 * bowlEntryPoint[2] - bowlApproachOrigin[2],
-];
-const bowlExitVirtualBefore: Vector3 = [
-  2 * bowlExitPoint[0] - finishStretchWaypoints[0][0],
-  2 * bowlExitPoint[1] - finishStretchWaypoints[0][1],
-  2 * bowlExitPoint[2] - finishStretchWaypoints[0][2],
-];
-
 const COURSE_WAYPOINTS: readonly Vector3[] = Object.freeze([
   ...PRE_BOWL_WAYPOINTS,
-  bowlEntryPoint,
-  bowlExitPoint,
   ...finishStretchWaypoints,
 ]);
-
-// The span connecting the entry waypoint to the exit waypoint -- the
-// "virtual bridge span" with no ribbon geometry and no interpolated path
-// samples between its two endpoints (see `samplesForSpan` below).
-const BRIDGE_SPAN_INDEX = PRE_BOWL_WAYPOINTS.length;
-
-// Every span samples `config.samplesPerSpan` points as usual, except the
-// bridge span, which samples exactly 1 -- the entry waypoint itself at
-// t=0 (the Catmull-Rom formula reduces to `start` exactly at t=0
-// regardless of `before`/`after`, so the bridge needs no special-cased
-// control points the way the parked spiral's first span did). The next
-// span's own t=0 sample is the exit waypoint, so the two land as adjacent
-// entries in the flattened `path` array with nothing interpolated between
-// them.
-function samplesForSpan(config: TrackConfig, span: number): number {
-  return span === BRIDGE_SPAN_INDEX ? 1 : config.samplesPerSpan;
-}
-
-// Cumulative sample count reached by the start of the given span -- the
-// inverse of `samplesForSpan`'s per-span counts, used to translate a span
-// index into a sample/path index once path samples exist.
-function sampleIndexAtSpanStart(config: TrackConfig, span: number): number {
-  let index = 0;
-  for (let candidate = 0; candidate < span; candidate += 1) {
-    index += samplesForSpan(config, candidate);
-  }
-  return index;
-}
 
 function add(left: Vector3, right: Vector3): Vector3 {
   return [left[0] + right[0], left[1] + right[1], left[2] + right[2]];
@@ -419,39 +252,20 @@ function catmullRom(
 function createPath(config: TrackConfig): TrackPathSample[] {
   const positions: Vector3[] = [];
   for (let span = 0; span < COURSE_WAYPOINTS.length - 1; span += 1) {
-    // Spans immediately adjacent to the bridge get a synthetic before/after
-    // reference instead of reaching across the gap -- see
-    // `bowlApproachVirtualAfter`/`bowlExitVirtualBefore` above.
-    const before =
-      span === BRIDGE_SPAN_INDEX + 1
-        ? bowlExitVirtualBefore
-        : COURSE_WAYPOINTS[Math.max(0, span - 1)];
+    const before = COURSE_WAYPOINTS[Math.max(0, span - 1)];
     const start = COURSE_WAYPOINTS[span];
     const end = COURSE_WAYPOINTS[span + 1];
-    const after =
-      span === BRIDGE_SPAN_INDEX - 1
-        ? bowlApproachVirtualAfter
-        : COURSE_WAYPOINTS[Math.min(COURSE_WAYPOINTS.length - 1, span + 2)];
-    const spanSampleCount = samplesForSpan(config, span);
-    for (let step = 0; step < spanSampleCount; step += 1) {
-      positions.push(catmullRom(before, start, end, after, step / spanSampleCount));
+    const after = COURSE_WAYPOINTS[Math.min(COURSE_WAYPOINTS.length - 1, span + 2)];
+    for (let step = 0; step < config.samplesPerSpan; step += 1) {
+      positions.push(catmullRom(before, start, end, after, step / config.samplesPerSpan));
     }
   }
   positions.push(COURSE_WAYPOINTS.at(-1) as Vector3);
 
-  // The sample immediately after the bridge span's single (entry) sample is
-  // the exit waypoint -- its distance-from-previous is overridden below to
-  // the bridge's real distance cost rather than the short straight-line gap
-  // between the two points.
-  const bridgeExitSampleIndex = sampleIndexAtSpanStart(config, BRIDGE_SPAN_INDEX) + 1;
-
   let cumulativeDistance = 0;
   return positions.map((position, index) => {
     if (index > 0) {
-      cumulativeDistance +=
-        index === bridgeExitSampleIndex
-          ? BOWL_BRIDGE_DISTANCE_METERS
-          : length(subtract(position, positions[index - 1]));
+      cumulativeDistance += length(subtract(position, positions[index - 1]));
     }
     const previous = positions[Math.max(0, index - 1)];
     const next = positions[Math.min(positions.length - 1, index + 1)];
@@ -502,43 +316,17 @@ function interpolatePathSample(
   };
 }
 
-function trackHalfWidthAtDistance(
-  config: TrackConfig,
-  distance: number,
-  bowlEntryDistance: number,
-  bowlExitDistance: number,
-): number {
+function trackHalfWidthAtDistance(config: TrackConfig, distance: number): number {
   const apronFraction = Math.max(0, Math.min(1, (36 - distance) / 24));
-  const normalHalfWidth = config.trackHalfWidth + apronFraction * 0.9;
-
-  const distanceBeforeBowl = bowlEntryDistance - distance;
-  if (distanceBeforeBowl >= 0 && distanceBeforeBowl <= BOWL_APPROACH_TAPER_METERS) {
-    const taperFraction = 1 - distanceBeforeBowl / BOWL_APPROACH_TAPER_METERS;
-    return normalHalfWidth + (BOWL_SAFE_HALF_WIDTH - normalHalfWidth) * taperFraction;
-  }
-
-  // Widen the catch zone right after the drain, tapering back to normal.
-  // Found empirically, not assumed: BOWL_RIM_RADIUS (7 m) is far larger than
-  // the original spiral's tight radius, so a marble reaching the drain
-  // carries real residual tangential velocity, and a normal-width exit
-  // ribbon right underneath the hole can miss it entirely -- traced
-  // directly, marbles sailing past the exit ribbon into ballistic free-fall
-  // (X drift to 200+, progress pinned at the course's final sample).
-  const distanceAfterExit = distance - bowlExitDistance;
-  if (distanceAfterExit >= 0 && distanceAfterExit <= BOWL_CATCH_TAPER_METERS) {
-    const catchFraction = 1 - distanceAfterExit / BOWL_CATCH_TAPER_METERS;
-    return normalHalfWidth + (BOWL_CATCH_HALF_WIDTH - normalHalfWidth) * catchFraction;
-  }
-
-  return normalHalfWidth;
+  return config.trackHalfWidth + apronFraction * 0.9;
 }
 
 // Wave section (OBSTACLE-IDEAS.md module 8): the bed rolls in three sine
-// humps over a 20 m stretch. Placed at distance 100 m -- well past the pin
-// field (ends ~67 m) and well before the vortex bowl. Exactly 3 full periods
+// humps over a 20 m stretch. Placed at distance 100 m (+ LEAD_IN_LENGTH_METERS,
+// see its declaration) -- well past the pin field. Exactly 3 full periods
 // over the stretch means the displacement is zero at both boundaries, so
 // there's no seam/kink where the wave section meets flat bed on either side.
-const WAVE_START_DISTANCE = 100;
+const WAVE_START_DISTANCE = 100 + LEAD_IN_LENGTH_METERS;
 const WAVE_LENGTH_METERS = 20;
 const WAVE_AMPLITUDE = 0.3;
 const WAVE_HUMP_COUNT = 3;
@@ -571,30 +359,19 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   const path = createPath(config);
   const boxes: TrackBox[] = [];
 
-  // The sample index of the entry waypoint (bridge span's only sample); the
-  // exit waypoint is the very next sample. Both geometry loops below skip
-  // the pair spanning these two indices -- no ribbon quad, no rail box --
-  // since that gap is where the funnel sits instead.
-  const bridgeEntrySampleIndex = sampleIndexAtSpanStart(config, BRIDGE_SPAN_INDEX);
-  const bowlEntryDistance = path[bridgeEntrySampleIndex].distance;
-  const bowlExitDistance = path[bridgeEntrySampleIndex + 1].distance;
-
   const wavedPosition = (sample: TrackPathSample): Vector3 =>
     add(sample.position, scale(sample.up, waveDisplacement(sample.distance)));
 
   const surfaceVertices: number[] = [];
   const surfaceIndices: number[] = [];
   for (const sample of path) {
-    const halfWidth = trackHalfWidthAtDistance(config, sample.distance, bowlEntryDistance, bowlExitDistance);
+    const halfWidth = trackHalfWidthAtDistance(config, sample.distance);
     const basePosition = wavedPosition(sample);
     const right = add(basePosition, scale(sample.side, halfWidth));
     const left = add(basePosition, scale(sample.side, -halfWidth));
     surfaceVertices.push(...right, ...left);
   }
   for (let index = 0; index < path.length - 1; index += 1) {
-    if (index === bridgeEntrySampleIndex) {
-      continue;
-    }
     const right = index * 2;
     const left = right + 1;
     const nextRight = right + 2;
@@ -603,14 +380,11 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   }
 
   for (let index = 0; index < path.length - 1; index += 1) {
-    if (index === bridgeEntrySampleIndex) {
-      continue;
-    }
     const start = path[index];
     const end = path[index + 1];
     const centerSample = interpolatePathSample(path, (start.distance + end.distance) / 2);
     const segmentLength = end.distance - start.distance;
-    const halfWidth = trackHalfWidthAtDistance(config, centerSample.distance, bowlEntryDistance, bowlExitDistance);
+    const halfWidth = trackHalfWidthAtDistance(config, centerSample.distance);
     const rotation = quaternionFromBasis(centerSample.side, centerSample.up, centerSample.tangent);
     const railBasePosition = wavedPosition(centerSample);
     for (const direction of [-1, 1]) {
@@ -633,97 +407,7 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
     }
   }
 
-  // Vortex bowl funnel: a revolved surface appended directly to the ribbon's
-  // own surface trimesh (PLAN.md -> "Funnel geometry: revolved triangles in
-  // the existing trimesh, not panels"), one continuous smoothstep radius
-  // profile from BOWL_RIM_RADIUS down to BOWL_DRAIN_RADIUS -- see the note
-  // at BOWL_RIM_RADIUS's declaration for why this replaced a discrete
-  // wall/lip/cone construction.
-  const smootherstep = (t: number): number => t * t * t * (t * (t * 6 - 15) + 10);
-  const funnelRings: Array<{ readonly radius: number; readonly y: number }> = [];
-  for (let ring = 0; ring <= BOWL_RING_SEGMENTS; ring += 1) {
-    const t = ring / BOWL_RING_SEGMENTS;
-    const eased = smootherstep(t);
-    funnelRings.push({
-      radius: BOWL_RIM_RADIUS - (BOWL_RIM_RADIUS - BOWL_DRAIN_RADIUS) * eased,
-      y: bowlRimY - BOWL_DROP * t,
-    });
-  }
-
-  const funnelVertexOffset = surfaceVertices.length / 3;
-  for (const { radius, y } of funnelRings) {
-    for (let segment = 0; segment < BOWL_RADIAL_SEGMENTS; segment += 1) {
-      const angle = (segment / BOWL_RADIAL_SEGMENTS) * 2 * Math.PI;
-      surfaceVertices.push(
-        bowlCenter[0] + radius * Math.cos(angle),
-        y,
-        bowlCenter[2] + radius * Math.sin(angle),
-      );
-    }
-  }
-  for (let ring = 0; ring < funnelRings.length - 1; ring += 1) {
-    for (let segment = 0; segment < BOWL_RADIAL_SEGMENTS; segment += 1) {
-      const nextSegment = (segment + 1) % BOWL_RADIAL_SEGMENTS;
-      const a = funnelVertexOffset + ring * BOWL_RADIAL_SEGMENTS + segment;
-      const b = funnelVertexOffset + ring * BOWL_RADIAL_SEGMENTS + nextSegment;
-      const c = funnelVertexOffset + (ring + 1) * BOWL_RADIAL_SEGMENTS + segment;
-      const d = funnelVertexOffset + (ring + 1) * BOWL_RADIAL_SEGMENTS + nextSegment;
-      surfaceIndices.push(a, b, c, b, d, c);
-    }
-  }
-
-  // Circular catch disc under the drain, not just a widened directional
-  // ribbon. Found empirically, not assumed: after an unpredictable number of
-  // spiral orbits, a marble's exit velocity points in an essentially random
-  // direction -- widening the exit ribbon (a strip fixed to one direction,
-  // the approach heading) had zero measurable effect on the failure, because
-  // the marble was exiting *sideways* through the strip's edge, not running
-  // off its far end. The funnel itself is radially symmetric; its catch
-  // surface needs to be too, so it covers every exit direction.
-  //
-  // The disc is *tilted*, not flat, along bowlApproachHeading -- a flat disc
-  // repeats the exact defect the flat lip had earlier: zero grade means
-  // nothing guides a marble toward the continuing ribbon, and it just
-  // wanders on residual momentum until it happens to cross the disc's own
-  // edge into open space again (traced directly: several marbles came to
-  // rest at y=-31.2, the disc's own height, for multiple seconds before
-  // resuming freefall). Every point on a tilted disc has a real downhill
-  // direction toward increasing heading-projected distance, which is also
-  // the direction the finish stretch continues in.
-  const catchDiscCenter: Vector3 = [bowlExitPoint[0], bowlExitPoint[1], bowlExitPoint[2]];
-  const catchDiscVertexOffset = surfaceVertices.length / 3;
-  surfaceVertices.push(...catchDiscCenter);
-  for (let segment = 0; segment < BOWL_RADIAL_SEGMENTS; segment += 1) {
-    const angle = (segment / BOWL_RADIAL_SEGMENTS) * 2 * Math.PI;
-    const offsetX = BOWL_CATCH_DISC_RADIUS * Math.cos(angle);
-    const offsetZ = BOWL_CATCH_DISC_RADIUS * Math.sin(angle);
-    const headingProjection = offsetX * bowlApproachHeading[0] + offsetZ * bowlApproachHeading[1];
-    surfaceVertices.push(
-      catchDiscCenter[0] + offsetX,
-      catchDiscCenter[1] - BOWL_CATCH_DISC_GRADE * headingProjection,
-      catchDiscCenter[2] + offsetZ,
-    );
-  }
-  for (let segment = 0; segment < BOWL_RADIAL_SEGMENTS; segment += 1) {
-    const nextSegment = (segment + 1) % BOWL_RADIAL_SEGMENTS;
-    surfaceIndices.push(
-      catchDiscVertexOffset,
-      catchDiscVertexOffset + 1 + segment,
-      catchDiscVertexOffset + 1 + nextSegment,
-    );
-  }
-
-  const bowl: TrackBowl = Object.freeze({
-    center: bowlCenter,
-    radius: BOWL_RIM_RADIUS,
-    rimY: bowlRimY,
-    drainY: bowlDrainY,
-    entryDistance: bowlEntryDistance,
-    bridgeLength: bowlExitDistance - bowlEntryDistance,
-  });
-
   const totalDistance = path.at(-1)?.distance ?? 0;
-  const bowlExitFraction = totalDistance === 0 ? 0 : bowlExitDistance / totalDistance;
 
   // Cylinder pin field (OBSTACLE-IDEAS.md module 7): staggered rows of
   // round posts -- replaces Phase 1's diamond box posts now that the shape
@@ -773,20 +457,20 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   // above) leaves a 1.293 m gap, already past the >=1.2 m a 15-marble pack
   // needs to drain instead of clogging.
   //
-  // Fixed distances (51.74-67.27 m), not fractions of `totalDistance`: a
-  // fraction-based placement would silently drag this obstacle to a
-  // different physical location every time `totalDistance` changes (the
-  // funnel redesign shortened the course again) -- these are the original
-  // fractions (0.20-0.26) times the pre-bowl course length (258.72 m),
-  // anchoring the field to the physical location it was actually tuned and
-  // proven at.
+  // Fixed distances (51.74-67.27 m, + LEAD_IN_LENGTH_METERS), not fractions
+  // of `totalDistance`: a fraction-based placement would silently drag this
+  // obstacle to a different physical location whenever `totalDistance`
+  // changes -- these are the original fractions (0.20-0.26) times the
+  // pre-bowl course length (258.72 m), anchoring the field to the physical
+  // location it was actually tuned and proven at, then shifted by the lead-in
+  // extension so that location is unchanged relative to the curves it sits on.
   const evenRowOffsets: readonly number[] = [-4, -2, 0, 2, 4];
   const oddRowOffsets: readonly number[] = [-3, -1, 1, 3];
   const pinFieldRows: readonly [number, readonly number[]][] = [
-    [51.74, evenRowOffsets],
-    [56.92, oddRowOffsets],
-    [62.09, evenRowOffsets],
-    [67.27, oddRowOffsets],
+    [51.74 + LEAD_IN_LENGTH_METERS, evenRowOffsets],
+    [56.92 + LEAD_IN_LENGTH_METERS, oddRowOffsets],
+    [62.09 + LEAD_IN_LENGTH_METERS, evenRowOffsets],
+    [67.27 + LEAD_IN_LENGTH_METERS, oddRowOffsets],
   ];
   for (const [distance, lateralOffsets] of pinFieldRows) {
     for (const lateralOffset of lateralOffsets) {
@@ -799,8 +483,7 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   // distances for the same reason as the pin field above.
   const addRumbleBar = (distance: number): void => {
     const sample = interpolatePathSample(path, distance);
-    const halfWidth =
-      trackHalfWidthAtDistance(config, sample.distance, bowlEntryDistance, bowlExitDistance) - config.railThickness;
+    const halfWidth = trackHalfWidthAtDistance(config, sample.distance) - config.railThickness;
     const halfExtents: Vector3 = [halfWidth, 0.05, 0.12];
     boxes.push({
       kind: "rumble",
@@ -811,7 +494,11 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
     });
   };
 
-  const rumbleDistances: readonly number[] = [47.86, 49.16, 50.45];
+  const rumbleDistances: readonly number[] = [
+    47.86 + LEAD_IN_LENGTH_METERS,
+    49.16 + LEAD_IN_LENGTH_METERS,
+    50.45 + LEAD_IN_LENGTH_METERS,
+  ];
   for (const distance of rumbleDistances) {
     addRumbleBar(distance);
   }
@@ -819,7 +506,7 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
   const startSlots: Vector3[] = [];
   const startSample = interpolatePathSample(path, 1.5);
   const availableHalfWidth =
-    trackHalfWidthAtDistance(config, startSample.distance, bowlEntryDistance, bowlExitDistance) -
+    trackHalfWidthAtDistance(config, startSample.distance) -
     config.railThickness -
     config.marbleRadius;
   const slotGap = Math.min(0.66, (availableHalfWidth * 2) / (config.startSlotCount - 1));
@@ -853,7 +540,5 @@ export function createTrackDefinition(config: TrackConfig): TrackDefinition {
       up: finishSample.up,
       halfWidth: config.trackHalfWidth,
     }),
-    bowl,
-    bowlExitFraction,
   });
 }

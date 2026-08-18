@@ -7,7 +7,11 @@ import {
   DEFAULT_TRACK_CONFIG,
   type TrackDefinition,
 } from "../track/definition";
-import { createProgressTracker, measureTrackProgress, type ProgressTracker } from "../track/progress";
+import {
+  createProgressTracker,
+  measureTrackProgress,
+  type ProgressTracker,
+} from "../track/progress";
 
 export interface RaceView {
   start(): void;
@@ -61,9 +65,8 @@ function createLineup(roster: readonly string[], styles: readonly MarbleStyle[])
 // Playback only ever moves forward through frames (createReplayController has
 // no scrubbing), so a running-max tracker updated once per newly-reached
 // frame stays valid — see src/track/progress.ts's ProgressTracker for why
-// this must be clamped at all (tight radii, i.e. the vortex bowl, make small
-// projection errors read as backward movement, which would flicker the
-// leaderboard).
+// this must be clamped at all (tight radii make small projection errors
+// read as backward movement, which would flicker the leaderboard).
 function rankAtFrame(
   recording: RaceRecording,
   track: TrackDefinition,

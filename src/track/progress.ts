@@ -51,52 +51,7 @@ function normalize(vector: Vector3): Vector3 {
   return scale(vector, 1 / vectorLength);
 }
 
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-// A position inside the vortex bowl's bounding volume gets a depth-advancing
-// reading instead of a nearest-segment projection: the bowl has no ribbon to
-// project onto (PLAN.md -> "Progress while inside the bowl"), and a flat
-// value was tried and rejected -- `createFinalRanking`/`rankAtFrame` both
-// break ties on marble index, so every marble in the bowl would tie and the
-// leaderboard would silently re-sort into roster order, the same "blank the
-// leaderboard during the bowl" defect the original spiral-centreline design
-// was chosen to avoid. Depth is a genuine monotone measure: a marble resting
-// on a cone has its depth rigidly coupled to its radius, so the marble
-// closest to the drain is the one about to go through it.
-function measureBowlProgress(track: TrackDefinition, position: Vector3): number | null {
-  const bowl = track.bowl;
-  const dx = position[0] - bowl.center[0];
-  const dz = position[2] - bowl.center[2];
-  const planarDistance = Math.hypot(dx, dz);
-  // A margin around the volume, not the bare rim radius/rim-to-drain span:
-  // a marble arriving at speed can be briefly airborne just outside the rim
-  // or just past the drain, and should still read as "in the bowl" rather
-  // than snapping back to a stale ribbon projection for one frame. Kept
-  // small deliberately: the funnel's own smoothstep profile has no discrete
-  // wall standing above the rim (an earlier version did, and needed a
-  // larger margin to cover its height), and a wide margin here reaches back
-  // into the ordinary approach ribbon's own final metres, corrupting a
-  // position that was never inside the bowl to begin with (found via the
-  // build-time assertion in definition.test.ts).
-  const margin = 1;
-  if (planarDistance > bowl.radius + margin) {
-    return null;
-  }
-  if (position[1] > bowl.rimY + margin || position[1] < bowl.drainY - margin) {
-    return null;
-  }
-  const depthFraction = clamp01((bowl.rimY - position[1]) / (bowl.rimY - bowl.drainY));
-  return bowl.entryDistance + bowl.bridgeLength * depthFraction;
-}
-
 export function measureTrackProgress(track: TrackDefinition, position: Vector3): number {
-  const bowlProgress = measureBowlProgress(track, position);
-  if (bowlProgress !== null) {
-    return bowlProgress;
-  }
-
   let nearestDistanceSquared = Number.POSITIVE_INFINITY;
   let nearestProgress = 0;
 
@@ -133,7 +88,7 @@ export interface ProgressTracker {
   currentProgress(marbleIndex: number): number;
 }
 
-// Tight radii (the vortex bowl, in particular) make small projection errors
+// Tight radii make small projection errors
 // in `measureTrackProgress` read as backward movement — a marble that hasn't
 // actually reversed can measure a lower progress on one frame than the last.
 // A leaderboard, camera target, or finish ranking built on raw readings would

@@ -18,7 +18,19 @@ that predates this spec.
 
 ## STATUS
 
-- Current phase: 3 — done (2026-08-16)
+- **Spec abandoned 2026-08-18**, in favor of an unrelated track refactor.
+  Phase 3's vortex bowl was reverted in full (commit `03903bf` on
+  `main`) — `TrackBowl`, the bowl-progress case in `measureTrackProgress`,
+  the revolved funnel surface, and all of its tests are gone, replaced by
+  an unrelated `LEAD_IN_WAYPOINT` change. Phases 4–6 (windmill/gates,
+  obstacle distribution, tuning) never started. PLAN.md called the bowl
+  "the spec's only queueing module" and said explicitly to stop and ask
+  before descoping it mid-phase; the user made that call directly, so
+  this is recorded rather than silently dropped. No capability-baseline
+  fold-in: this project's `RULEBOOK.md` has no "Capability baseline"
+  section, so there is nothing to apply a delta to. The phase history
+  below is left as it stood at the point of abandonment, for the record.
+- Current phase: 3 — done (2026-08-16), later reverted — see above
 - Phase 1 — Static modules: done
 - Phase 2 — Shape union: done
 - Phase 3 — Progress hardening and the vortex bowl: done. Item 1

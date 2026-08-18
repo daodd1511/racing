@@ -4,37 +4,17 @@ export type Vector3 = readonly [x: number, y: number, z: number];
 
 export type Quaternion = readonly [x: number, y: number, z: number, w: number];
 
-export interface MarbleTransform {
-  readonly position: Vector3;
-  readonly rotation: Quaternion;
-}
-
-export interface TransformFrame {
-  readonly index: number;
-  readonly simulationTimeSeconds: number;
-  readonly transforms: readonly MarbleTransform[];
-}
-
+// Kept despite being a "recording" type per PLAN.md's deletion list: it is
+// still `createRaceAudio.ts`'s (and its test's) `playContact` input, and that
+// module is one Phase 1 keeps untouched -- audio's rewiring onto live
+// contact events is Spec 4's job, not this phase's. Frame-based fields
+// (frameIndex, simulationTimeSeconds, marbleIndices) are unused by the
+// surviving code; only `impulse` is read.
 export interface RecordedContactEvent {
   readonly frameIndex: number;
   readonly simulationTimeSeconds: number;
   readonly marbleIndices: readonly number[];
   readonly impulse: number;
-}
-
-export interface RaceRecording {
-  readonly seed: number;
-  readonly roster: readonly string[];
-  readonly selectionMode: SelectionMode;
-  readonly slotByMarbleIndex: readonly number[];
-  readonly frames: readonly TransformFrame[];
-  readonly contactEvents: readonly RecordedContactEvent[];
-  readonly finishFrameByMarbleIndex: readonly (number | null)[];
-  readonly finishOrder: readonly number[];
-  readonly finalRanking: readonly number[];
-  readonly selectedMarbleIndex: number;
-  readonly selectionFrameIndex: number;
-  readonly simulationDurationSeconds: number;
 }
 
 export interface CommittedRaceRecord {

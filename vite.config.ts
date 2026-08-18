@@ -12,6 +12,6 @@ export default defineConfig({
     emptyOutDir: true,
   },
   optimizeDeps: {
-    entries: ["index.html", "preview.html"],
+    entries: ["index.html"],
   },
 });

@@ -1,4 +1,5 @@
 import { chute } from "../modules/chute";
+import { vortexBowl } from "../modules/vortexBowl";
 import type { KinematicTransform, ModuleDefinition, ModuleMeta, Role, Spec } from "../modules/types";
 import type { ParamValues } from "./ParamPanel";
 
@@ -37,4 +38,4 @@ function toShowcaseEntry<P>(module: ModuleDefinition<P>): ShowcaseEntry {
   };
 }
 
-export const MODULES: readonly ShowcaseEntry[] = [toShowcaseEntry(chute)];
+export const MODULES: readonly ShowcaseEntry[] = [toShowcaseEntry(chute), toShowcaseEntry(vortexBowl)];

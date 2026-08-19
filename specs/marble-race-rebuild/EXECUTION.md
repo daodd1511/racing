@@ -13,12 +13,18 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Scaffold and old-race removal: pending
+- Current phase: 1 — done
+- Phase 1 — Scaffold and old-race removal: done
 - Phase 2 — Module contract, Validator, chute: pending
 - Phase 3 — Showcase: pending
 - Phase 4 — Vortex bowl: pending
-- Verification debt: none
+- Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
+  resting" review-checklist item could not be verified by the implementer —
+  this session's browser automation reports `document.visibilityState` stuck
+  on `"hidden"` with `requestAnimationFrame` never firing, an environment
+  limitation, not a code question. Left as an open item in the PR's review
+  checklist for the user to close with their own `pnpm dev`, per the
+  rulebook's "manual verification scenarios are the user's, not agent debt."
 
 Resolved while planning, not deferred: initial values for `marbleRadius`, channel width, and
 Cell pitch land in `src/race/scale.ts` in Phase 2 and are tuned empirically in Phases 3–4 —
@@ -40,26 +46,33 @@ Fresh review: required — CI/test-gate infrastructure (`tsconfig.json`, `vite.c
 oxlint config and the deploy workflow's gate all change; a weakened typecheck here would go
 unnoticed for the rest of the spec)
 
-- [ ] Add deps at the versions in PLAN.md → "Stack": `react@19.2.8`, `react-dom@19.2.8`, `@react-three/fiber@9.7.0`, `@react-three/rapier@2.2.0`, `@react-three/drei@10.7.8`, `@react-three/postprocessing@3.0.5`, `@vitejs/plugin-react`, `@types/react`, `@types/react-dom`; keep `three@0.185.1`.
-- [ ] Pin `@dimforge/rapier3d-compat` to whatever version `@react-three/rapier@2.2.0` resolves (read it from `pnpm-lock.yaml`, do not assume 0.20.0).
-- [ ] Add `src/deps.test.ts` asserting the `@dimforge/rapier3d-compat` version resolved directly equals the one resolved under `@react-three/rapier` — per PLAN.md → "Stack", drift makes the Validator lie silently.
-- [ ] Set `"jsx": "react-jsx"` in `tsconfig.json`; register `@vitejs/plugin-react` in `vite.config.ts`; keep `base: "./"` and both `optimizeDeps.entries`.
-- [ ] Enable oxlint's React and react-hooks rules in the project's oxlint config so `pnpm lint` covers `.tsx`.
-- [ ] Replace `src/main.ts` with `src/main.tsx`: mount a React root into `#app` rendering a `<Canvas><Physics>` smoke scene — one marble dropped onto one static floor — to prove the R3F/Rapier path end to end. Update `index.html`'s script src.
-- [ ] Delete the race pipeline: `src/simulation/simulateRace.ts`, `simulateWithRetry.ts`, `initializeRapier.ts`, `trackStress.test.ts`, `simulateRace.test.ts`, `simulateWithRetry.test.ts`.
-- [ ] Delete the track and replay layers: `src/track/definition.ts`, `colliders.ts`, `progress.ts` and their tests; `src/render/createRaceScene.ts`, `src/render/cameraTarget.ts` and its test; `src/replay/createReplayController.ts` and its test.
-- [ ] Delete `src/app/createApp.ts` + `createApp.test.ts` and `src/ui/createRaceView.ts` — all three depend on the deleted replay and scene layers.
-- [ ] Strip the recording types from `src/race/types.ts`: remove `RaceRecording`, `TransformFrame`, `MarbleTransform`, `RecordedContactEvent`; keep `SelectionMode`, `PickerSettingsV1`, `PickerStateV1`, `Vector3`, `Quaternion` for Spec 4.
-- [ ] Keep untouched as Spec 4's port source, per PLAN.md → "What carries over unchanged": `src/race/random.ts`, `src/race/config.ts`, `src/storage/raceStore.ts`, `src/render/marbleStyles.ts`, `src/audio/createRaceAudio.ts`, `src/ui/createSetupView.ts`, `src/ui/createResultDialog.ts` and their tests.
-- [ ] Delete the unreferenced Vite scaffold leftovers: `src/counter.ts`, `src/style.css`, `src/assets/hero.png`, `src/assets/typescript.svg`, `src/assets/vite.svg`, and `.prettierignore` (Prettier is not a dependency).
-- [ ] Confirm `main` still builds and deploys: `index.html` now serves the smoke scene, not a working picker — per the session's decision, that is expected until Spec 4.
+- [x] Add deps at the versions in PLAN.md → "Stack": `react@19.2.8`, `react-dom@19.2.8`, `@react-three/fiber@9.7.0`, `@react-three/rapier@2.2.0`, `@react-three/drei@10.7.8`, `@react-three/postprocessing@3.0.5`, `@vitejs/plugin-react`, `@types/react`, `@types/react-dom`; keep `three@0.185.1`.
+- [x] Pin `@dimforge/rapier3d-compat` to whatever version `@react-three/rapier@2.2.0` resolves (read it from `pnpm-lock.yaml`, do not assume 0.20.0). Resolved to `0.19.2`, not the `0.20.0` PLAN.md assumed — confirmed against `@react-three/rapier`'s own `package.json`, which pins it exact, not a range.
+- [x] Add `src/deps.test.ts` asserting the `@dimforge/rapier3d-compat` version resolved directly equals the one resolved under `@react-three/rapier` — per PLAN.md → "Stack", drift makes the Validator lie silently. Walks real Node resolution from `@react-three/rapier`'s entry file rather than trusting node_modules layout; verified it actually fails on an injected drift before relying on it.
+- [x] (amended 2026-08-18) Add `@types/node` and `"node"` to `tsconfig.json`'s `types` — `src/deps.test.ts`'s `node:module`/`node:path`/`node:fs` imports don't typecheck without it. Not in PLAN.md's stack list.
+- [x] Set `"jsx": "react-jsx"` in `tsconfig.json`; register `@vitejs/plugin-react` in `vite.config.ts`; keep `base: "./"`.
+- [x] (amended 2026-08-18) `optimizeDeps.entries` drops `preview.html`, not kept as originally written — see the `racePreview.ts` deletion below, which this entry can't survive.
+- [x] Enable oxlint's React and react-hooks rules in the project's oxlint config so `pnpm lint` covers `.tsx`. oxlint folds react-hooks rules into its own `react` plugin (`react/rules-of-hooks`, `react/exhaustive-deps`) rather than a separate package; verified `rules-of-hooks` actually fires on a conditional-hook fixture before relying on it.
+- [x] Replace `src/main.ts` with `src/main.tsx`: mount a React root into `#app` rendering a `<Canvas><Physics>` smoke scene — one marble dropped onto one static floor — to prove the R3F/Rapier path end to end. Update `index.html`'s script src.
+- [x] Delete the race pipeline: `src/simulation/simulateRace.ts`, `simulateWithRetry.ts`, `initializeRapier.ts`, `trackStress.test.ts`, `simulateRace.test.ts`, `simulateWithRetry.test.ts`.
+- [x] Delete the track and replay layers: `src/track/definition.ts`, `colliders.ts`, `progress.ts` and their tests; `src/render/createRaceScene.ts`, `src/render/cameraTarget.ts` and its test; `src/replay/createReplayController.ts` and its test.
+- [x] Delete `src/app/createApp.ts` + `createApp.test.ts` and `src/ui/createRaceView.ts` — all three depend on the deleted replay and scene layers.
+- [x] Strip the recording types from `src/race/types.ts`: remove `RaceRecording`, `TransformFrame`, `MarbleTransform`; keep `SelectionMode`, `PickerSettingsV1`, `PickerStateV1`, `Vector3`, `Quaternion`, `CommittedRaceRecord` for Spec 4. `RecordedContactEvent` is **not** removed, correcting this item as originally written — see next item.
+- [x] (amended 2026-08-18) Keep `RecordedContactEvent` in `src/race/types.ts`, commented as to why: `createRaceAudio.ts`'s `playContact` still takes it, and that module is the very next item's "keep untouched" — deleting the type would force touching audio code that Spec 4 owns. Original item 10 said to remove it; that was a defect in the plan, not something I could satisfy both items on.
+- [x] Keep untouched as Spec 4's port source, per PLAN.md → "What carries over unchanged": `src/race/random.ts`, `src/race/config.ts`, `src/storage/raceStore.ts`, `src/render/marbleStyles.ts`, `src/audio/createRaceAudio.ts`, `src/ui/createSetupView.ts`, `src/ui/createResultDialog.ts` and their tests. None touched.
+- [x] (amended 2026-08-18) Delete `src/dev/racePreview.ts` and `preview.html` — the tuning harness depended entirely on `simulateRace`/`initializeRapier`/`createRaceView`, all deleted above, and EXECUTION.md's own Phase 3 already routes the real Showcase through `main.tsx`, not a second entry point. Not in the original checklist; necessary for the deletions above to typecheck at all.
+- [x] Delete the unreferenced Vite scaffold leftovers: `src/counter.ts`, `src/style.css`, `src/assets/hero.png`, `src/assets/typescript.svg`, `src/assets/vite.svg`. `.prettierignore` is **not** deleted — see next item.
+- [x] (amended 2026-08-18) Keep `.prettierignore`, correcting this item as originally written: PLAN.md's claim that it "survives from a Prettier this project does not depend on" is wrong — `oxfmt` reads it as its own ignore file (confirmed: deleting it made `pnpm format:check` start scanning `specs/`, `ui-variant-*.html`, and `README.md`, all of which the marble-race-picker spec deliberately excluded). Deleting it would have broken `pnpm format:check` in `.github/workflows/deploy-pages.yml` on every future push to `main`.
+- [x] Confirm `main` still builds and deploys: `pnpm build` succeeds (`dist/` produced, single ~3.3 MB chunk — code-splitting is out of scope for this phase). `index.html` now serves the smoke scene, not a working picker — per the session's decision, that is expected until Spec 4.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` — clean (project-wide `tsc -b`).
+- [x] `pnpm vitest related --run <changed files>` against the diff's non-deleted files (`src/main.tsx`, `src/race/types.ts`, `vite.config.ts`) found no related tests — expected, since `types.ts`'s consumers only use `import type`, which `vitest related`'s module graph doesn't see. Ran the full suite as substitute evidence instead: `pnpm test` — 7 files, 17 tests, all passing.
+
+Also run and clean, beyond the two hard gate items: `pnpm lint` (0 findings) and `pnpm build` (succeeds). `pnpm format:check` still fails on 11 files (9 `.claude/skills/threejs-*/SKILL.md` plus `CLAUDE.md` and `docs/DOMAIN-RULEBOOK.md`) — confirmed **pre-existing on `main` before this phase** (checked out `main` at the planning commit and reproduced the same 11-file failure there), not part of this phase's gate, not touched here. Flagged for the user; `deploy-pages.yml`'s format-check step is presently red on `main` for reasons unrelated to this spec.
 
 **Review checklist (user, at PR review):**
-- [ ] `pnpm dev` shows one marble falling onto a floor and resting — R3F and Rapier are alive.
+- [ ] `pnpm dev` shows one marble falling onto a floor and resting — R3F and Rapier are alive. **Could not be verified by the implementer**: this session's browser automation reports `document.visibilityState` as permanently `"hidden"` with `requestAnimationFrame` never firing (0 calls in a 3s window, unaffected by clicks or `window.focus()`), which is an environment limitation, not a code question — R3F's frame loop is entirely rAF-driven, so no automated screenshot in this environment can show a rendered frame regardless of correctness. Verified by other means instead: `<Canvas onCreated>` fires, `RAPIER.init()` resolves cleanly against the pinned version with no rejection, zero console errors/unhandled rejections through the full load sequence, and the scene graph (camera distance ~0.67 m from a 0.016 m-radius marble over a 1×1 m floor, fov 50°) checks out on inspection. This item genuinely needs your own `pnpm dev` to close.
 - [ ] `pnpm build` output loads from `dist/` with no console errors.
 
 **On completion:** run the phase gate; run `fresh-review` (required above); update STATUS +

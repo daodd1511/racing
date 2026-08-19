@@ -222,11 +222,15 @@ revolved geometry rather than boxes.
 Consumes: `ModuleDefinition`, `Spec`, `SCALE`, `<ModuleColliders>`, `<Showcase />`,
 `validateModule`.
 Produces: `vortexBowl: ModuleDefinition<VortexBowlParams>`;
-`revolveProfile(profile, segments): ColliderSpec[]` in `src/modules/geometry/revolve.ts`.
+`revolveProfile(profile: readonly ProfileRing[], segments: number, marbleRadius: number): Shape`
+in `src/modules/geometry/revolve.ts` (corrected from the planned `ColliderSpec[]` return --
+`Shape` is the union already shared by `ColliderSpec`/`VisualSpec` per types.ts, so a caller
+triangulates once for both instead of twice; `marbleRadius` is the facet-margin input the
+item below requires, not something the planned two-arg signature had room for).
 
 Fresh review: not required
 
-- [ ] Add `src/modules/geometry/revolve.ts` turning a 2D profile into a revolved trimesh collider, with a facet-chord margin sized against `SCALE.marbleRadius` so no marble tunnels a facet seam.
+- [x] Add `src/modules/geometry/revolve.ts` turning a 2D profile into a revolved trimesh collider, with a facet-chord margin sized against `SCALE.marbleRadius` so no marble tunnels a facet seam. Verified by `revolve.test.ts`: winding checked against a cone's computed face normals (inward+upward on every facet), facet-margin floor checked by forcing a coarse request up and confirming a fine one is left alone -- headless, since nothing here renders to check by eye.
 - [ ] Add `src/modules/vortexBowl/index.ts` building the mechanism PLAN.md → "The vortex bowl" specifies: tilted basin leaning into the Board, raised rim lip, **tangential rim entry spout**, and one rim exit gap. `role: "shuffle"`.
 - [ ] Build the basin floor as a shallow inward spiral ramp with the exit at its inner end — the Dwell bound comes from this geometry, so `step` stays pure and no timer is added.
 - [ ] Expose params: basin radius, rim bank angle, board tilt, exit gap width, wall friction, spiral pitch — the six dials that set orbit count.

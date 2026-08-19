@@ -6,6 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { ModuleColliders } from "../modules/render/ModuleColliders";
 import { SCALE } from "../race/scale";
 import { percentile, shuffleCoefficient } from "../validator/metrics";
+import { CameraFraming } from "./CameraFraming";
 import { Feeder, type FeedMode } from "./Feeder";
 import { EMPTY_LIVE_METRICS, MetricsReadout, type LiveMetricsState } from "./MetricsReadout";
 import { defaultParamValues, ParamPanel, type ParamValues } from "./ParamPanel";
@@ -38,6 +39,18 @@ export function Showcase() {
   const exitSpeedsRef = useRef<number[]>([]);
 
   const spec = useMemo(() => selected.buildSpec(params), [selected, params]);
+
+  // Deliberately built from the Module's *default* params, not the live
+  // `params` state: this decides how the camera frames a Module, and
+  // recomputing it on every param edit -- `spec.footprint.bounds` does
+  // change with params, e.g. the chute's `length` -- would yank the camera
+  // back to a fresh fit on every slider drag, fighting any zoom the user
+  // just set by hand. It only needs to change identity when the Module
+  // itself does, which `[selected]` alone guarantees.
+  const framingBounds = useMemo(
+    () => selected.buildSpec(defaultParamValues(selected.meta.params)).footprint.bounds,
+    [selected],
+  );
 
   const resetMetrics = useCallback(() => {
     dwellSecondsByIdRef.current = new Map();
@@ -140,6 +153,9 @@ export function Showcase() {
       </aside>
 
       <div style={{ position: "relative", background: "#0b0c0d" }}>
+        {/* `position` here is only a fallback for the first frame, before
+         * `<CameraFraming>`'s effect runs and overwrites it -- keeps that
+         * frame from flashing R3F's own generic default camera position. */}
         <Canvas camera={{ position: [0, 0.3, 0.6], fov: 50 }} shadows>
           {/* Dark charcoal per PLAN.md -> "Art direction" -- set on the
            * scene itself, not left to the page's CSS behind a possibly-
@@ -147,6 +163,11 @@ export function Showcase() {
           <color attach="background" args={["#0b0c0d"]} />
           <ambientLight intensity={0.5} />
           <directionalLight position={[0.6, 1, 0.4]} intensity={1.4} castShadow />
+          {/* Fits the camera to the selected Module and then lets the user
+           * zoom/pan/orbit freely -- see CameraFraming.tsx. The old fixed
+           * position only ever suited the chute; the vortex bowl's bounds
+           * run more than twice as wide. */}
+          <CameraFraming bounds={framingBounds} />
           <Physics gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}>
             <ModuleColliders spec={spec} />
             <Feeder

@@ -13,9 +13,9 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — done
 - Phase 1 — Scaffold and old-race removal: done
-- Phase 2 — Module contract, Validator, chute: pending
+- Phase 2 — Module contract, Validator, chute: done
 - Phase 3 — Showcase: pending
 - Phase 4 — Vortex bowl: pending
 - Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
@@ -27,9 +27,10 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
   rulebook's "manual verification scenarios are the user's, not agent debt."
 
 Resolved while planning, not deferred: initial values for `marbleRadius`, channel width, and
-Cell pitch land in `src/race/scale.ts` in Phase 2 and are tuned empirically in Phases 3–4 —
-PLAN.md defers them deliberately. The on-screen-displacement threshold is likewise defined as
-a metric in Phase 2 and given its number in Phase 3, once a chute is watchable.
+Cell pitch landed in `src/race/scale.ts` in Phase 2 (done) and are tuned empirically in
+Phases 3–4 — PLAN.md defers them deliberately. The on-screen-displacement metric is likewise
+defined in Phase 2 (`src/validator/metrics.ts`'s `displacementPerSecond`); its threshold number
+is still Phase 3's to set, once a chute is watchable.
 
 ## Phase 1 — Scaffold and old-race removal
 
@@ -86,26 +87,42 @@ The pure headless layer every visual surface consumes; the chute lands here beca
 Validator's own fixture, per PLAN.md → "Sequencing".
 
 Consumes: nothing from Phase 1 but its dependency graph.
-Produces: `Role`, `ColliderSpec`, `VisualSpec`, `Anchor`, `Footprint`, `Spec`, `ModuleMeta`,
-`ParamSchema`, `KinematicTransform`, `ModuleDefinition<P>` (all from `src/modules/types.ts`);
-`SCALE` from `src/race/scale.ts`; `chute: ModuleDefinition<ChuteParams>`;
-`buildWorld(specs: readonly Spec[]): RAPIER.World`;
-`validateModule(module, params, options): ValidationReport`.
+Produces (corrected from the plan's sketch to the actual exported surface —
+"Interfaces are part of the contract"): from `src/modules/types.ts` — `Role`, `Cell`, `Anchor`,
+`Footprint`, `Shape`, `ColliderMaterial`, `ColliderSpec`, `VisualMaterial`, `VisualSpec`, `Spec`,
+`NumberParamField`, `BooleanParamField`, `ParamField`, `ParamSchema`, `ModuleMeta`,
+`KinematicTransform`, `ModuleDefinition<P>`. `Shape` unifies collider and visual geometry
+(cuboid/cylinder/ball/trimesh) rather than duplicating the union per concern; `trimesh` exists
+from this phase on so Phase 4's revolved bowl geometry doesn't force a breaking change to a
+contract Phase 3's renderer already depends on.
+From `src/race/scale.ts` — `SCALE` (includes `cellPitch`, defined but unconsumed: nothing
+computes real Cell occupancy until Spec 3's Board exists).
+From `src/modules/chute/index.ts` — `ChuteParams`, `chute: ModuleDefinition<ChuteParams>`.
+From `src/validator/buildWorld.ts` — `buildWorld(specs: readonly Spec[]): RAPIER.World`.
+From `src/validator/metrics.ts` — `FrameSample`, `MarbleRun`, `DwellResult`, `StallCount`,
+`measureDwell(run, exit): DwellResult`, `displacementPerSecond(run): number[]`,
+`shuffleCoefficient(dwellSecondsByMarbleIndex): number`, `countStalls(exitedFlags): StallCount`.
+From `src/validator/validateModule.ts` — `ValidateModuleOptions`, `ValidationReport`,
+`validateModule(module, params, options): Promise<ValidationReport>`.
 
 Fresh review: not required
 
-- [ ] Define the contract in `src/modules/types.ts` exactly as PLAN.md → "The Module contract" states: `buildSpec(params): Spec` pure, `step(spec, tSeconds): KinematicTransform[]` pure in `t`. `Footprint` carries occupied Cells plus entry and exit `Anchor`s.
-- [ ] Add `src/race/scale.ts` with the toy-scale constants per PLAN.md → "Scale and materials": marble radius ≈ 0.016, channel width ≈ 0.5, gravity −9.81, and non-zero restitution / zero damping defaults. These are starting values, tuned in Phases 3–4.
-- [ ] Add `src/modules/chute/index.ts`: a straight banked chute with side rails, `role: "accel"`, params for length, grade, and width.
-- [ ] Add `src/validator/buildWorld.ts` translating `ColliderSpec[]` into a raw `@dimforge/rapier3d-compat` world — no React, no `@react-three/rapier`, per ADR 0002.
-- [ ] Add `src/validator/metrics.ts` computing Dwell Time distribution, exit speed, Shuffle coefficient, stall count, and on-screen displacement per second (the metric enforcing PLAN.md's "Dwell must be paid for with visible motion"; its threshold is set in Phase 3).
-- [ ] Add `src/validator/validateModule.ts` stepping a fixed 1/60 across a seed sweep and returning a `ValidationReport`.
-- [ ] Add `src/modules/purity.test.ts` asserting `buildSpec` is referentially transparent — same params in, deep-equal `Spec` out, across repeated calls and call order.
-- [ ] Add `src/validator/validateModule.test.ts` running the chute over a seed sweep: every marble exits, zero stalls, and exit speed rises with grade.
+- [x] Define the contract in `src/modules/types.ts` exactly as PLAN.md → "The Module contract" states: `buildSpec(params): Spec` pure, `step(spec, tSeconds): KinematicTransform[]` pure in `t`. `Footprint` carries occupied Cells plus entry and exit `Anchor`s. `cells` is legitimately `[]` for every Module until Spec 3's Board exists to occupy — see the corrected Produces line above.
+- [x] Add `src/race/scale.ts` with the toy-scale constants per PLAN.md → "Scale and materials": marble radius ≈ 0.016, channel width ≈ 0.5, gravity −9.81, and non-zero restitution / zero damping defaults. These are starting values, tuned in Phases 3–4. Also carries `cellPitch`, per STATUS's note above.
+- [x] Add `src/modules/chute/index.ts`: a straight banked chute with side rails, `role: "accel"`, params for length, grade, and width.
+- [x] Add `src/validator/buildWorld.ts` translating `ColliderSpec[]` into a raw `@dimforge/rapier3d-compat` world — no React, no `@react-three/rapier`, per ADR 0002.
+- [x] Add `src/validator/metrics.ts` computing Dwell Time distribution, exit speed, Shuffle coefficient, stall count, and on-screen displacement per second (the metric enforcing PLAN.md's "Dwell must be paid for with visible motion"; its threshold is set in Phase 3). Per-run primitives (`measureDwell`, `displacementPerSecond`, `shuffleCoefficient`, `countStalls`); `validateModule.ts` aggregates them into seed-sweep distributions.
+- [x] Add `src/validator/validateModule.ts` stepping a fixed 1/60 across a seed sweep and returning a `ValidationReport`.
+- [x] Add `src/modules/purity.test.ts` asserting `buildSpec` is referentially transparent — same params in, deep-equal `Spec` out, across repeated calls and call order.
+- [x] Add `src/validator/validateModule.test.ts` running the chute over a seed sweep: every marble exits, zero stalls, and exit speed rises with grade.
+- [x] (amended 2026-08-19) Fix `chute`'s pitch quaternion: the original used a hand-picked `setFromAxisAngle` sign that pointed the ramp uphill while `entry`/`exit` still claimed it went downhill — self-consistent enough to typecheck, wrong enough that a marble fell straight through the floor with zero contact. Replaced with `setFromUnitVectors` derived directly from `exit - entry`, which cannot disagree with the anchors by construction. Found empirically via `validateModule.test.ts` failing (`stalledMarbles` 32/32 instead of 0), not by reading the math; root-caused with a throwaway scratch reproduction (never committed) that isolated rotation sign, collider thickness, and CCD one at a time before finding the real cause below.
+- [x] (amended 2026-08-19) Fix `validateModule.ts`'s `spawnMarbles`: a marble spawned exactly at `Footprint.entry.position` sits on the geometric edge of the entry collider and can miss it entirely on the first physics step — confirmed not a thin-collider tunneling issue (a 10×-thicker floor made no difference) but a genuine non-overlap at spawn. Fixed by spawning a few marble radii inward along `entry.tangent`, lifted along `entry.up`. Also replaced the lateral spawn axis's hardcoded `+X` assumption with `cross(entry.tangent, entry.up)`, which holds for any Module's entry orientation, not only the chute's.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` — clean (project-wide `tsc -b`).
+- [x] `pnpm vitest related --run <changed files>` against this phase's diff (`src/modules/chute/index.ts`, `purity.test.ts`, `types.ts`, `src/race/scale.ts`, `src/validator/{buildWorld,metrics,validateModule,validateModule.test}.ts`) — 2 files, 7 tests, all passing.
+
+Also run and clean, beyond the two hard gate items: `pnpm test` (full suite, 9 files / 24 tests) and `pnpm lint` (0 findings).
 
 **Review checklist (user, at PR review):**
 - [ ] Read `src/modules/types.ts` and confirm the contract is one you want to author ten Modules against.

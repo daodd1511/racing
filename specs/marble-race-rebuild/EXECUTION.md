@@ -336,8 +336,10 @@ to the tilt-induced potential barrier oscillates rather than circulates -- reaso
 phase's investigation, then not re-checked once escapes stopped) is a real candidate explanation, not
 a certainty. **Do not trust this phase's orbit-count numbers as evidence of circulation without a
 metric that checks direction, not just net displacement, and without watching it.** Deferred at the
-user's direction until the rest of the Module catalogue (Spec 2) is further along; resume by reading
-this note and PLAN.md's "Where the risk actually sits" before touching the mechanism again.
+user's direction, explicitly not to "after Spec 2" but to **after Specs 2, 3, and 4 are all done and
+the app is fully functional** -- this phase has already cost far more time than budgeted, and the
+user's call is to get everything else working first and come back to this one Module last. Resume by
+reading this note and PLAN.md's "Where the risk actually sits" before touching the mechanism again.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

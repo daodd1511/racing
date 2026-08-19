@@ -120,7 +120,11 @@ function buildSpec(params: ChuteParams): Spec {
     {
       id: "floor",
       shape: floorShape,
-      material: { color: "#2b2f33", metalness: 0.1, roughness: 0.8 },
+      // Glossy injection-moulded plastic, per PLAN.md -> "Art direction" --
+      // near-zero metalness (plastic isn't a metal) and low roughness for
+      // the sheen. A dark, rough, semi-metallic material here was read as a
+      // matte concrete slab, not the toy-real look the direction calls for.
+      material: { color: "#e8e2d0", metalness: 0.05, roughness: 0.25 },
       position: toVector(floorCenter),
       rotation: toQuaternion(pitch),
     },
@@ -148,7 +152,7 @@ function buildSpec(params: ChuteParams): Spec {
     visuals.push({
       id,
       shape,
-      material: { color: "#d8ff42", metalness: 0.3, roughness: 0.4 },
+      material: { color: "#d8ff42", metalness: 0.05, roughness: 0.2 },
       position: toVector(railCenter),
       rotation: toQuaternion(pitch),
     });

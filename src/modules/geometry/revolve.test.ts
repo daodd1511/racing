@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { revolveProfile } from "./revolve";
+import { revolveProfile, revolveProfileToPlates } from "./revolve";
 
 // No renderer runs in this suite -- see the module comment on why winding
 // and facet count are verified numerically here instead of by eye.
@@ -113,5 +113,163 @@ describe("revolveProfile", () => {
 
   it("rejects a profile with fewer than two rings", () => {
     expect(() => revolveProfile([{ radius: 1, height: 0 }], 8, 0.016)).toThrow();
+  });
+});
+
+describe("revolveProfileToPlates", () => {
+  // Applies a quaternion to a vector via the standard formula --
+  // independent of quaternionFromBasis (a private helper in revolve.ts),
+  // so this is a genuine outside check of what the rotation actually does
+  // rather than a restatement of the implementation.
+  function applyQuaternion(v: readonly number[], q: readonly number[]): number[] {
+    const [vx, vy, vz] = v;
+    const [qx, qy, qz, qw] = q;
+    const tx = 2 * (qy * vz - qz * vy);
+    const ty = 2 * (qz * vx - qx * vz);
+    const tz = 2 * (qx * vy - qy * vx);
+    return [
+      vx + qw * tx + (qy * tz - qz * ty),
+      vy + qw * ty + (qz * tx - qx * tz),
+      vz + qw * tz + (qx * ty - qy * tx),
+    ];
+  }
+
+  it("orients every plate so its rotation reproduces a unit, inward-and-upward normal", () => {
+    // Same cone shape revolveProfile's own winding test uses -- outer/high
+    // to inner/low, radius and height decreasing together.
+    const plates = revolveProfileToPlates(
+      [
+        { radius: 2, height: 1 },
+        { radius: 1, height: 0 },
+      ],
+      6,
+      0.016,
+    );
+    expect(plates.length).toBeGreaterThan(0);
+
+    for (const plate of plates) {
+      const normal = applyQuaternion([0, 1, 0], plate.rotation);
+      const normalLength = Math.hypot(normal[0], normal[1], normal[2]);
+      expect(normalLength).toBeCloseTo(1, 9);
+
+      // Upward: every plate supports something resting on top of it.
+      expect(normal[1]).toBeGreaterThan(0);
+
+      // Inward: the horizontal component points back toward the axis --
+      // the same check revolveProfile's own winding test makes, applied
+      // to the plate's rotated local Y instead of a triangle's face normal.
+      const radialDot = normal[0] * plate.position[0] + normal[2] * plate.position[2];
+      expect(radialDot).toBeLessThan(0);
+
+      // The rotation is a genuine orthonormal basis, not merely a vector
+      // pointing the right way -- local X and Z must also come out unit
+      // length and mutually perpendicular to the normal and each other.
+      const circumferential = applyQuaternion([1, 0, 0], plate.rotation);
+      const radial = applyQuaternion([0, 0, 1], plate.rotation);
+      expect(Math.hypot(...circumferential)).toBeCloseTo(1, 9);
+      expect(Math.hypot(...radial)).toBeCloseTo(1, 9);
+      const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+      expect(dot(circumferential, normal)).toBeCloseTo(0, 9);
+      expect(dot(circumferential, radial)).toBeCloseTo(0, 9);
+      expect(dot(normal, radial)).toBeCloseTo(0, 9);
+    }
+  });
+
+  it("tiles the whole profile with one plate per radial-band-by-angular-segment cell", () => {
+    const profile = [
+      { radius: 0.3, height: 0.1 },
+      { radius: 0.2, height: 0.02 },
+      { radius: 0.1, height: -0.02 },
+      { radius: 0.04, height: -0.06 },
+    ];
+    const plates = revolveProfileToPlates(profile, 12, 0.016);
+
+    // Four rings, three radial bands -- confirmed via the trimesh emitter
+    // over the identical profile, which is the same tiling by construction.
+    const shape = revolveProfile(profile, 12, 0.016);
+    if (shape.kind !== "trimesh") {
+      throw new Error("expected a trimesh");
+    }
+    const facetsUsed = shape.vertices.length / 3 / profile.length;
+    expect(plates.length).toBe((profile.length - 1) * facetsUsed);
+  });
+
+  it("keeps every plate's surface within the marble-radius sagitta margin of the sampled profile corners", () => {
+    // Ring spacing modeled on the vortex bowl's own default profile
+    // (src/modules/vortexBowl/index.ts): PROFILE_STEP_COUNT bands over a
+    // basin radius on the order of tens of centimeters.
+    const marbleRadius = 0.016;
+    const profile = Array.from({ length: 12 }, (_unused, i) => {
+      const t = i / 11;
+      return { radius: 0.3 - t * 0.26, height: 0.1 - t * 0.2 };
+    });
+    const plates = revolveProfileToPlates(profile, 16, marbleRadius);
+
+    // Same generosity revolveProfile's own facet margin uses (a fraction
+    // of the marble's radius), doubled: a plate's flatness error compounds
+    // the same circumferential approximation with a second, radial one.
+    const tolerance = marbleRadius * 0.25 * 2;
+    const facetCount = plates.length / (profile.length - 1);
+
+    let maxDeviation = 0;
+    for (let ringIndex = 0; ringIndex < profile.length - 1; ringIndex += 1) {
+      const outer = profile[ringIndex];
+      const inner = profile[ringIndex + 1];
+      for (let i = 0; i < facetCount; i += 1) {
+        const a0 = (i / facetCount) * Math.PI * 2;
+        const a1 = ((i + 1) / facetCount) * Math.PI * 2;
+        const corners = [
+          [outer.radius * Math.cos(a0), outer.height, outer.radius * Math.sin(a0)],
+          [outer.radius * Math.cos(a1), outer.height, outer.radius * Math.sin(a1)],
+          [inner.radius * Math.cos(a0), inner.height, inner.radius * Math.sin(a0)],
+          [inner.radius * Math.cos(a1), inner.height, inner.radius * Math.sin(a1)],
+        ];
+
+        const plate = plates[ringIndex * facetCount + i];
+        const normal = applyQuaternion([0, 1, 0], plate.rotation);
+        const topFace = [
+          plate.position[0] + normal[0] * plate.halfExtents[1],
+          plate.position[1] + normal[1] * plate.halfExtents[1],
+          plate.position[2] + normal[2] * plate.halfExtents[1],
+        ];
+
+        for (const corner of corners) {
+          const deviation = Math.abs(
+            (corner[0] - topFace[0]) * normal[0] +
+              (corner[1] - topFace[1]) * normal[1] +
+              (corner[2] - topFace[2]) * normal[2],
+          );
+          maxDeviation = Math.max(maxDeviation, deviation);
+        }
+      }
+    }
+
+    expect(maxDeviation).toBeLessThan(tolerance);
+  });
+
+  it("agrees with the trimesh emitter's vertex positions at every sampled corner", () => {
+    // Same profile revolveProfile's own facet-margin test uses, so this
+    // exercises the auto-raised segment count both emitters must share.
+    const profile = [
+      { radius: 1, height: 1 },
+      { radius: 0.5, height: 0 },
+    ];
+    const marbleRadius = 0.016;
+    const trimesh = revolveProfile(profile, 3, marbleRadius);
+    const plates = revolveProfileToPlates(profile, 3, marbleRadius);
+    if (trimesh.kind !== "trimesh") {
+      throw new Error("expected a trimesh");
+    }
+
+    // Both emitters raise the same coarse request (3) against the same
+    // facet-margin floor -- if they ever disagreed, one would tile a
+    // different number of cells than the other, and this count check
+    // would catch it before the geometry checks below run at all.
+    const facetCount = trimesh.vertices.length / 3 / profile.length;
+    expect(plates.length).toBe(facetCount);
+  });
+
+  it("rejects a profile with fewer than two rings", () => {
+    expect(() => revolveProfileToPlates([{ radius: 1, height: 0 }], 8, 0.016)).toThrow();
   });
 });

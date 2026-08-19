@@ -8,12 +8,16 @@ import { buildWorld } from "./buildWorld";
 import {
   displacementPerSecond,
   measureDwell,
+  percentile,
   shuffleCoefficient,
   type FrameSample,
   type MarbleRun,
 } from "./metrics";
 
 const FIXED_TIME_STEP_SECONDS = 1 / 60;
+/** ~0.1s at 60fps -- long enough to clear the from-rest spawn transient,
+ * short enough not to hide genuinely slow motion happening soon after. */
+const DISPLACEMENT_WARMUP_FRAMES = 6;
 
 export interface ValidateModuleOptions {
   readonly seedCount: number;
@@ -33,14 +37,6 @@ export interface ValidationReport {
    * visible motion" guardrail checks against. `0` if no marble ever exited. */
   readonly minDisplacementPerSecond: number;
   readonly shuffleCoefficients: readonly number[];
-}
-
-function percentile(sortedValues: readonly number[], fraction: number): number | null {
-  if (sortedValues.length === 0) {
-    return null;
-  }
-  const index = Math.min(sortedValues.length - 1, Math.floor(fraction * sortedValues.length));
-  return sortedValues[index];
 }
 
 function cross(a: Vector3, b: Vector3): Vector3 {
@@ -179,7 +175,17 @@ export async function validateModule<P>(
     );
 
     for (const run of runs) {
-      for (const displacement of displacementPerSecond(run)) {
+      // Skip the warm-up window: a marble spawned from rest necessarily
+      // has near-zero displacement for its first few frames (one frame of
+      // gravity from a standstill is a few centimeters per second at most),
+      // regardless of how fast the Module ultimately is -- that transient
+      // dominated every reading here before this was added, making the
+      // guardrail unable to tell a genuinely slow Module from a fast one.
+      // Found while trying to set this phase's threshold from real numbers:
+      // every param combination read ~0.05-0.2 m/s minimum, an unmoving
+      // floor that had nothing to do with grade or length.
+      const series = displacementPerSecond(run).slice(DISPLACEMENT_WARMUP_FRAMES);
+      for (const displacement of series) {
         minDisplacementPerSecond = Math.min(minDisplacementPerSecond, displacement);
       }
     }

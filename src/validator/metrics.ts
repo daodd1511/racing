@@ -27,8 +27,12 @@ function length(v: Vector3): number {
 }
 
 /** Signed distance of `position` past the exit plane -- the plane through
- * `exit.position` perpendicular to `exit.tangent`. Positive means crossed. */
-function exitPlaneDistance(exit: Anchor, position: Vector3): number {
+ * `exit.position` perpendicular to `exit.tangent`. Positive means crossed.
+ * Exported so the Showcase's live Feeder can detect the same crossing
+ * incrementally, frame by frame, rather than re-deriving this math for a
+ * streaming context -- the batch (`measureDwell`) and live paths must agree
+ * on what "exited" means. */
+export function exitPlaneDistance(exit: Anchor, position: Vector3): number {
   return dot(subtract(position, exit.position), exit.tangent);
 }
 
@@ -68,10 +72,31 @@ export function measureDwell(run: MarbleRun, exit: Anchor): DwellResult {
   return { exited: false, dwellSeconds: null, exitSpeed: null };
 }
 
+/** Floor for `ValidationReport.minDisplacementPerSecond` (after
+ * `validateModule`'s warm-up skip) -- the guardrail enforcing PLAN.md's
+ * "Dwell must be paid for with visible motion". A marble sitting nearly
+ * still for a whole second is exactly the failure being fixed.
+ *
+ * Set from real measurements, not a guess: the chute's own params schema
+ * spans grade 0.05-0.6 and length 0.2-1.5; sweeping that range through
+ * `validateModule` (6 seeds, 3 marbles, after the warm-up fix below) reads
+ * minDisplacementPerSecond from ~0.043 m/s (shallowest legal grade) to
+ * ~0.42 m/s (steepest). This threshold sits comfortably under that
+ * observed floor, so no legally-configured chute fails it, while staying
+ * well above the ~0 a genuinely stalled or barely-creeping marble reads.
+ *
+ * This is a physics-grounded number, not an eye-confirmed one: it was set
+ * without ever watching the chute run (this session's browser automation
+ * cannot render a frame here -- see Phase 1 and Phase 3's completion
+ * reports). Revisit it once someone has actually watched continuous feed
+ * and can say whether "just above stalled" also means "still reads as
+ * fast" -- those are different claims, and only one of them is checked here.
+ */
+export const MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND = 0.02;
+
 /** Per-frame on-screen displacement, in meters per simulated second -- the
- * metric enforcing PLAN.md's "Dwell must be paid for with visible motion".
- * A marble sitting nearly still for a whole second is exactly the failure
- * being fixed; the Validator's guardrail is a floor on this value. */
+ * raw series `validateModule` aggregates (after skipping its warm-up
+ * window) into `minDisplacementPerSecond`, checked against the floor above. */
 export function displacementPerSecond(run: MarbleRun): number[] {
   const { frames } = run;
   const result: number[] = [];
@@ -126,4 +151,16 @@ export interface StallCount {
 
 export function countStalls(exitedFlags: readonly boolean[]): StallCount {
   return { stalled: exitedFlags.filter((exited) => !exited).length, total: exitedFlags.length };
+}
+
+/** `sortedValues` must already be sorted ascending -- this doesn't sort, so
+ * a live/growing series can call it without re-sorting a stable prefix
+ * every frame if the caller keeps it sorted incrementally; `validateModule`
+ * simply sorts once before calling. */
+export function percentile(sortedValues: readonly number[], fraction: number): number | null {
+  if (sortedValues.length === 0) {
+    return null;
+  }
+  const index = Math.min(sortedValues.length - 1, Math.floor(fraction * sortedValues.length));
+  return sortedValues[index];
 }

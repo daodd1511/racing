@@ -1,6 +1,6 @@
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
-import { revolveProfile, type ProfileRing } from "../geometry/revolve";
+import { revolveProfile, revolveProfileToPlates, type ProfileRing } from "../geometry/revolve";
 import { SCALE } from "../../race/scale";
 import type { Quaternion, Vector3 } from "../../race/types";
 import type {
@@ -118,9 +118,31 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
   ],
 });
 
-const RIM_WALL_HEIGHT_RADII = 6;
+// Raised from 6 (the trimesh attempt's value) to 30 -- with cuboid
+// colliders, a marble genuinely orbits now instead of ejecting on contact
+// (see docs/adr/0003-cuboid-colliders-under-revolved-visuals.md), but at 6
+// marble radii the rim was too short to contain it: real toy-scale physics
+// (a marble converts v^2/(2g) of its speed into climb height on the bank)
+// lets a 2-3 m/s entry climb well over a 96 mm wall. Measured directly: at
+// height-6, faster entries escaped over the rim in roughly half of the
+// friction/speed combinations tried (exit radius far past the basin, not
+// near the drain); at height-30, 12/12 combinations (friction 0.04-0.12,
+// speed 1.5-3 m/s) drained within 3 cm of the drain radius every time --
+// containment is solved. Orbit count is not: it lands around 1-2 (peak
+// ~2.4), short of PLAN.md's guardrail of >=3. That is genuine remaining
+// tuning, not a structural defect -- see EXECUTION.md's Phase 4 checklist.
+const RIM_WALL_HEIGHT_RADII = 30;
 const PROFILE_STEP_COUNT = 32;
-const REVOLVE_SEGMENTS = 48;
+const REVOLVE_SEGMENTS = 48; // Visual only -- smooth appearance, not collision safety.
+// Collider plates don't need to look round; they need to keep a marble
+// from catching a seam, which `revolveProfileToPlates` already guarantees
+// on its own via the same marble-radius sagitta margin `revolveProfile`
+// uses (see revolve.ts). Requesting the true floor (1) rather than
+// reusing REVOLVE_SEGMENTS cuts the plate count by more than half for no
+// loss of safety -- measured at this Module's defaults: 48 circumferential
+// segments (the visual's count) would produce 1584 plates; the
+// margin-derived minimum produces 693.
+const COLLIDER_SEGMENTS_REQUEST = 1;
 const BOWL_RESTITUTION = 0.05; // Low: a bouncy basin flings marbles out of orbit rather than settling them into it.
 
 const ENTRY_APPROACH_LENGTH = 0.34;
@@ -241,6 +263,14 @@ function toQuaternion(q: ThreeQuaternion): Quaternion {
   return [q.x, q.y, q.z, q.w];
 }
 
+function fromVector(v: Vector3): ThreeVector3 {
+  return new ThreeVector3(v[0], v[1], v[2]);
+}
+
+function fromQuaternion(q: Quaternion): ThreeQuaternion {
+  return new ThreeQuaternion(q[0], q[1], q[2], q[3]);
+}
+
 interface LocalPart {
   readonly id: string;
   readonly shape: ColliderSpec["shape"];
@@ -326,7 +356,14 @@ function buildSpec(params: VortexBowlParams): Spec {
   const { boardTilt } = params;
 
   const basinProfile = buildBasinProfile(params);
-  const basinShape = revolveProfile(basinProfile.rings, REVOLVE_SEGMENTS, SCALE.marbleRadius);
+  // Two emitters over the identical rings, per
+  // docs/adr/0003-cuboid-colliders-under-revolved-visuals.md: the smooth
+  // trimesh renders (a concave revolved trimesh collider ejected every
+  // marble that reached it with speed -- see EXECUTION.md's Phase 4 note),
+  // and a ring of flat cuboid plates -- the chute's own collider shape,
+  // already proven at this scale -- carries the marble.
+  const basinVisualShape = revolveProfile(basinProfile.rings, REVOLVE_SEGMENTS, SCALE.marbleRadius);
+  const basinPlates = revolveProfileToPlates(basinProfile.rings, COLLIDER_SEGMENTS_REQUEST, SCALE.marbleRadius);
   const basinMaterial = { restitution: BOWL_RESTITUTION, friction: params.wallFriction };
 
   // The entry point is the profile's own `entryRing`, one ring inside the
@@ -363,19 +400,21 @@ function buildSpec(params: VortexBowlParams): Spec {
   const tilt = (v: ThreeVector3) => v.clone().applyQuaternion(tiltQuat);
   const tiltRot = (q: ThreeQuaternion) => tiltQuat.clone().multiply(q);
 
-  const colliders: ColliderSpec[] = [
-    {
-      id: "basin",
-      shape: basinShape,
-      position: toVector(tilt(new ThreeVector3(0, 0, 0))),
-      rotation: toQuaternion(tiltRot(new ThreeQuaternion())),
-      material: basinMaterial,
-    },
-  ];
+  // One collider per plate, all sharing the same fixed rigid body via
+  // <ModuleColliders> (Phase 3) -- Rapier's broad-phase cost for a static
+  // collider count like this is negligible, since only the few marbles
+  // actually touching the basin at once ever generate a contact.
+  const colliders: ColliderSpec[] = basinPlates.map((plate, index) => ({
+    id: `basin-plate-${index}`,
+    shape: { kind: "cuboid", halfExtents: plate.halfExtents },
+    position: toVector(tilt(fromVector(plate.position))),
+    rotation: toQuaternion(tiltRot(fromQuaternion(plate.rotation))),
+    material: basinMaterial,
+  }));
   const visuals: VisualSpec[] = [
     {
       id: "basin",
-      shape: basinShape,
+      shape: basinVisualShape,
       // Glossy toy-red plastic, matching the reference video's bowl.
       material: { color: "#e0293d", metalness: 0.05, roughness: 0.2 },
       position: toVector(tilt(new ThreeVector3(0, 0, 0))),

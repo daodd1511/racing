@@ -13,19 +13,20 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 4 — in-progress (resumed 2026-08-19 on a cuboid-plate rebuild)
+- Current phase: 4 — parked (2026-08-20), by the user, after visual inspection
 - Phase 1 — Scaffold and old-race removal: done
 - Phase 2 — Module contract, Validator, chute: done
 - Phase 3 — Showcase: done
-- Phase 4 — Vortex bowl: in-progress. The first attempt (trimesh basin, WIP commit `afcca58`) could
-  not be made to orbit; see Phase 4's "Amended 2026-08-19" note for the full account and the swept
-  search behind it. Resumed on the user's direction with the mechanism unchanged and the collider
-  construction replaced: a ring of cuboid plates carries the marble, the revolved mesh stays as the
-  visual only, per `docs/adr/0003-cuboid-colliders-under-revolved-visuals.md`. That rebuild landed
-  2026-08-20 (`revolveProfileToPlates`, `vortexBowl/index.ts` rewired, 9 new geometry tests) and, per
-  Phase 4's "Result, 2026-08-20" note, actually orbits and drains at the centre for the first time --
-  something the trimesh attempt never achieved even once. Remaining: orbit count is not yet reliably
-  >=3 (the guardrail), so the guardrail test and video-matched tuning are still open.
+- Phase 4 — Vortex bowl: parked 2026-08-20, by the user, after the first actual visual look at it
+  (the Showcase had no working camera until this session's last commit -- see "Parked 2026-08-20"
+  below). The first attempt (trimesh basin, WIP commit `afcca58`) could not be made to orbit; see
+  Phase 4's "Amended 2026-08-19" note for that account. The cuboid-plate rebuild that followed
+  (`revolveProfileToPlates`, `vortexBowl/index.ts` rewired, 9 new geometry tests, "Result, 2026-08-20")
+  eliminated rim-escape ejection entirely in headless sweeps and reported orbit counts of 1-2.4 --
+  but watching it, the marble does not read as going around in a circle. That headless metric
+  (net angular displacement, unwrapped) cannot distinguish true circulation from an oscillation that
+  nets the same cumulative angle without ever looking like an orbit -- see "Parked 2026-08-20" for
+  what this means for whoever resumes.
 - Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
   resting" review-checklist item could not be verified by the implementer —
   this session's browser automation reports `document.visibilityState` stuck
@@ -317,10 +318,26 @@ guardrail: it lands around 1-2, peaking at 2.4 in one `spiralPitch`/friction com
 `spiralPitch` sweep (0.10-0.25) did not find a clear further win and produced one case that never
 drained within 30 s -- a stall, which the guardrail explicitly requires zero of -- so it was not kept.
 
-**What remains open:** the mechanism now genuinely orbits and reliably drains at the centre, which the
-trimesh attempt never did even once. Getting orbit count to a *reliable* >=3 (not just a peak) across
-the full param range, plus the Dwell timing and zero-stall guardrails, is real remaining tuning -- the
-next two checklist items, both still open.
+**What remains open:** rim-escape ejection is gone and the mechanism reliably drains at the centre --
+a real improvement the trimesh attempt never achieved. Whether it *orbits* was, until this section's
+last paragraph, judged only by a headless net-angular-displacement metric; see "Parked 2026-08-20"
+immediately below for why that turned out not to be enough.
+
+**Parked 2026-08-20, by the user.** First real visual look at the bowl, in the Showcase, right after
+this same session finally gave the Showcase a working camera (it had none before -- see the
+`CameraFraming` commit). The marble does not read as going around in a circle. This is the single most
+important finding in this phase's whole history and it comes from a source none of the headless work
+above could reach: **the orbit-count metric used throughout this phase (and reported as 1.0-2.4 in
+"Result, 2026-08-20" above) is net unwrapped angular displacement -- the same number results from one
+smooth revolution and from a marble swinging partway around and back several times, since both net the
+same cumulative angle.** Nothing in this phase's testing ever checked the *sign* of angular velocity
+over time to tell those apart, which given PLAN.md's own board-tilt physics (a marble too slow relative
+to the tilt-induced potential barrier oscillates rather than circulates -- reasoned about early in this
+phase's investigation, then not re-checked once escapes stopped) is a real candidate explanation, not
+a certainty. **Do not trust this phase's orbit-count numbers as evidence of circulation without a
+metric that checks direction, not just net displacement, and without watching it.** Deferred at the
+user's direction until the rest of the Module catalogue (Spec 2) is further along; resume by reading
+this note and PLAN.md's "Where the risk actually sits" before touching the mechanism again.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

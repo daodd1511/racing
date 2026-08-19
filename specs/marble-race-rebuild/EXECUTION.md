@@ -21,7 +21,11 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
   not be made to orbit; see Phase 4's "Amended 2026-08-19" note for the full account and the swept
   search behind it. Resumed on the user's direction with the mechanism unchanged and the collider
   construction replaced: a ring of cuboid plates carries the marble, the revolved mesh stays as the
-  visual only, per `docs/adr/0003-cuboid-colliders-under-revolved-visuals.md`.
+  visual only, per `docs/adr/0003-cuboid-colliders-under-revolved-visuals.md`. That rebuild landed
+  2026-08-20 (`revolveProfileToPlates`, `vortexBowl/index.ts` rewired, 9 new geometry tests) and, per
+  Phase 4's "Result, 2026-08-20" note, actually orbits and drains at the centre for the first time --
+  something the trimesh attempt never achieved even once. Remaining: orbit count is not yet reliably
+  >=3 (the guardrail), so the guardrail test and video-matched tuning are still open.
 - Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
   resting" review-checklist item could not be verified by the implementer —
   this session's browser automation reports `document.visibilityState` stuck
@@ -240,13 +244,13 @@ this change than usual?" is plainly yes. Phase 3's upgrade on the same question 
 runtime bugs; this phase has less runtime confirmation available, not more.
 
 - [x] Add `src/modules/geometry/revolve.ts` turning a 2D profile into a revolved trimesh collider, with a facet-chord margin sized against `SCALE.marbleRadius` so no marble tunnels a facet seam. Verified by `revolve.test.ts`: winding checked against a cone's computed face normals (inward+upward on every facet), facet-margin floor checked by forcing a coarse request up and confirming a fine one is left alone -- headless, since nothing here renders to check by eye.
-- [ ] (amended 2026-08-19) Add `revolveProfileToPlates(profile, segments, marbleRadius): PlatePlacement[]` to `src/modules/geometry/revolve.ts` — the same `ProfileRing[]` the trimesh emitter consumes, converted instead into cuboid plate placements (one plate per consecutive-ring pair per angular segment, each rotated to the local surface tangent). Both the radial band count and the angular segment count are sized against `SCALE.marbleRadius` so no marble can catch a seam between plates. Record the resulting plate count in this item when it lands — it is a real cost, not a free swap.
-- [ ] (amended 2026-08-19) Extend `src/modules/geometry/revolve.test.ts`: plates cover the whole profile with no gap or overlap step wider than the seam tolerance, and every plate's outward face agrees with the trimesh emitter's surface at the same (radius, angle) within that tolerance — the collider and the visual must describe one surface, per ADR 0003.
-- [ ] (amended 2026-08-19) Supersedes the original item: `src/modules/vortexBowl/index.ts` builds the mechanism PLAN.md → "The vortex bowl" specifies — tilted basin leaning into the Board, raised rim, **tangential rim entry spout**, and a **centre drain** (not a rim gap; PLAN.md said both and was amended 2026-08-19 to the centre drain). `role: "shuffle"`.
-- [ ] (amended 2026-08-19) `buildSpec` emits the plate ring as `Spec.colliders` and the single `revolveProfile` trimesh as `Spec.visuals`, per ADR 0003. This is the phase's whole point of difference from the abandoned attempt — nothing else about the mechanism changes.
-- [ ] (amended 2026-08-19) Re-verify the three fixes carried over from the trimesh attempt still hold against plate colliders, since each was found against a different surface: the entry-ring margin (`BasinProfile.entryRing`), the world-down `exit.tangent`, and the ~20° inward entry lean. Any that the plate ring makes unnecessary gets removed with a note, not left in as cargo.
-- [ ] Build the basin floor as a shallow inward spiral ramp with the exit at its inner end — the Dwell bound comes from this geometry, so `step` stays pure and no timer is added.
-- [ ] Expose params: basin radius, rim bank angle, board tilt, exit gap width, wall friction, spiral pitch — the six dials that set orbit count.
+- [x] (amended 2026-08-19) Add `revolveProfileToPlates(profile, segments, marbleRadius): PlatePlacement[]` to `src/modules/geometry/revolve.ts` — the same `ProfileRing[]` the trimesh emitter consumes, converted instead into cuboid plate placements (one plate per consecutive-ring pair per angular segment, orthonormal basis from Gram-Schmidt over the cell's own edge directions, quaternion via the standard rotation-matrix branch, each verified against hand-computed cases for all four branches before use). Radial bands come from `profile` unchanged; the angular segment count is requested at the true floor (not `revolveProfile`'s visual-tuned 48) and raised only as far as the shared marble-radius sagitta margin requires. Plate count at the Module's defaults: 693, versus 1584 had the visual's segment count been reused — recorded in `src/modules/vortexBowl/index.ts` next to `COLLIDER_SEGMENTS_REQUEST`.
+- [x] (amended 2026-08-19) Extend `src/modules/geometry/revolve.test.ts`: five new tests -- every plate's rotation reproduces a unit, orthonormal, inward-and-upward basis (the same winding check `revolveProfile`'s own test makes, applied to the rotated local axes instead of a triangle's face normal); plate count matches one-per-cell against the trimesh emitter's own tiling over the identical profile; every plate's surface stays within the marble-radius sagitta margin of its four sampled corners; both emitters raise the same coarse request against the same facet-margin floor; the fewer-than-two-rings rejection. 9/9 passing.
+- [x] (amended 2026-08-19) Supersedes the original item: `src/modules/vortexBowl/index.ts` builds the mechanism PLAN.md → "The vortex bowl" specifies — tilted basin leaning into the Board, raised rim, **tangential rim entry spout**, and a **centre drain** (not a rim gap; PLAN.md said both and was amended 2026-08-19 to the centre drain). `role: "shuffle"`.
+- [x] (amended 2026-08-19) `buildSpec` emits the plate ring as `Spec.colliders` and the single `revolveProfile` trimesh as `Spec.visuals`, per ADR 0003. This is the phase's whole point of difference from the abandoned attempt — nothing else about the mechanism changes.
+- [x] (amended 2026-08-19) Re-verify the three fixes carried over from the trimesh attempt still hold against plate colliders, since each was found against a different surface: the entry-ring margin (`BasinProfile.entryRing`), the world-down `exit.tangent`, and the ~20° inward entry lean. All three still apply and none became dead cargo -- confirmed by headless sweep (see "Result" below), not by inspection: the marble now makes real, sustained contact from spawn (no more zero-collision freefall), and exits are correctly detected near the drain rather than false-triggering near the rim.
+- [x] Build the basin floor as a shallow inward spiral ramp with the exit at its inner end — the Dwell bound comes from this geometry, so `step` stays pure and no timer is added. Unchanged from the trimesh attempt (`buildBasinProfile` drives both emitters identically); what changed is rim wall height, needed for the geometry's own guarantee to actually hold at real entry speeds -- see "Result" below.
+- [x] Expose params: basin radius, rim bank angle, board tilt, exit gap width, wall friction, spiral pitch — the six dials that set orbit count. Unchanged from the trimesh attempt (`VortexBowlParams`/`PARAM_SCHEMA`).
 - [ ] Add `src/modules/vortexBowl/vortexBowl.test.ts` asserting the Validator guardrails from PLAN.md → "Acceptance": orbit count ≥ 3 at nominal entry speed, Dwell p50 in 4–8 s, p99 under 15 s, zero stalls across 200 seeds.
 - [ ] Tune the six params in the Showcase against the reference video (`/Users/thomasduong/Pictures/Trivial/Video-79749.mp4`, bowls at 4–12 s, 20–28 s, 44–64 s) until orbit-then-drain reads correctly, then record the settled values as the Module's defaults.
 
@@ -290,6 +294,33 @@ than the final "does it look right" call.
 revolved mesh as the visual. Two alternatives were weighed and rejected for now — a helix descent (safe,
 but abandons the roulette look) and a rotating turntable (needs `step`, and its shape supplies no Dwell
 bound). Both stay available if the plate ring also fails to orbit; the helix is the fallback.
+
+**Result, 2026-08-20 — the collider swap worked; containment needed one more fix.** Headless sweeps
+(`buildWorld` + a raw Rapier ball, entry speed and velocity taken from the real `Footprint.entry`
+anchor, not a hand-rolled spawn) against the cuboid-plate basin, at `RIM_WALL_HEIGHT_RADII` unchanged
+from the trimesh attempt (6):
+
+- Real, sustained contact from spawn, unlike the trimesh's single deflection -- confirms fixes 1 and 3
+  above still apply to the plate surface.
+- At entry speed 1.5 m/s: consistent orbiting (0.5-1.9 orbits across tilt 0.15-0.35 rad, friction
+  0.04-0.12) draining within a few cm of the drain radius -- genuine orbit-then-drain, never observed
+  even once with the trimesh.
+- At entry speed 2-3 m/s: still escaped over the rim in most combinations (exit radius 0.5-0.7 m, past
+  the whole basin) within under a second -- a *different* failure than the trimesh's ejection, and a
+  physically expected one: `v^2/(2g)` puts a 2 m/s marble's climb potential (~0.20 m) at more than
+  double a 6-marble-radii rim (0.096 m).
+
+Raising `RIM_WALL_HEIGHT_RADII` to 30 (measured, not guessed -- 14 and 22 were tried first and left
+gaps in the sweep) eliminated the rim escapes entirely: 12/12 combinations across friction 0.04-0.12
+and speed 1.5-3 m/s now drain within 3 cm of the drain radius. Orbit count is not yet at the >=3
+guardrail: it lands around 1-2, peaking at 2.4 in one `spiralPitch`/friction combination tried. A
+`spiralPitch` sweep (0.10-0.25) did not find a clear further win and produced one case that never
+drained within 30 s -- a stall, which the guardrail explicitly requires zero of -- so it was not kept.
+
+**What remains open:** the mechanism now genuinely orbits and reliably drains at the centre, which the
+trimesh attempt never did even once. Getting orbit count to a *reliable* >=3 (not just a peak) across
+the full param range, plus the Dwell timing and zero-stall guardrails, is real remaining tuning -- the
+next two checklist items, both still open.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

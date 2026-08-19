@@ -13,11 +13,17 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 3 — done
+- Current phase: 4 — parked (2026-08-19), genuine physics blocker, not resumable without direction
 - Phase 1 — Scaffold and old-race removal: done
 - Phase 2 — Module contract, Validator, chute: done
 - Phase 3 — Showcase: done
-- Phase 4 — Vortex bowl: pending
+- Phase 4 — Vortex bowl: parked. See Phase 4's "Parked 2026-08-19" note: the basin geometry and
+  entry ramp exist (uncommitted WIP on `marble-race-rebuild/phase-4-vortex-bowl`), three real bugs
+  found and fixed along the way, but a marble entering the rim still takes one hard deflection then
+  flies off in an unbroken ballistic arc, never orbiting, across a wide swept search of every exposed
+  param plus wall height, transition width, entry speed, timestep, and CCD on/off. Needs the user's
+  direction on how to proceed (keep debugging the trimesh contact, or try a different collider
+  strategy) before this phase can continue.
 - Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
   resting" review-checklist item could not be verified by the implementer —
   this session's browser automation reports `document.visibilityState` stuck
@@ -232,10 +238,48 @@ Fresh review: not required
 
 - [x] Add `src/modules/geometry/revolve.ts` turning a 2D profile into a revolved trimesh collider, with a facet-chord margin sized against `SCALE.marbleRadius` so no marble tunnels a facet seam. Verified by `revolve.test.ts`: winding checked against a cone's computed face normals (inward+upward on every facet), facet-margin floor checked by forcing a coarse request up and confirming a fine one is left alone -- headless, since nothing here renders to check by eye.
 - [ ] Add `src/modules/vortexBowl/index.ts` building the mechanism PLAN.md → "The vortex bowl" specifies: tilted basin leaning into the Board, raised rim lip, **tangential rim entry spout**, and one rim exit gap. `role: "shuffle"`.
+  **(parked 2026-08-19, not done — see note below.)**
 - [ ] Build the basin floor as a shallow inward spiral ramp with the exit at its inner end — the Dwell bound comes from this geometry, so `step` stays pure and no timer is added.
+  **(parked 2026-08-19 — geometry exists, see note below.)**
 - [ ] Expose params: basin radius, rim bank angle, board tilt, exit gap width, wall friction, spiral pitch — the six dials that set orbit count.
+  **(parked 2026-08-19 — schema exists in `index.ts`, unverified against real orbiting behavior.)**
 - [ ] Add `src/modules/vortexBowl/vortexBowl.test.ts` asserting the Validator guardrails from PLAN.md → "Acceptance": orbit count ≥ 3 at nominal entry speed, Dwell p50 in 4–8 s, p99 under 15 s, zero stalls across 200 seeds.
+  **(parked 2026-08-19, not started — would fail today; see note.)**
 - [ ] Tune the six params in the Showcase against the reference video (`/Users/thomasduong/Pictures/Trivial/Video-79749.mp4`, bowls at 4–12 s, 20–28 s, 44–64 s) until orbit-then-drain reads correctly, then record the settled values as the Module's defaults.
+  **(parked 2026-08-19, blocked — see note.)**
+
+**Parked 2026-08-19 — genuine physics blocker, not a missing feature.** `src/modules/vortexBowl/index.ts`
+exists on this branch (uncommitted work, WIP) with the module contract, six-param schema, and a
+revolved-trimesh basin built via `revolveProfile`. Three real, independently-confirmed bugs were found
+and fixed along the way (each is documented inline where fixed):
+1. The entry ramp's endpoint originally landed exactly on the trimesh's outer boundary vertex — Rapier
+   gave *zero* collision response there (not weak, not late — total freefall), confirmed by dumping raw
+   per-frame trajectories with no renderer involved. Fixed with `BasinProfile.entryRing`, one ring inside
+   the mesh's true edge.
+2. `exitPlaneDistance`'s infinite-plane exit test (shared with the chute and the Feeder) false-triggered
+   within a fifth of an orbit, because a marble legitimately still on the rim is measurably lower in
+   world Y on the tilted-away side of its own orbit than the drain itself. Fixed by keeping `exit.tangent`
+   as true world-down instead of tilting it with every other collider.
+3. A rim entry aimed on a pure circumferential tangent only grazes the wall instead of being caught by
+   it. Partially fixed with a ~20° inward lean.
+
+**What is not fixed:** despite items 1–3, and despite a wide swept search (rim wall height 6–20 marble
+radii; rim bank angle 0.3–1.4 rad, i.e. near-vertical to near-horizontal; wall/floor transition width
+from a narrow band to 65% of the floor's radial run; entry speed 0.8–3 m/s; wall friction 0.04–0.12;
+board tilt 0.15–0.35 rad; CCD on/off; physics timestep 1/60 down to 1/960; rotation locked vs free), a
+marble entering the rim consistently takes **one hard deflection off the wall, then flies off in a
+clean, unbroken ballistic arc** — never more than ~0.4 orbits before either escaping outward past the
+mesh's edge or (rarely) draining by accident. This is not the orbit-then-drain behavior PLAN.md
+describes, and none of the six params or the entry geometry moved it past that ceiling. The suspected
+cause (unconfirmed): Rapier's contact resolution for a fast ball grazing a curved/concave trimesh at a
+shallow angle, not a geometry defect this session found a way to fix. A structurally different collider
+strategy (e.g. a stack of convex primitives approximating the curve, instead of one trimesh) is the next
+thing worth trying, not more parameter sweeping.
+Per PLAN.md → "Where the risk actually sits": *"The bowl. It is the one Module that failed before... If
+the Module contract cannot express it cleanly, that must surface on Module 1, not Module 10."* It has
+surfaced. Per PLAN.md → "Acceptance": *"Spec 1 cannot be marked done by an agent."* — this was always
+going to need the user's judgment; it needs it earlier than expected, on the mechanism itself rather
+than the final "does it look right" call.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

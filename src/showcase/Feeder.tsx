@@ -137,6 +137,20 @@ export interface FeederProps {
   readonly onStall: (id: number) => void;
 }
 
+interface SpawnedMarble {
+  readonly id: number;
+  /** Computed once, at the moment of spawn -- never recomputed on a later
+   * render. `Feeder` previously recomputed every alive marble's position
+   * (with a fresh `Math.random()` lateral jitter) inline in `.map()` on
+   * every render, and `<RigidBody position>` applies a changed position
+   * value by calling `setTranslation` again -- so an already-rolling marble
+   * got silently snapped back toward spawn on nearly every re-render
+   * (every exit, every stall, every param edit). Found by fresh review,
+   * not observed directly: this session had no browser access at all to
+   * see the glitch. */
+  readonly spawnPosition: Vector3;
+}
+
 /** Drops marbles into a Module in the Showcase -- continuously, in a burst
  * of 15, or one at a time. Each marble tracks its own crossing of the
  * Module's exit plane (via `exitPlaneDistance`, the same math the batch
@@ -144,28 +158,45 @@ export interface FeederProps {
  * despawns itself shortly after so a long continuous feed doesn't
  * accumulate free-falling bodies forever. */
 export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: FeederProps) {
-  const [marbleIds, setMarbleIds] = useState<readonly number[]>([]);
+  const [marbles, setMarbles] = useState<readonly SpawnedMarble[]>([]);
   const nextIdRef = useRef(0);
   const lastTriggerRef = useRef(triggerNonce);
   const lastContinuousSpawnRef = useRef(0);
+  // Kept current every render so a spawn always uses the live entry frame,
+  // without making spawnOne/spawnBurst's identity depend on `entry` (which
+  // would otherwise change every render `entry` does, e.g. on every param
+  // edit for a Module whose entry position depends on its own params).
+  const entryRef = useRef(entry);
+  entryRef.current = entry;
 
-  const lateral = normalize(cross(entry.tangent, entry.up));
-  const basePosition = addScaled(
-    addScaled(entry.position, entry.tangent, SCALE.marbleRadius * ENTRY_MARGIN_RADII),
-    entry.up,
-    SCALE.marbleRadius * ENTRY_LIFT_RADII,
-  );
+  const makeSpawnPosition = useCallback((): Vector3 => {
+    const currentEntry = entryRef.current;
+    const lateral = normalize(cross(currentEntry.tangent, currentEntry.up));
+    const basePosition = addScaled(
+      addScaled(currentEntry.position, currentEntry.tangent, SCALE.marbleRadius * ENTRY_MARGIN_RADII),
+      currentEntry.up,
+      SCALE.marbleRadius * ENTRY_LIFT_RADII,
+    );
+    const lateralOffset = (Math.random() - 0.5) * (SCALE.channelWidth - SCALE.marbleRadius * 4);
+    return addScaled(basePosition, lateral, lateralOffset);
+  }, []);
 
   const spawnOne = useCallback(() => {
-    setMarbleIds((ids) => [...ids, nextIdRef.current++]);
-  }, []);
+    setMarbles((existing) => [...existing, { id: nextIdRef.current++, spawnPosition: makeSpawnPosition() }]);
+  }, [makeSpawnPosition]);
 
-  const spawnBurst = useCallback((count: number) => {
-    setMarbleIds((ids) => {
-      const spawned = Array.from({ length: count }, () => nextIdRef.current++);
-      return [...ids, ...spawned];
-    });
-  }, []);
+  const spawnBurst = useCallback(
+    (count: number) => {
+      setMarbles((existing) => {
+        const spawned: SpawnedMarble[] = Array.from({ length: count }, () => ({
+          id: nextIdRef.current++,
+          spawnPosition: makeSpawnPosition(),
+        }));
+        return [...existing, ...spawned];
+      });
+    },
+    [makeSpawnPosition],
+  );
 
   useEffect(() => {
     if (triggerNonce === lastTriggerRef.current) {
@@ -191,15 +222,12 @@ export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: Fee
   });
 
   const despawn = useCallback((id: number) => {
-    setMarbleIds((ids) => ids.filter((existing) => existing !== id));
+    setMarbles((existing) => existing.filter((marble) => marble.id !== id));
   }, []);
 
   return (
     <>
-      {marbleIds.map((id) => {
-        const lateralOffset = (Math.random() - 0.5) * (SCALE.channelWidth - SCALE.marbleRadius * 4);
-        const spawnPosition = addScaled(basePosition, lateral, lateralOffset);
-
+      {marbles.map(({ id, spawnPosition }) => {
         return (
           <Marble
             key={id}

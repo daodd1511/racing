@@ -5,7 +5,7 @@ import {
   RigidBody,
   TrimeshCollider,
 } from "@react-three/rapier";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 
 import type { ColliderSpec, Shape, Spec, VisualSpec } from "../types";
@@ -91,6 +91,17 @@ function VisualMesh({ visual }: { readonly visual: VisualSpec }) {
   // params (same buildSpec output shape) still gets a stable geometry as
   // long as the caller memoizes the Spec itself (the Showcase does).
   const geometry = useMemo(() => geometryForShape(visual.shape), [visual.shape]);
+
+  // The `geometry` prop bypasses R3F's automatic dispose-on-replace (that
+  // only applies to geometries declared as JSX children), and every live
+  // param edit produces a new Spec -- hence a new `visual.shape` identity,
+  // hence a new geometry from the memo above -- so without this, every
+  // slider drag leaked one GPU buffer per tick. Found by fresh review, not
+  // observed: unbounded GPU growth during a tuning session isn't something
+  // typecheck/lint/build catches.
+  useEffect(() => {
+    return () => geometry.dispose();
+  }, [geometry]);
 
   return (
     <mesh geometry={geometry} position={visual.position} quaternion={visual.rotation}>

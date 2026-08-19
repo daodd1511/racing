@@ -13,17 +13,15 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 4 — parked (2026-08-19), genuine physics blocker, not resumable without direction
+- Current phase: 4 — in-progress (resumed 2026-08-19 on a cuboid-plate rebuild)
 - Phase 1 — Scaffold and old-race removal: done
 - Phase 2 — Module contract, Validator, chute: done
 - Phase 3 — Showcase: done
-- Phase 4 — Vortex bowl: parked. See Phase 4's "Parked 2026-08-19" note: the basin geometry and
-  entry ramp exist (uncommitted WIP on `marble-race-rebuild/phase-4-vortex-bowl`), three real bugs
-  found and fixed along the way, but a marble entering the rim still takes one hard deflection then
-  flies off in an unbroken ballistic arc, never orbiting, across a wide swept search of every exposed
-  param plus wall height, transition width, entry speed, timestep, and CCD on/off. Needs the user's
-  direction on how to proceed (keep debugging the trimesh contact, or try a different collider
-  strategy) before this phase can continue.
+- Phase 4 — Vortex bowl: in-progress. The first attempt (trimesh basin, WIP commit `afcca58`) could
+  not be made to orbit; see Phase 4's "Amended 2026-08-19" note for the full account and the swept
+  search behind it. Resumed on the user's direction with the mechanism unchanged and the collider
+  construction replaced: a ring of cuboid plates carries the marble, the revolved mesh stays as the
+  visual only, per `docs/adr/0003-cuboid-colliders-under-revolved-visuals.md`.
 - Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
   resting" review-checklist item could not be verified by the implementer —
   this session's browser automation reports `document.visibilityState` stuck
@@ -222,36 +220,42 @@ push/PR. Review checklist goes into the PR description.
 
 Branch: `marble-race-rebuild/phase-4-vortex-bowl` (stacked: `gh stack add`)
 
-The spec's risk, isolated: the one Module that failed before, and the only one needing
-revolved geometry rather than boxes.
+The spec's risk, isolated: the one Module that failed before, and the only one whose surface
+curves. As of 2026-08-19 it curves *visually* and collides as boxes — see ADR 0003.
 
 Consumes: `ModuleDefinition`, `Spec`, `SCALE`, `<ModuleColliders>`, `<Showcase />`,
 `validateModule`.
-Produces: `vortexBowl: ModuleDefinition<VortexBowlParams>`;
-`revolveProfile(profile: readonly ProfileRing[], segments: number, marbleRadius: number): Shape`
-in `src/modules/geometry/revolve.ts` (corrected from the planned `ColliderSpec[]` return --
-`Shape` is the union already shared by `ColliderSpec`/`VisualSpec` per types.ts, so a caller
-triangulates once for both instead of twice; `marbleRadius` is the facet-margin input the
-item below requires, not something the planned two-arg signature had room for).
+Produces: `vortexBowl: ModuleDefinition<VortexBowlParams>`; and from
+`src/modules/geometry/revolve.ts`, two emitters over one shared `ProfileRing[]` --
+`revolveProfile(profile, segments, marbleRadius): Shape` (the smooth trimesh, now the **visual**
+source) and `revolveProfileToPlates(profile, segments, marbleRadius): PlatePlacement[]` (the
+**collider** source, added 2026-08-19 per ADR 0003). `revolveProfile`'s signature is corrected from
+the planned `ColliderSpec[]` return: `Shape` is the union already shared by
+`ColliderSpec`/`VisualSpec` per types.ts, and `marbleRadius` is the facet-margin input the first
+checklist item requires, which the planned two-arg signature had no room for.
 
-Fresh review: not required
+Fresh review: **required** (upgraded 2026-08-19) -- the orbiting behaviour is now on its second
+construction after the first was abandoned, and the rulebook's self-check "am I less confident in
+this change than usual?" is plainly yes. Phase 3's upgrade on the same question caught two real
+runtime bugs; this phase has less runtime confirmation available, not more.
 
 - [x] Add `src/modules/geometry/revolve.ts` turning a 2D profile into a revolved trimesh collider, with a facet-chord margin sized against `SCALE.marbleRadius` so no marble tunnels a facet seam. Verified by `revolve.test.ts`: winding checked against a cone's computed face normals (inward+upward on every facet), facet-margin floor checked by forcing a coarse request up and confirming a fine one is left alone -- headless, since nothing here renders to check by eye.
-- [ ] Add `src/modules/vortexBowl/index.ts` building the mechanism PLAN.md → "The vortex bowl" specifies: tilted basin leaning into the Board, raised rim lip, **tangential rim entry spout**, and one rim exit gap. `role: "shuffle"`.
-  **(parked 2026-08-19, not done — see note below.)**
+- [ ] (amended 2026-08-19) Add `revolveProfileToPlates(profile, segments, marbleRadius): PlatePlacement[]` to `src/modules/geometry/revolve.ts` — the same `ProfileRing[]` the trimesh emitter consumes, converted instead into cuboid plate placements (one plate per consecutive-ring pair per angular segment, each rotated to the local surface tangent). Both the radial band count and the angular segment count are sized against `SCALE.marbleRadius` so no marble can catch a seam between plates. Record the resulting plate count in this item when it lands — it is a real cost, not a free swap.
+- [ ] (amended 2026-08-19) Extend `src/modules/geometry/revolve.test.ts`: plates cover the whole profile with no gap or overlap step wider than the seam tolerance, and every plate's outward face agrees with the trimesh emitter's surface at the same (radius, angle) within that tolerance — the collider and the visual must describe one surface, per ADR 0003.
+- [ ] (amended 2026-08-19) Supersedes the original item: `src/modules/vortexBowl/index.ts` builds the mechanism PLAN.md → "The vortex bowl" specifies — tilted basin leaning into the Board, raised rim, **tangential rim entry spout**, and a **centre drain** (not a rim gap; PLAN.md said both and was amended 2026-08-19 to the centre drain). `role: "shuffle"`.
+- [ ] (amended 2026-08-19) `buildSpec` emits the plate ring as `Spec.colliders` and the single `revolveProfile` trimesh as `Spec.visuals`, per ADR 0003. This is the phase's whole point of difference from the abandoned attempt — nothing else about the mechanism changes.
+- [ ] (amended 2026-08-19) Re-verify the three fixes carried over from the trimesh attempt still hold against plate colliders, since each was found against a different surface: the entry-ring margin (`BasinProfile.entryRing`), the world-down `exit.tangent`, and the ~20° inward entry lean. Any that the plate ring makes unnecessary gets removed with a note, not left in as cargo.
 - [ ] Build the basin floor as a shallow inward spiral ramp with the exit at its inner end — the Dwell bound comes from this geometry, so `step` stays pure and no timer is added.
-  **(parked 2026-08-19 — geometry exists, see note below.)**
 - [ ] Expose params: basin radius, rim bank angle, board tilt, exit gap width, wall friction, spiral pitch — the six dials that set orbit count.
-  **(parked 2026-08-19 — schema exists in `index.ts`, unverified against real orbiting behavior.)**
 - [ ] Add `src/modules/vortexBowl/vortexBowl.test.ts` asserting the Validator guardrails from PLAN.md → "Acceptance": orbit count ≥ 3 at nominal entry speed, Dwell p50 in 4–8 s, p99 under 15 s, zero stalls across 200 seeds.
-  **(parked 2026-08-19, not started — would fail today; see note.)**
 - [ ] Tune the six params in the Showcase against the reference video (`/Users/thomasduong/Pictures/Trivial/Video-79749.mp4`, bowls at 4–12 s, 20–28 s, 44–64 s) until orbit-then-drain reads correctly, then record the settled values as the Module's defaults.
-  **(parked 2026-08-19, blocked — see note.)**
 
-**Parked 2026-08-19 — genuine physics blocker, not a missing feature.** `src/modules/vortexBowl/index.ts`
-exists on this branch (uncommitted work, WIP) with the module contract, six-param schema, and a
-revolved-trimesh basin built via `revolveProfile`. Three real, independently-confirmed bugs were found
-and fixed along the way (each is documented inline where fixed):
+**Amended 2026-08-19 — why the construction changed.** Kept as the record behind the amended items
+above and behind ADR 0003; a cold agent needs to know what was already ruled out. The first attempt
+(WIP commit `afcca58`) put a revolved-trimesh basin in `src/modules/vortexBowl/index.ts` with the
+module contract and six-param schema. Three real, independently-confirmed bugs were found and fixed
+along the way, and **all three carry forward** — they are properties of the mechanism, not of the mesh
+(each is documented inline where fixed):
 1. The entry ramp's endpoint originally landed exactly on the trimesh's outer boundary vertex — Rapier
    gave *zero* collision response there (not weak, not late — total freefall), confirmed by dumping raw
    per-frame trajectories with no renderer involved. Fixed with `BasinProfile.entryRing`, one ring inside
@@ -275,11 +279,17 @@ cause (unconfirmed): Rapier's contact resolution for a fast ball grazing a curve
 shallow angle, not a geometry defect this session found a way to fix. A structurally different collider
 strategy (e.g. a stack of convex primitives approximating the curve, instead of one trimesh) is the next
 thing worth trying, not more parameter sweeping.
+
 Per PLAN.md → "Where the risk actually sits": *"The bowl. It is the one Module that failed before... If
 the Module contract cannot express it cleanly, that must surface on Module 1, not Module 10."* It has
 surfaced. Per PLAN.md → "Acceptance": *"Spec 1 cannot be marked done by an agent."* — this was always
 going to need the user's judgment; it needs it earlier than expected, on the mechanism itself rather
 than the final "does it look right" call.
+
+**Resolved 2026-08-19, by the user:** rebuild the same mechanism on a ring of cuboid plates, keeping the
+revolved mesh as the visual. Two alternatives were weighed and rejected for now — a helix descent (safe,
+but abandons the roulette look) and a rotating turntable (needs `step`, and its shape supplies no Dwell
+bound). Both stay available if the plate ring also fails to orbit; the helix is the fallback.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

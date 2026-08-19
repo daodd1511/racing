@@ -199,10 +199,11 @@ video at 20–28 s:
 - Board tilt gives gravity a component in the basin plane, so the marble
   accelerates down one side of the rim and decelerates up the other. It
   circulates instead of settling.
-- One exit gap sits in the rim. The marble leaves not when it reaches the exit
-  but when it is slow enough to **fall into** the exit while passing — exactly a
-  roulette ball passing pockets too fast to be captured. This is what produces
-  the orbit count and the suspense.
+- The drain sits at the **centre**, at the inner end of the basin floor. A
+  marble leaves not when it reaches the drain but when it has slowed enough to
+  sink that far in — a fast marble rides the outer rim past it, orbit after
+  orbit, exactly as a roulette ball passes pockets too fast to be captured. This
+  is what produces the orbit count and the suspense.
 - Several marbles orbit at once and collide. That is the Shuffle.
 
 Orbit-decay has unbounded worst-case Dwell Time, which `last` mode makes worse.
@@ -214,6 +215,22 @@ the Validator can measure the worst-case tail rather than trust it.
 
 A timed widening gate was rejected: a visibly opening gap looks like the game
 helping, which undercuts the no-rigging claim.
+
+**Amended 2026-08-19 — drain placement.** This section previously said both that
+the exit gap sat *in the rim* and that the exit sat *at the inner end*, which are
+two different mechanisms. The centre drain wins: it is what makes the Dwell bound
+a property of the floor's shape, and a rim pocket would reintroduce the unbounded
+tail the spiral floor exists to remove. The roulette feel is preserved either way,
+because the suspense comes from being too fast to be captured, not from where the
+pocket sits.
+
+**Amended 2026-08-19 — construction.** The basin's marble-bearing surface is a
+**ring of cuboid collider plates**, not one revolved trimesh; the smooth revolved
+mesh remains as the *visual* only. A concave revolved trimesh ejected every marble
+that entered the rim with speed, across every parameter swept — see
+`docs/adr/0003-cuboid-colliders-under-revolved-visuals.md`, which generalises the
+rule to every Module whose surface curves. Nothing about the mechanism above
+changes; only how its surface reaches Rapier.
 
 ### The Validator
 
@@ -249,6 +266,11 @@ project does not depend on.
 most about, and the only one needing revolved geometry rather than boxes. If the
 Module contract cannot express it cleanly, that must surface on Module 1, not
 Module 10 — which is why Spec 1 builds it.
+
+*This fired, as designed, on 2026-08-19.* The Module contract expressed the bowl
+fine; Rapier's contact handling for a concave revolved trimesh did not. Surfacing
+it on Module 1 cost one phase and produced ADR 0003, which now governs the eight
+Modules in Spec 2 — the exact payoff this ordering was chosen for.
 
 **Judging fun.** The last bowl shipped with a green phase gate, 53/53 tests, a
 clean fresh review, and a 15-seed scan showing zero bowl stalls, and it was still

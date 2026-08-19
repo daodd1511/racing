@@ -13,10 +13,10 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — done
 - Phase 1 — Scaffold and old-race removal: done
 - Phase 2 — Module contract, Validator, chute: done
-- Phase 3 — Showcase: pending
+- Phase 3 — Showcase: done
 - Phase 4 — Vortex bowl: pending
 - Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
   resting" review-checklist item could not be verified by the implementer —
@@ -25,6 +25,15 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
   limitation, not a code question. Left as an open item in the PR's review
   checklist for the user to close with their own `pnpm dev`, per the
   rulebook's "manual verification scenarios are the user's, not agent debt."
+  Phase 3's review checklist is entirely unverified for the same underlying
+  reason, one step worse: no browser access at all this session, not even
+  Phase 1's DOM/console-level checks. Fresh review was upgraded to required
+  specifically because of this gap and caught two real runtime bugs
+  (teleporting marbles, a geometry leak — see Phase 3's Fresh review note)
+  that typecheck/lint/build could not; both fixed and re-reviewed clean. The
+  question fresh review cannot answer — does the chute actually *look* fast
+  and fun — is still entirely open and is the single most important thing
+  for the user to check before merging Phase 3.
 
 Resolved while planning, not deferred: initial values for `marbleRadius`, channel width, and
 Cell pitch landed in `src/race/scale.ts` in Phase 2 (done) and are tuned empirically in
@@ -137,27 +146,66 @@ Branch: `marble-race-rebuild/phase-3-showcase` (stacked: `gh stack add`)
 The React surface over the Phase 2 contract, and the first point at which toy-scale feel can
 be judged by eye.
 
-Consumes: `ModuleDefinition`, `Spec`, `ParamSchema`, `SCALE`, `chute`, `validateModule`.
-Produces: `<ModuleColliders spec anchor>` (the shared Spec renderer both Showcase and Course
-use), `<Showcase />`, `<Feeder>`, `FeedMode`.
+Consumes: `ModuleDefinition`, `Spec`, `ParamSchema`, `SCALE`, `chute`, `validateModule`,
+`exitPlaneDistance` and `percentile` (both promoted to exported per-run/aggregation primitives
+in `src/validator/metrics.ts` this phase, so the live Feeder and `validateModule.ts` share the
+same math instead of two implementations that could silently diverge).
+Produces: `<ModuleColliders spec anchor>` (`src/modules/render/ModuleColliders.tsx`, the shared
+Spec renderer both Showcase and Course use); `<Showcase />`; `<Feeder>`, `FeedMode`
+(`src/showcase/Feeder.tsx`); `<ParamPanel>`, `ParamValues`, `defaultParamValues`
+(`src/showcase/ParamPanel.tsx`); `<MetricsReadout>`, `LiveMetricsState`, `EMPTY_LIVE_METRICS`
+(`src/showcase/MetricsReadout.tsx`); `MODULES`, `ShowcaseEntry` (`src/showcase/registry.ts` —
+not in the original sketch; the obvious place for Phase 4 to add `vortexBowl` without touching
+`Showcase.tsx`'s JSX). `src/validator/metrics.ts` also gains
+`MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND`.
 
-Fresh review: not required
+Fresh review: **upgraded to required** — this phase's entire diff (10 files, six of them new
+React/R3F/Rapier surface) has **zero runtime confirmation**: the Claude-in-Chrome extension
+wasn't connected at all in this session (a strictly worse position than Phase 1's, which at
+least got DOM/console checks despite the rAF/visibility limitation). Typecheck, lint, and the
+existing test suite are the only evidence behind this phase; per the rulebook's self-check
+("Am I less confident in this change than usual?"), the honest answer is yes.
+
+**Initial review found two real bugs** — evidence of exactly the runtime-verification gap
+above, both bugs that typecheck/lint/build cannot see: **P0**, `Feeder.tsx` recomputed every
+live marble's `spawnPosition` (with a fresh `Math.random()` jitter) inline in render, feeding
+a changed value into `<RigidBody position>` every render — `@react-three/rapier` applies that
+by calling `setTranslation` again, so an already-rolling marble was silently teleported back
+toward spawn on nearly every re-render (every exit, stall, or param edit). **P1**,
+`ModuleColliders.tsx`'s `VisualMesh` built a fresh `THREE.BufferGeometry` on every param edit
+(a fresh `Spec` per `buildSpec` call means a fresh `visual.shape` identity) with nothing
+disposing the previous one — geometries passed via the `geometry` prop bypass R3F's automatic
+dispose-on-replace. Both fixed in `990def4`: spawn position computed once at spawn time and
+stored in state (never recomputed for an already-alive marble); geometry disposed via a
+`useEffect` cleanup keyed on the memoized geometry. **Re-review: no findings** — both
+confirmed resolved by independently tracing `@react-three/rapier`'s actual bundled source for
+the exact mechanism each bug depended on, not by trusting the fix's own reasoning. One residual
+risk noted and not escalated: React StrictMode's dev-only double-invoke of effect cleanups
+disposes-then-reattaches the same geometry object within one commit before paint — benign
+(Three.js re-uploads it to the GPU normally), doesn't reproduce in production builds.
 
 - [ ] Add `src/modules/render/ModuleColliders.tsx` rendering a `Spec`'s colliders and visuals through `@react-three/rapier` — the single render path for every Module, per PLAN.md → "The Module contract".
 - [ ] Add `src/showcase/Showcase.tsx`: Module sidebar, one `<Canvas><Physics>` stage, and layout per PLAN.md → "Showcase".
-- [ ] Add `src/showcase/ParamPanel.tsx` generating controls from the selected Module's `meta.params` schema — never a hand-written panel per Module.
-- [ ] Add `src/showcase/Feeder.tsx` releasing marbles in `continuous` / `burst15` / `single` modes.
-- [ ] Add `src/showcase/MetricsReadout.tsx` displaying live Dwell, exit speed, Shuffle, and stalls from the Phase 2 metrics, computed over the live stage.
-- [ ] Apply the art direction to Modules and marbles per PLAN.md → "Art direction": glossy plastic materials, dark charcoal ground, glass/chrome marbles, bloom via `@react-three/postprocessing`.
-- [ ] Point `src/main.tsx` at `<Showcase />`, replacing Phase 1's smoke scene. No router — Spec 4 decides routing.
-- [ ] Set the on-screen-displacement threshold in `src/validator/metrics.ts` from what the chute actually reads once watchable, and record the chosen number in a comment.
+- [x] Add `src/showcase/ParamPanel.tsx` generating controls from the selected Module's `meta.params` schema — never a hand-written panel per Module. Also exports `defaultParamValues(schema)`, used to (re)initialize params whenever the selected Module changes.
+- [x] Add `src/showcase/Feeder.tsx` releasing marbles in `continuous` / `burst15` / `single` modes. Each marble despawns itself once it falls past `DESPAWN_DROP_METERS` below the exit anchor, so a long continuous feed doesn't accumulate free-falling bodies.
+- [x] Add `src/showcase/MetricsReadout.tsx` displaying live Dwell, exit speed, Shuffle, and stalls from the Phase 2 metrics, computed over the live stage. Deliberately plain (no styling investment) — the broadcast chrome is Spec 4's.
+- [x] Apply the art direction to Modules and marbles per PLAN.md → "Art direction": glossy plastic materials, dark charcoal ground, glass/chrome marbles, bloom via `@react-three/postprocessing`.
+- [x] Point `src/main.tsx` at `<Showcase />`, replacing Phase 1's smoke scene. No router — Spec 4 decides routing.
+- [x] Set the on-screen-displacement threshold in `src/validator/metrics.ts` from what the chute actually reads once watchable, and record the chosen number in a comment. **Physics-grounded, not eye-confirmed** — see the Fresh review note above; `MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND = 0.02`, measured by sweeping the chute's own params schema (grade 0.05–0.6, length 0.2–1.5) through `validateModule` and reading the real `minDisplacementPerSecond` back (0.043–0.42 m/s across that range), set below that floor with margin.
+- [x] (amended 2026-08-19) Add `src/showcase/registry.ts`: not in the original checklist, but the natural home for the `ShowcaseEntry` type-erasure boundary (`toShowcaseEntry`) and the `MODULES` list — `Showcase.tsx` imports it rather than owning the registry inline, so Phase 4 adds `vortexBowl` in one line here without touching the Showcase's JSX.
+- [x] (amended 2026-08-19) Fix `src/modules/chute/index.ts`'s materials: the original metalness/roughness values (0.1/0.8 floor, 0.3/0.4 rails) rendered as matte concrete, not the glossy plastic the art-direction item above asks for. Corrected while implementing that same item, not a separate change.
+- [x] (amended 2026-08-19) Fix `minDisplacementPerSecond` in `src/validator/metrics.ts` / `validateModule.ts`: found while trying to set the threshold above from real numbers — every chute param combination read the same ~0.05–0.2 m/s regardless of grade, because a marble spawned from rest has near-zero displacement for its first few frames regardless of how fast the Module ultimately is, and that transient dominated the "worst observed" reading entirely. `validateModule.ts` now skips a 6-frame (~0.1s) warm-up before folding a run into the minimum; re-measured numbers (above) now actually scale with grade. This is the same file the threshold item already names, not new scope.
+- [x] (amended 2026-08-19) Fix fresh review's P0 (marble teleport on every re-render) and P1 (leaked `THREE.BufferGeometry` on every param edit) — see the Fresh review note above for full detail. Commit `990def4`.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` — clean (project-wide `tsc -b`), re-run after the P0/P1 fix.
+- [x] `pnpm vitest related --run <changed files>` against this phase's full diff (all 10 files, including the P0/P1 fix) — 2 files, 7 tests, all passing.
+
+Also run and clean, beyond the two hard gate items, re-run after the P0/P1 fix: `pnpm test`
+(full suite, 9 files / 24 tests), `pnpm lint` (0 findings), `pnpm build` (succeeds).
 
 **Review checklist (user, at PR review):**
-- [ ] **Do the marbles look fast?** Watch the chute at continuous feed. This is the toy-scale question the whole scale decision rests on; a no here means revisiting PLAN.md → "Scale and materials", not tuning onward.
+- [ ] **Do the marbles look fast?** Watch the chute at continuous feed. This is the toy-scale question the whole scale decision rests on; a no here means revisiting PLAN.md → "Scale and materials", not tuning onward. **Not verified by the implementer at all this phase** — no browser access this session, not even the DOM/console-level checks Phase 1 managed. Everything in this phase is typecheck/lint/build-verified and carefully reasoned through the Rapier/R3F API declarations, but nobody has watched it run.
 - [ ] Dragging any chute param visibly changes behaviour, and the metrics readout moves with it.
 - [ ] All three Feeder modes work.
 

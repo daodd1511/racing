@@ -17,9 +17,9 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — in-progress (checklist complete, fresh review pending)
 - Phase 1 — Shared channel geometry and Module registry: done
-- Phase 2 — Steep zigzag, pin field, rumble strip: pending
+- Phase 2 — Steep zigzag, pin field, rumble strip: in-progress
 - Phase 3 — Staircase, friction lanes: pending
 - Phase 4 — Whoops: pending
 - Phase 5 — Funnel choke: pending
@@ -86,18 +86,24 @@ Produces: `steepZigzag: ModuleDefinition<SteepZigzagParams>` from
 from `src/modules/pinField/index.ts`; `rumbleStrip:
 ModuleDefinition<RumbleStripParams>` from `src/modules/rumbleStrip/index.ts`.
 
-Fresh review: not required
+Fresh review: required — upgraded at completion. Each of the three Modules
+needed multiple rounds of empirical correction to reach zero stalls
+(spawn-width mismatch, joint V-notches, a dead-center post collision, a
+too-short run-up before the first obstacle), well past the rulebook's
+"same behavior needed two correction attempts" trigger, and rumbleStrip's
+actual Dwell budget came in far outside what this phase's own checklist
+item originally described (see its amended item).
 
-- [ ] Add `src/modules/steepZigzag/index.ts` — `role: "accel"`. A chain of `buildChannel` segments alternating lateral direction down a steep grade, so the marble gains speed while staying inside a compact footprint. `SteepZigzagParams`: `legLength`, `grade`, `legCount`, `turnAngle`, `width`. Each leg's outer rail must be tall enough to contain a marble arriving at the leg's own terminal speed — size it from `v²/(2g)`, the same calculation that fixed the vortex bowl's rim escapes (`../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Result, 2026-08-20"), not by trying values.
-- [ ] Add `src/modules/pinField/index.ts` — `role: "scatter"`. Staggered rows of cuboid posts rotated 45° about `up` so each presents an edge to oncoming marbles, per OBSTACLE-IDEAS → "Diamond pin field". `PinFieldParams`: `rowCount`, `postSpacing`, `postHeight`, `postWidth`, `rowPitch`. Keep the post gap at or above the ratio OBSTACLE-IDEAS gives (1.2 m against a 0.7 m marble diameter ≈ 1.7 diameters) or a 15-marble pack clogs instead of draining.
-- [ ] Add `src/modules/rumbleStrip/index.ts` — `role: "scatter"`. Low transverse bars spanning the channel width, per OBSTACLE-IDEAS → "Rumble strip". `RumbleStripParams`: `barCount`, `barSpacing`, `barHeight`, `restitution`. Bars are for disruption, not holding: this Module's Dwell budget is well under a second and its guardrail test must say so rather than inheriting the bowl's 4–8 s.
-- [ ] Register all three in `src/modules/registry.ts`.
-- [ ] Add `src/modules/steepZigzag/steepZigzag.test.ts`, `src/modules/pinField/pinField.test.ts`, `src/modules/rumbleStrip/rumbleStrip.test.ts`, each driving `validateModule` over at least 20 seeds × 5 marbles and asserting: zero stalls, `minDisplacementPerSecond > MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND`, and that Module's own declared Dwell p50/p99 range. State the chosen range and the reasoning in a comment beside the assertion — a bare number is what made the bowl's guardrails unfalsifiable.
-- [ ] Assert exit speed rises across the steep zigzag (`accel` earns its Role) and that `shuffleCoefficient` is non-zero across seeds for the pin field and rumble strip (`scatter` earns theirs). A Module whose Role its own metrics cannot demonstrate is mis-tagged, and the Arc places by Role.
+- [x] Add `src/modules/steepZigzag/index.ts` — `role: "accel"`. A chain of `buildChannel` segments alternating lateral direction down a steep grade, so the marble gains speed while staying inside a compact footprint. `SteepZigzagParams`: `legLength`, `grade`, `legCount`, `turnAngle`, `width`. Each leg's outer rail must be tall enough to contain a marble arriving at the leg's own terminal speed — size it from `v²/(2g)`, the same calculation that fixed the vortex bowl's rim escapes (`../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Result, 2026-08-20"), not by trying values. *(amended 2026-08-20)* `width` defaults to `SCALE.channelWidth` rather than a narrower value — the Validator's multi-marble spawn spread is hardcoded to `SCALE.channelWidth` regardless of a Module's own width, so a narrower default spread marbles outside this Module's own rails. Turning legs also needed a small joint overlap (their rails only touch at a point at each corner, leaving a V-notch a slow marble sticks in) plus a gentler default `turnAngle` and higher restitution/lower friction to reach zero stalls across the guardrail sweep.
+- [x] Add `src/modules/pinField/index.ts` — `role: "scatter"`. Staggered rows of cuboid posts rotated 45° about `up` so each presents an edge to oncoming marbles, per OBSTACLE-IDEAS → "Diamond pin field". `PinFieldParams`: `rowCount`, `postSpacing`, `postHeight`, `postWidth`, `rowPitch`. Keep the post gap at or above the ratio OBSTACLE-IDEAS gives (1.2 m against a 0.7 m marble diameter ≈ 1.7 diameters) or a 15-marble pack clogs instead of draining. *(amended 2026-08-20)* The gap is sized against a post's real diagonal reach after the 45° turn (`postWidth * √2`), not its pre-rotation width — sizing off the narrower value packed posts closer than the ratio actually allows. A post landing exactly on the spawn centerline was also a dead-center hit with no left/right bias to deflect off, parking a marble near-motionless for many frames; `postLateralOffsets` now keeps every row off that line by a quarter-spacing.
+- [x] Add `src/modules/rumbleStrip/index.ts` — `role: "scatter"`. Low transverse bars spanning the channel width, per OBSTACLE-IDEAS → "Rumble strip". `RumbleStripParams`: `barCount`, `barSpacing`, `barHeight`, `restitution`. Bars are for disruption, not holding: this Module's Dwell budget is well under a second and its guardrail test must say so rather than inheriting the bowl's 4–8 s. *(amended 2026-08-20)* Measured, this Module's Dwell budget is **not** well under a second — p50 ~2.1 s, p99 ~2.8 s across the guardrail sweep, dominated by the run-up length (`LEAD_IN`) a marble needs before the first bar. A short `LEAD_IN` (originally `MARBLE_DIAMETER * 3`, matching the "brief approach section" framing) parked every marble dead-still at the first bar: zero horizontal speed against a raised leading face is a wall, not a bump, regardless of friction. `rumbleStrip.test.ts`'s Dwell range and its comment record the actual measured budget and why "well under a second" describes each bar's own disruption, not this Module's total transit time.
+- [x] Register all three in `src/modules/registry.ts`.
+- [x] Add `src/modules/steepZigzag/steepZigzag.test.ts`, `src/modules/pinField/pinField.test.ts`, `src/modules/rumbleStrip/rumbleStrip.test.ts`, each driving `validateModule` over at least 20 seeds × 5 marbles and asserting: zero stalls, `minDisplacementPerSecond > MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND`, and that Module's own declared Dwell p50/p99 range. State the chosen range and the reasoning in a comment beside the assertion — a bare number is what made the bowl's guardrails unfalsifiable.
+- [x] Assert exit speed rises across the steep zigzag (`accel` earns its Role) and that `shuffleCoefficient` is non-zero across seeds for the pin field and rumble strip (`scatter` earns theirs). A Module whose Role its own metrics cannot demonstrate is mis-tagged, and the Arc places by Role.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/pinField/index.ts src/modules/pinField/pinField.test.ts src/modules/registry.ts src/modules/rumbleStrip/index.ts src/modules/rumbleStrip/rumbleStrip.test.ts src/modules/steepZigzag/index.ts src/modules/steepZigzag/steepZigzag.test.ts` — 16 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] Each of the three appears in the Showcase sidebar and its sliders move real geometry.

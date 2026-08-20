@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 5 — done
+- Current phase: 6 — done
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -60,7 +60,11 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   geometry corrections; it found no P0-P2 findings. The Phase 5 gate passed:
   `pnpm typecheck`, plus 18 dependency-related tests. The default 20-seed ×
   15-marble Queue and every legal throat-width sweep cleared with zero stalls.
-- Phase 6 — Kinematic `step` application: pending
+- Phase 6 — Kinematic `step` application: done. The shared integer fixed-step
+  clock drives position-based kinematic colliders in both the Validator and
+  live R3F world. R3F applies each next transform before every solver substep
+  and synchronizes visuals in `useFrame`. The phase gate passed: `pnpm
+  typecheck` plus 34 related tests, including cross-path divergence coverage.
 - Phase 7 — Windmill: pending
 - Verification debt:
   - pinField: `minDisplacementPerSecond` drops below
@@ -288,18 +292,19 @@ colliders under their own `<RigidBody type="kinematicPosition">`, driven by
 
 Fresh review: not required
 
-- [ ] Add `readonly kinematic?: boolean` to `ColliderSpec` in `src/modules/types.ts`. Absent or `false` means fixed, so every existing Module and both existing construction paths are unchanged by the addition.
-- [ ] Change `src/validator/buildWorld.ts` to return `BuiltWorld` and attach `RigidBodyDesc.kinematicPositionBased()` for kinematic colliders, keyed by `ColliderSpec.id`. Update `src/validator/validateModule.ts`'s call site.
-- [ ] Add `src/validator/applyStep.ts` with `applyStep`, and call `module.step(spec, tSeconds)` once per fixed 1/60 step inside `validateModule`'s loop, before `world.step()`. `tSeconds` is the accumulated fixed-step time already computed there — never wall clock, per the contract's "pure in `tSeconds`".
-- [ ] Change `src/modules/render/ModuleColliders.tsx` to mount kinematic colliders under a separate `<RigidBody type="kinematicPosition">` per collider id, and drive them from `step` via `useFrame` using an accumulated fixed-step clock, not `delta`. Feeding R3F's variable frame delta here is what would make the renderer and the Validator disagree; the whole phase exists to prevent that.
-- [ ] Pass the elapsed clock into `<ModuleColliders>` explicitly rather than reading it inside — the Showcase owns time, and Spec 3's race loop will own it differently.
-- [ ] Add `src/validator/applyStep.test.ts`: a synthetic two-collider `Spec` with one kinematic collider whose `step` returns a known rotation at known times; assert the body's transform matches the returned `KinematicTransform` exactly at several `tSeconds`, and that the fixed collider never moves.
-- [ ] Add `src/modules/divergence.test.ts` asserting the two paths agree: for a synthetic kinematic Module, the transform `applyStep` writes at `t` and the transform the renderer's own clock computes at the same `t` are identical. This is the test ADR 0002 has needed since the second path existed; a rendering-free extraction of the renderer's clock arithmetic is what makes it testable, so extract it rather than mounting React.
-- [ ] Keep `Footprint.cells` empty and change nothing about `buildSpec` purity — `step` is the only thing gaining a consumer here.
+- [x] Add `readonly kinematic?: boolean` to `ColliderSpec` in `src/modules/types.ts`. Absent or `false` means fixed, so every existing Module and both existing construction paths are unchanged by the addition.
+- [x] Change `src/validator/buildWorld.ts` to return `BuiltWorld` and attach `RigidBodyDesc.kinematicPositionBased()` for kinematic colliders, keyed by `ColliderSpec.id`. Update `src/validator/validateModule.ts`'s call site.
+- [x] Add `src/validator/applyStep.ts` with `applyStep`, and call `module.step(spec, tSeconds)` once per fixed 1/60 step inside `validateModule`'s loop, before `world.step()`. `tSeconds` is the accumulated fixed-step time already computed there — never wall clock, per the contract's "pure in `tSeconds`".
+- [x] Change `src/modules/render/ModuleColliders.tsx` to mount kinematic colliders under a separate `<RigidBody type="kinematicPosition">` per collider id, set their next transforms via `useBeforePhysicsStep` on the accumulated fixed-step clock, and synchronize the matching visuals in `useFrame`. Feeding R3F's variable frame delta here is what would make the renderer and the Validator disagree; the whole phase exists to prevent that.
+- [x] Pass the elapsed clock into `<ModuleColliders>` explicitly rather than reading it inside — the Showcase owns time, and Spec 3's race loop will own it differently.
+- [x] (amended 2026-08-21) Add `src/modules/kinematics.ts` and `src/showcase/KinematicClock.tsx`: share an integer fixed-step clock between the Validator and Showcase. Use `useBeforePhysicsStep` to set collider transforms before **every** Rapier substep, while `useFrame` synchronizes the rendered visual. A `useFrame`-only collider update would run once per rendered frame but Rapier can run multiple 1/60 substeps in that frame, diverging from the Validator exactly when the display hitches.
+- [x] Add `src/validator/applyStep.test.ts`: a synthetic two-collider `Spec` with one kinematic collider whose `step` returns a known rotation at known times; assert the body's transform matches the returned `KinematicTransform` exactly at several `tSeconds`, and that the fixed collider never moves.
+- [x] Add `src/modules/divergence.test.ts` asserting the two paths agree: for a synthetic kinematic Module, the transform `applyStep` writes at `t` and the transform the renderer's own clock computes at the same `t` are identical. This is the test ADR 0002 has needed since the second path existed; a rendering-free extraction of the renderer's clock arithmetic is what makes it testable, so extract it rather than mounting React.
+- [x] Keep `Footprint.cells` empty and change nothing about `buildSpec` purity — `step` is the only thing gaining a consumer here.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/types.ts src/modules/kinematics.ts src/modules/divergence.test.ts src/modules/render/ModuleColliders.tsx src/showcase/KinematicClock.tsx src/showcase/Showcase.tsx src/validator/applyStep.ts src/validator/applyStep.test.ts src/validator/buildWorld.ts src/validator/validateModule.ts src/modules/whoops/whoops.test.ts` — 34 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] The chute and vortex bowl in the Showcase are unchanged — no Module has moving parts yet, so anything that looks different is a regression.

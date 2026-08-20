@@ -41,11 +41,14 @@ const BLADE_LENGTH_MAX = 0.22;
 const DEFAULT_BLADE_LENGTH = BLADE_LENGTH_MAX;
 const DEFAULT_BLADE_THICKNESS = SCALE.marbleRadius * 0.85;
 const MAX_BLADE_THICKNESS = SCALE.marbleRadius * 1.15;
-const FLOOR_CLEARANCE = FLOOR_THICKNESS / 2 + SCALE.marbleRadius * 0.15;
-// The hub must clear the longest, thickest legal blade as it rotates down to
-// the floor. Shorter blade settings lift their tip clear of the bed; the
-// default uses the maximum length so its paddles meter the Queue at the floor.
-const MINIMUM_HUB_HEIGHT = BLADE_LENGTH_MAX + MAX_BLADE_THICKNESS / 2 + FLOOR_CLEARANCE;
+// Keep the downward tip within one marble radius of the floor without
+// penetrating it. A resting marble's centre sits one radius above the floor,
+// so this gives the full-width paddle positive contact margin at bed level.
+const FLOOR_GATE_CLEARANCE = SCALE.marbleRadius * 0.9;
+// The default uses the maximum length so the paddle meters the Queue at the
+// floor. The two parameters are pinned together below because ParamSchema
+// cannot express this relationship for independently ranged fields.
+const MINIMUM_HUB_HEIGHT = BLADE_LENGTH_MAX + FLOOR_GATE_CLEARANCE;
 const DEFAULT_HUB_HEIGHT = MINIMUM_HUB_HEIGHT;
 const MARBLE_DIAMETER = SCALE.marbleRadius * 2;
 const FIXED_STEP_SECONDS = 1 / 60;
@@ -83,10 +86,13 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       default: DEFAULT_PARAMS.bladeCount,
     } satisfies NumberParamField,
     {
+      // `ParamSchema` has no cross-field constraints. A shorter blade cannot
+      // share this floor-contact hub height, so keep this pair fixed until the
+      // Showcase can express `hubHeight = bladeLength + clearance` directly.
       kind: "number",
       key: "bladeLength",
       label: "Blade length (m)",
-      min: 0.16,
+      min: BLADE_LENGTH_MAX,
       max: BLADE_LENGTH_MAX,
       step: 0.01,
       default: DEFAULT_PARAMS.bladeLength,
@@ -114,7 +120,7 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       key: "hubHeight",
       label: "Hub height (m)",
       min: MINIMUM_HUB_HEIGHT,
-      max: 0.3,
+      max: MINIMUM_HUB_HEIGHT,
       step: 0.005,
       default: DEFAULT_PARAMS.hubHeight,
     } satisfies NumberParamField,

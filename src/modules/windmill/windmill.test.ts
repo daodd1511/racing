@@ -107,6 +107,22 @@ describe("windmill guardrails", () => {
     expect(stepDistance).toBeLessThan(SCALE.marbleRadius * 2);
   });
 
+  it("keeps every legal blade-length and hub-height setting at the floor gate", () => {
+    const bladeLength = numberField("bladeLength");
+    const hubHeight = numberField("hubHeight");
+
+    // ParamSchema cannot couple two numeric fields, so these values must be
+    // one compatible pair. Otherwise a legal short blade or tall hub leaves
+    // the full-width paddle above the marbles and disables the Queue.
+    expect(bladeLength.min).toBe(bladeLength.max);
+    expect(hubHeight.min).toBe(hubHeight.max);
+
+    // The hub is measured from the floor surface, so this difference is the
+    // downward tip's clearance at the floor-gate pose. A resting marble's
+    // centre is one radius above the floor.
+    expect(hubHeight.min - bladeLength.min).toBeLessThan(SCALE.marbleRadius);
+  });
+
   it("hits a marble at maximum speed without sweeping it to the far side", () => {
     const angularVelocity = numberField("angularVelocity");
     const maximumSpeedParams = { ...params, angularVelocity: angularVelocity.max };

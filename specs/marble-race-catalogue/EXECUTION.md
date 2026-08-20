@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 6 — done
+- Current phase: 7 — in progress
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -65,7 +65,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   live R3F world. R3F applies each next transform before every solver substep
   and synchronizes visuals in `useFrame`. The phase gate passed: `pnpm
   typecheck` plus 34 related tests, including cross-path divergence coverage.
-- Phase 7 — Windmill: pending
+- Phase 7 — Windmill: in progress
 - Verification debt:
   - pinField: `minDisplacementPerSecond` drops below
     `MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND` (though stalls stay at zero) at
@@ -322,13 +322,16 @@ because it is the only one that can prove Phase 6's infrastructure works.
 Consumes: `buildChannel`, `ColliderSpec.kinematic`, `applyStep`, `BuiltWorld`,
 `KinematicTransform`, `ALL_MODULES`, `SCALE`, `validateModule`.
 Produces: `windmill: ModuleDefinition<WindmillParams>` from
-`src/modules/windmill/index.ts`.
+`src/modules/windmill/index.ts`, plus `ColliderSpec.motion?:
+KinematicRotationMotion` so a pure `step(spec, tSeconds)` can evaluate its
+parameter-controlled motion without hidden runtime state.
 
 Fresh review: not required
 
-- [ ] Add `src/modules/windmill/index.ts` — `role: "queue"`. A hub with cuboid blades rotating about the channel's tangent axis, low enough that a blade sweeps the floor at any moment, per OBSTACLE-IDEAS → "Windmill paddle wheel". `WindmillParams`: `bladeCount`, `bladeLength`, `bladeThickness`, `angularVelocity`, `hubHeight`. Blade colliders carry `kinematic: true`; the hub and the surrounding channel stay fixed.
-- [ ] Implement `step(spec, tSeconds)` returning one `KinematicTransform` per blade at `angle = angularVelocity * tSeconds`, read from the blade's own id. Pure in `tSeconds`: no accumulated state, no `Math.random`, no wall clock — a stateful `step` costs the Validator its reproducibility, per `../marble-race-rebuild/PLAN.md` → "The Module contract".
-- [ ] Cap `angularVelocity`'s schema maximum so the blade tip sweeps under one marble diameter per 1/60 step. Marbles have CCD; kinematic colliders do not, so a fast blade passes through a marble instead of hitting it — OBSTACLE-IDEAS' constraint 5, restated at toy scale. Derive the cap from `bladeLength` and `SCALE.marbleRadius` in a comment, do not pick a round number.
+- [x] (amended 2026-08-21) Add optional `ColliderSpec.motion?: KinematicRotationMotion`. The existing Spec cannot otherwise retain slider-controlled angular velocity for a pure `step(spec, tSeconds)`; a closure or a value encoded into ids would make the two construction paths depend on hidden data rather than their shared input.
+- [x] Add `src/modules/windmill/index.ts` — `role: "queue"`. A hub with cuboid blades rotating about the channel's tangent axis, low enough that a blade sweeps the floor at any moment, per OBSTACLE-IDEAS → "Windmill paddle wheel". `WindmillParams`: `bladeCount`, `bladeLength`, `bladeThickness`, `angularVelocity`, `hubHeight`. Blade colliders carry `kinematic: true`; the hub and the surrounding channel stay fixed.
+- [x] Implement `step(spec, tSeconds)` returning one `KinematicTransform` per blade at `angle = angularVelocity * tSeconds`, read from the blade's own id. Pure in `tSeconds`: no accumulated state, no `Math.random`, no wall clock — a stateful `step` costs the Validator its reproducibility, per `../marble-race-rebuild/PLAN.md` → "The Module contract".
+- [x] Cap `angularVelocity`'s schema maximum so the blade tip sweeps under one marble diameter per 1/60 step. Marbles have CCD; kinematic colliders do not, so a fast blade passes through a marble instead of hitting it — OBSTACLE-IDEAS' constraint 5, restated at toy scale. Derive the cap from `bladeLength` and `SCALE.marbleRadius` in a comment, do not pick a round number.
 - [ ] Register in `src/modules/registry.ts`.
 - [ ] Add `src/modules/windmill/windmill.test.ts`: universal guardrails, its own Dwell range, `step` purity (same `tSeconds` gives a deep-equal result on repeat calls and is independent of call order), and a tunnelling assertion — sweep `angularVelocity` to its schema maximum and confirm no marble ever ends up on the far side of a blade it should have been struck by.
 - [ ] Confirm `src/modules/purity.test.ts`'s generalized loop covers the windmill's non-empty `step`, and extend it if the existing static-`step` assertion assumes `[]`.

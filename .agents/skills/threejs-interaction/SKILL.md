@@ -359,11 +359,7 @@ Drag objects directly.
 import { DragControls } from "three/addons/controls/DragControls.js";
 
 const draggableObjects = [mesh1, mesh2, mesh3];
-const dragControls = new DragControls(
-  draggableObjects,
-  camera,
-  renderer.domElement,
-);
+const dragControls = new DragControls(draggableObjects, camera, renderer.domElement);
 
 dragControls.addEventListener("dragstart", (event) => {
   orbitControls.enabled = false;
@@ -475,8 +471,7 @@ function onMouseMove(event) {
   if (intersects.length > 0) {
     hoveredObject = intersects[0].object;
     if (!hoveredObject.userData.originalColor) {
-      hoveredObject.userData.originalColor =
-        hoveredObject.material.color.getHex();
+      hoveredObject.userData.originalColor = hoveredObject.material.color.getHex();
     }
     hoveredObject.material.color.set(0xff6600);
     document.body.style.cursor = "pointer";

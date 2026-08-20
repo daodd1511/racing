@@ -216,7 +216,9 @@ function buildSpec(params: SteepZigzagParams): Spec {
   const JOINT_OVERLAP = SCALE.marbleRadius * 1.5;
   const segments: ChannelSegment[] = legs.map((leg, index) => {
     const start =
-      index === 0 ? leg.start : leg.start.clone().sub(leg.heading.clone().multiplyScalar(JOINT_OVERLAP));
+      index === 0
+        ? leg.start
+        : leg.start.clone().sub(leg.heading.clone().multiplyScalar(JOINT_OVERLAP));
     const end =
       index === legs.length - 1
         ? leg.end
@@ -257,7 +259,9 @@ function buildSpec(params: SteepZigzagParams): Spec {
     // a guard wall that only meets its neighbor at a point leaves the same
     // V-notch one leg height higher up.
     const guardStart =
-      index === 0 ? leg.start : leg.start.clone().sub(leg.heading.clone().multiplyScalar(JOINT_OVERLAP));
+      index === 0
+        ? leg.start
+        : leg.start.clone().sub(leg.heading.clone().multiplyScalar(JOINT_OVERLAP));
     const guardEnd =
       index === legs.length - 1
         ? leg.end

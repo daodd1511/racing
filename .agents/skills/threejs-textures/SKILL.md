@@ -312,11 +312,7 @@ material.map = renderTarget.texture;
 
 ```javascript
 const renderTarget = new THREE.WebGLRenderTarget(512, 512);
-renderTarget.depthTexture = new THREE.DepthTexture(
-  512,
-  512,
-  THREE.UnsignedShortType,
-);
+renderTarget.depthTexture = new THREE.DepthTexture(512, 512, THREE.UnsignedShortType);
 
 // Access depth
 const depthTexture = renderTarget.depthTexture;

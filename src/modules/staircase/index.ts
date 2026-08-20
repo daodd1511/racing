@@ -129,8 +129,14 @@ function cuboidCorners(
 function buildSpec(params: StaircaseParams): Spec {
   const { stepCount, tread, riseHeight, width } = params;
   const treadDrop = tread * TREAD_GRADE;
-  const channelMaterial = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
-  const riserMaterial = { restitution: SCALE.defaultRestitution * 0.6, friction: SCALE.defaultFriction };
+  const channelMaterial = {
+    restitution: SCALE.defaultRestitution,
+    friction: SCALE.defaultFriction,
+  };
+  const riserMaterial = {
+    restitution: SCALE.defaultRestitution * 0.6,
+    friction: SCALE.defaultFriction,
+  };
 
   // Each tread is its own flat-ish segment; the riser drop between one
   // tread's end and the next tread's start is a deliberate discontinuity

@@ -98,11 +98,7 @@ new THREE.ColorKeyframeTrack(".material.color", times, [
 new THREE.BooleanKeyframeTrack(".visible", [0, 0.5, 1], [true, false, true]);
 
 // String track (for morph targets)
-new THREE.StringKeyframeTrack(
-  ".morphTargetInfluences[smile]",
-  [0, 1],
-  ["0", "1"],
-);
+new THREE.StringKeyframeTrack(".morphTargetInfluences[smile]", [0, 1], ["0", "1"]);
 ```
 
 ### Interpolation Modes
@@ -449,10 +445,7 @@ function smoothDamp(current, target, velocity, smoothTime, deltaTime) {
   const x = omega * deltaTime;
   const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
   const change = current.clone().sub(target);
-  const temp = velocity
-    .clone()
-    .add(change.clone().multiplyScalar(omega))
-    .multiplyScalar(deltaTime);
+  const temp = velocity.clone().add(change.clone().multiplyScalar(omega)).multiplyScalar(deltaTime);
   velocity.sub(temp.clone().multiplyScalar(omega)).multiplyScalar(exp);
   return target.clone().add(change.add(temp).multiplyScalar(exp));
 }

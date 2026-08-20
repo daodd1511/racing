@@ -192,7 +192,11 @@ function cuboidCorners(
  * Galton-board stagger. `usableWidth` leaves a margin so a post's own
  * half-extent (post-rotation, its footprint reaches out to `postSpacing`'s
  * own scale, not just `postWidth/2`) doesn't collide with the rails. */
-function postLateralOffsets(rowIsOffset: boolean, postSpacing: number, channelWidth: number): number[] {
+function postLateralOffsets(
+  rowIsOffset: boolean,
+  postSpacing: number,
+  channelWidth: number,
+): number[] {
   const usableWidth = Math.max(postSpacing, channelWidth - postSpacing);
   const count = Math.max(1, Math.floor(usableWidth / postSpacing) + 1);
   const span = (count - 1) * postSpacing;
@@ -214,7 +218,10 @@ function buildSpec(params: PinFieldParams): Spec {
   const { rowCount, postSpacing, postHeight, postWidth, rowPitch } = params;
   const totalRun = LEAD_IN + Math.max(0, rowCount - 1) * rowPitch + LEAD_OUT;
   const drop = totalRun * FLOOR_GRADE;
-  const channelMaterial = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
+  const channelMaterial = {
+    restitution: SCALE.defaultRestitution,
+    friction: SCALE.defaultFriction,
+  };
 
   const channel = buildChannel(
     [{ start: [0, 0, 0], end: [0, -drop, totalRun], width: SCALE.channelWidth }],

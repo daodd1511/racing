@@ -175,7 +175,12 @@ export function buildChannel(
         .clone()
         .add(new ThreeVector3(side * lateral, 0, 0).applyQuaternion(pitch))
         .add(up.clone().multiplyScalar(RAIL_HEIGHT / 2));
-      const railId = segmentId(idPrefix, side < 0 ? "rail-left" : "rail-right", index, segments.length);
+      const railId = segmentId(
+        idPrefix,
+        side < 0 ? "rail-left" : "rail-right",
+        index,
+        segments.length,
+      );
       const railHalfExtents: Vector3 = [RAIL_THICKNESS / 2, RAIL_HEIGHT / 2, segmentLength / 2];
       const railShape = { kind: "cuboid" as const, halfExtents: railHalfExtents };
 

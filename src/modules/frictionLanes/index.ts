@@ -3,7 +3,14 @@ import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 import { SCALE } from "../../race/scale";
 import type { Quaternion, Vector3 } from "../../race/types";
 import { buildChannel, FLOOR_THICKNESS } from "../geometry/channel";
-import type { ColliderSpec, ModuleDefinition, NumberParamField, ParamSchema, Spec, VisualSpec } from "../types";
+import type {
+  ColliderSpec,
+  ModuleDefinition,
+  NumberParamField,
+  ParamSchema,
+  Spec,
+  VisualSpec,
+} from "../types";
 
 // Parallel lanes down one channel, each carrying its own floor friction, per
 // OBSTACLE-IDEAS.md -> "3. Friction patches". `role: "sort"`: marbles have
@@ -175,7 +182,10 @@ function buildSpec(params: FrictionLanesParams): Spec {
       .clone()
       .add(new ThreeVector3(laneCenter, 0, 0).applyQuaternion(pitch));
     const id = `lane-floor-${lane}`;
-    const material = { restitution: SCALE.defaultRestitution, friction: isFast ? fastFriction : slowFriction };
+    const material = {
+      restitution: SCALE.defaultRestitution,
+      friction: isFast ? fastFriction : slowFriction,
+    };
 
     colliders.push({
       id,
@@ -197,7 +207,11 @@ function buildSpec(params: FrictionLanesParams): Spec {
   // laneCount - 1 dividers, one at each interior lane boundary.
   for (let divider = 1; divider < laneCount; divider += 1) {
     const dividerLateral = -SCALE.channelWidth / 2 + laneWidth * divider;
-    const dividerHalfExtents: Vector3 = [DIVIDER_THICKNESS / 2, dividerHeight / 2, segmentLength / 2];
+    const dividerHalfExtents: Vector3 = [
+      DIVIDER_THICKNESS / 2,
+      dividerHeight / 2,
+      segmentLength / 2,
+    ];
     const dividerShape = { kind: "cuboid" as const, halfExtents: dividerHalfExtents };
     const dividerPosition = floorCenter
       .clone()

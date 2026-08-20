@@ -193,7 +193,10 @@ function buildSpec(params: RumbleStripParams): Spec {
   const { barCount, barSpacing, barHeight, restitution } = params;
   const totalRun = LEAD_IN + Math.max(0, barCount - 1) * barSpacing + LEAD_OUT;
   const drop = totalRun * effectiveFloorGrade(barHeight, restitution);
-  const channelMaterial = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
+  const channelMaterial = {
+    restitution: SCALE.defaultRestitution,
+    friction: SCALE.defaultFriction,
+  };
 
   const channel = buildChannel(
     [{ start: [0, 0, 0], end: [0, -drop, totalRun], width: SCALE.channelWidth }],

@@ -270,14 +270,8 @@ const interleavedBuffer = new THREE.InterleavedBuffer(
   5, // stride (floats per vertex)
 );
 
-geometry.setAttribute(
-  "position",
-  new THREE.InterleavedBufferAttribute(interleavedBuffer, 3, 0),
-); // size 3, offset 0
-geometry.setAttribute(
-  "uv",
-  new THREE.InterleavedBufferAttribute(interleavedBuffer, 2, 3),
-); // size 2, offset 3
+geometry.setAttribute("position", new THREE.InterleavedBufferAttribute(interleavedBuffer, 3, 0)); // size 3, offset 0
+geometry.setAttribute("uv", new THREE.InterleavedBufferAttribute(interleavedBuffer, 2, 3)); // size 2, offset 3
 ```
 
 ## EdgesGeometry & WireframeGeometry
@@ -285,10 +279,7 @@ geometry.setAttribute(
 ```javascript
 // Edge lines (only hard edges)
 const edges = new THREE.EdgesGeometry(boxGeometry, 15); // 15 = threshold angle
-const edgeMesh = new THREE.LineSegments(
-  edges,
-  new THREE.LineBasicMaterial({ color: 0xffffff }),
-);
+const edgeMesh = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff }));
 
 // Wireframe (all triangles)
 const wireframe = new THREE.WireframeGeometry(boxGeometry);
@@ -333,10 +324,7 @@ const points = [
   new THREE.Vector3(1, 0, 0),
 ];
 const geometry = new THREE.BufferGeometry().setFromPoints(points);
-const line = new THREE.Line(
-  geometry,
-  new THREE.LineBasicMaterial({ color: 0xff0000 }),
-);
+const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xff0000 }));
 
 // LineLoop (closed loop)
 const loop = new THREE.LineLoop(geometry, material);
@@ -398,15 +386,9 @@ for (let i = 0; i < count; i++) {
 instancedMesh.instanceMatrix.needsUpdate = true;
 
 // Optional: per-instance colors
-instancedMesh.instanceColor = new THREE.InstancedBufferAttribute(
-  new Float32Array(count * 3),
-  3,
-);
+instancedMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
 for (let i = 0; i < count; i++) {
-  instancedMesh.setColorAt(
-    i,
-    new THREE.Color(Math.random(), Math.random(), Math.random()),
-  );
+  instancedMesh.setColorAt(i, new THREE.Color(Math.random(), Math.random(), Math.random()));
 }
 instancedMesh.instanceColor.needsUpdate = true;
 

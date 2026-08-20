@@ -18,11 +18,7 @@ function magnitude(v: Vector3): number {
  * rotation applied to a point `signedHalfExtentZ` along local Z. Used to
  * check that two chained floors' touching faces actually coincide, not just
  * that their centers are close. */
-function faceCenter(
-  position: Vector3,
-  rotation: Quaternion,
-  signedHalfExtentZ: number,
-): Vector3 {
+function faceCenter(position: Vector3, rotation: Quaternion, signedHalfExtentZ: number): Vector3 {
   const point = new ThreeVector3(0, 0, signedHalfExtentZ)
     .applyQuaternion(new ThreeQuaternion(...rotation))
     .add(new ThreeVector3(...position));
@@ -110,11 +106,7 @@ describe("buildChannel", () => {
     const halfExtentZ1 = floor1.shape.kind === "cuboid" ? floor1.shape.halfExtents[2] : 0;
     const faceStart1 = faceCenter(floor1.position, floor1.rotation, -halfExtentZ1);
 
-    const gap = magnitude([
-      face0[0] - joint[0],
-      face0[1] - joint[1],
-      face0[2] - joint[2],
-    ]);
+    const gap = magnitude([face0[0] - joint[0], face0[1] - joint[1], face0[2] - joint[2]]);
     const gapStart1 = magnitude([
       faceStart1[0] - joint[0],
       faceStart1[1] - joint[1],

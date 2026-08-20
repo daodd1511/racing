@@ -24,7 +24,9 @@ describe("steepZigzag guardrails", () => {
     });
 
     expect(report.stalledMarbles).toBe(0);
-    expect(report.minDisplacementPerSecond).toBeGreaterThan(MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND);
+    expect(report.minDisplacementPerSecond).toBeGreaterThan(
+      MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND,
+    );
     expect(report.dwellSecondsP50).not.toBeNull();
     expect(report.dwellSecondsP50 as number).toBeLessThan(DWELL_P50_MAX_SECONDS);
     expect(report.dwellSecondsP99 as number).toBeLessThan(DWELL_P99_MAX_SECONDS);

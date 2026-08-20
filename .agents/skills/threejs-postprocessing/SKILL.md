@@ -142,19 +142,13 @@ import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { FXAAShader } from "three/addons/shaders/FXAAShader.js";
 
 const fxaaPass = new ShaderPass(FXAAShader);
-fxaaPass.material.uniforms["resolution"].value.set(
-  1 / window.innerWidth,
-  1 / window.innerHeight,
-);
+fxaaPass.material.uniforms["resolution"].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 
 composer.addPass(fxaaPass);
 
 // Update on resize
 function onResize() {
-  fxaaPass.material.uniforms["resolution"].value.set(
-    1 / window.innerWidth,
-    1 / window.innerHeight,
-  );
+  fxaaPass.material.uniforms["resolution"].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 }
 ```
 
@@ -176,12 +170,7 @@ composer.addPass(smaaPass);
 ```javascript
 import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 
-const ssaoPass = new SSAOPass(
-  scene,
-  camera,
-  window.innerWidth,
-  window.innerHeight,
-);
+const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
 ssaoPass.kernelRadius = 16;
 ssaoPass.minDistance = 0.005;
 ssaoPass.maxDistance = 0.1;
@@ -471,10 +460,7 @@ composer.addPass(new ShaderPass(GammaCorrectionShader));
 
 // 5. Anti-aliasing (always last before output)
 const fxaaPass = new ShaderPass(FXAAShader);
-fxaaPass.uniforms["resolution"].value.set(
-  1 / window.innerWidth,
-  1 / window.innerHeight,
-);
+fxaaPass.uniforms["resolution"].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 composer.addPass(fxaaPass);
 ```
 

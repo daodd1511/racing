@@ -332,14 +332,7 @@ rgbeLoader.load("environment.hdr", (texture) => {
 
 ```javascript
 const cubeLoader = new THREE.CubeTextureLoader();
-const envMap = cubeLoader.load([
-  "px.jpg",
-  "nx.jpg",
-  "py.jpg",
-  "ny.jpg",
-  "pz.jpg",
-  "nz.jpg",
-]);
+const envMap = cubeLoader.load(["px.jpg", "nx.jpg", "py.jpg", "ny.jpg", "pz.jpg", "nz.jpg"]);
 
 scene.environment = envMap;
 scene.background = envMap;
@@ -359,15 +352,9 @@ scene.add(lightProbe);
 lightProbe.copy(LightProbeGenerator.fromCubeTexture(cubeTexture));
 
 // Or from render target
-const cubeCamera = new THREE.CubeCamera(
-  0.1,
-  100,
-  new THREE.WebGLCubeRenderTarget(256),
-);
+const cubeCamera = new THREE.CubeCamera(0.1, 100, new THREE.WebGLCubeRenderTarget(256));
 cubeCamera.update(renderer, scene);
-lightProbe.copy(
-  LightProbeGenerator.fromCubeRenderTarget(renderer, cubeCamera.renderTarget),
-);
+lightProbe.copy(LightProbeGenerator.fromCubeRenderTarget(renderer, cubeCamera.renderTarget));
 ```
 
 ## Common Lighting Setups

@@ -1,30 +1,53 @@
+import { useFrame } from "@react-three/fiber";
 import {
   BallCollider,
   CuboidCollider,
   CylinderCollider,
   RigidBody,
   TrimeshCollider,
+  type RapierRigidBody,
+  useBeforePhysicsStep,
 } from "@react-three/rapier";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject, type RefObject } from "react";
 import * as THREE from "three";
 
-import type { ColliderSpec, Shape, Spec, VisualSpec } from "../types";
+import {
+  kinematicSeconds,
+  kinematicTransformsAt,
+  transformForAnchor,
+  type KinematicClock,
+  type KinematicStep,
+  type ModuleAnchor,
+} from "../kinematics";
+import type { ColliderSpec, KinematicTransform, Shape, Spec, VisualSpec } from "../types";
+import { applyStep } from "../../validator/applyStep";
+
+const ORIGIN: [number, number, number] = [0, 0, 0];
+const IDENTITY_ROTATION: [number, number, number, number] = [0, 0, 0, 1];
 
 // The single render path for every Module's Spec -- used by the Showcase
 // (this phase) and, later, the Course (Spec 3). Colliders and visuals are
 // rendered from the SAME `Spec` a Module's `buildSpec` produced, per
 // PLAN.md -> "The Module contract"; nothing here re-derives geometry.
 
-function ColliderPrimitive({ collider }: { readonly collider: ColliderSpec }) {
+function ColliderPrimitive({
+  collider,
+  relativeToRigidBody = false,
+}: {
+  readonly collider: ColliderSpec;
+  readonly relativeToRigidBody?: boolean;
+}) {
   const { shape, material } = collider;
+  const position = relativeToRigidBody ? ORIGIN : collider.position;
+  const quaternion = relativeToRigidBody ? IDENTITY_ROTATION : collider.rotation;
 
   switch (shape.kind) {
     case "cuboid":
       return (
         <CuboidCollider
           args={shape.halfExtents as [number, number, number]}
-          position={collider.position}
-          quaternion={collider.rotation}
+          position={position}
+          quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
         />
@@ -33,8 +56,8 @@ function ColliderPrimitive({ collider }: { readonly collider: ColliderSpec }) {
       return (
         <CylinderCollider
           args={[shape.halfHeight, shape.radius]}
-          position={collider.position}
-          quaternion={collider.rotation}
+          position={position}
+          quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
         />
@@ -43,8 +66,8 @@ function ColliderPrimitive({ collider }: { readonly collider: ColliderSpec }) {
       return (
         <BallCollider
           args={[shape.radius]}
-          position={collider.position}
-          quaternion={collider.rotation}
+          position={position}
+          quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
         />
@@ -53,8 +76,8 @@ function ColliderPrimitive({ collider }: { readonly collider: ColliderSpec }) {
       return (
         <TrimeshCollider
           args={[shape.vertices, shape.indices]}
-          position={collider.position}
-          quaternion={collider.rotation}
+          position={position}
+          quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
         />
@@ -84,7 +107,13 @@ function geometryForShape(shape: Shape): THREE.BufferGeometry {
   }
 }
 
-function VisualMesh({ visual }: { readonly visual: VisualSpec }) {
+function VisualMesh({
+  visual,
+  meshRef,
+}: {
+  readonly visual: VisualSpec;
+  readonly meshRef?: RefObject<THREE.Mesh | null>;
+}) {
   // Geometry is rebuilt only when this visual's shape reference changes --
   // `buildSpec` returns a fresh object per call, so identity, not deep
   // equality, is the right dependency here: a re-render with the same
@@ -104,7 +133,7 @@ function VisualMesh({ visual }: { readonly visual: VisualSpec }) {
   }, [geometry]);
 
   return (
-    <mesh geometry={geometry} position={visual.position} quaternion={visual.rotation}>
+    <mesh ref={meshRef} geometry={geometry} position={visual.position} quaternion={visual.rotation}>
       <meshStandardMaterial
         color={visual.material.color}
         metalness={visual.material.metalness}
@@ -116,25 +145,136 @@ function VisualMesh({ visual }: { readonly visual: VisualSpec }) {
 
 export interface ModuleCollidersProps {
   readonly spec: Spec;
+  readonly step: KinematicStep;
+  /** The Showcase advances this ref once per fixed Rapier substep. */
+  readonly clockRef: MutableRefObject<KinematicClock>;
   /** Where this Module sits in a larger scene. Identity (undefined) in the
    * Showcase, where a Module is shown alone. */
-  readonly anchor?: {
-    readonly position?: readonly [number, number, number];
-    readonly rotation?: readonly [number, number, number, number];
-  };
+  readonly anchor?: ModuleAnchor;
 }
 
-export function ModuleColliders({ spec, anchor }: ModuleCollidersProps) {
+function KinematicCollider({
+  collider,
+  bodies,
+}: {
+  readonly collider: ColliderSpec;
+  readonly bodies: MutableRefObject<Map<string, RapierRigidBody>>;
+}) {
+  const bodyRef = useRef<RapierRigidBody>(null);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (body === null) {
+      return;
+    }
+    bodies.current.set(collider.id, body);
+    return () => {
+      bodies.current.delete(collider.id);
+    };
+  }, [bodies, collider.id]);
+
+  return (
+    <RigidBody
+      ref={bodyRef}
+      type="kinematicPosition"
+      colliders={false}
+      position={collider.position}
+      quaternion={collider.rotation}
+    >
+      <ColliderPrimitive collider={collider} relativeToRigidBody />
+    </RigidBody>
+  );
+}
+
+function KinematicVisualMesh({
+  visual,
+  meshes,
+}: {
+  readonly visual: VisualSpec;
+  readonly meshes: MutableRefObject<Map<string, THREE.Mesh>>;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (mesh === null) {
+      return;
+    }
+    meshes.current.set(visual.id, mesh);
+    return () => {
+      meshes.current.delete(visual.id);
+    };
+  }, [meshes, visual.id]);
+
+  return <VisualMesh visual={visual} meshRef={meshRef} />;
+}
+
+function applyVisualTransforms(
+  transforms: readonly KinematicTransform[],
+  meshes: ReadonlyMap<string, THREE.Mesh>,
+): void {
+  for (const transform of transforms) {
+    const mesh = meshes.get(transform.id);
+    if (mesh === undefined) {
+      continue;
+    }
+    if (transform.position !== undefined) {
+      mesh.position.set(...transform.position);
+    }
+    if (transform.rotation !== undefined) {
+      mesh.quaternion.set(...transform.rotation);
+    }
+  }
+}
+
+export function ModuleColliders({ spec, step, clockRef, anchor }: ModuleCollidersProps) {
+  const kinematicBodies = useRef(new Map<string, RapierRigidBody>());
+  const kinematicVisuals = useRef(new Map<string, THREE.Mesh>());
+  const kinematicIds = new Set(
+    spec.colliders.filter((collider) => collider.kinematic).map((collider) => collider.id),
+  );
+
+  // The physics hook fires once per actual fixed Rapier substep, before that
+  // substep integrates. `setNextKinematic*` lets Rapier derive the collider's
+  // velocity for contact resolution; assigning a transform after a render
+  // frame would both miss substeps and let marbles pass through a blade.
+  useBeforePhysicsStep(() => {
+    const transforms = kinematicTransformsAt(step, spec, kinematicSeconds(clockRef.current));
+    applyStep(
+      transforms.map((transform) => transformForAnchor(transform, anchor)),
+      kinematicBodies.current,
+    );
+  });
+
+  // The same fixed-step time reaches the visual path explicitly. This is a
+  // render concern, so it runs in `useFrame`; it never advances or samples a
+  // wall clock, leaving the Showcase-owned clock as the sole time source.
+  useFrame(() => {
+    const transforms = kinematicTransformsAt(step, spec, kinematicSeconds(clockRef.current));
+    applyVisualTransforms(transforms, kinematicVisuals.current);
+  });
+
   return (
     <group position={anchor?.position} quaternion={anchor?.rotation}>
       <RigidBody type="fixed" colliders={false}>
-        {spec.colliders.map((collider) => (
-          <ColliderPrimitive key={collider.id} collider={collider} />
-        ))}
+        {spec.colliders
+          .filter((collider) => !collider.kinematic)
+          .map((collider) => (
+            <ColliderPrimitive key={collider.id} collider={collider} />
+          ))}
       </RigidBody>
-      {spec.visuals.map((visual) => (
-        <VisualMesh key={visual.id} visual={visual} />
-      ))}
+      {spec.colliders
+        .filter((collider) => collider.kinematic)
+        .map((collider) => (
+          <KinematicCollider key={collider.id} collider={collider} bodies={kinematicBodies} />
+        ))}
+      {spec.visuals.map((visual) =>
+        kinematicIds.has(visual.id) ? (
+          <KinematicVisualMesh key={visual.id} visual={visual} meshes={kinematicVisuals} />
+        ) : (
+          <VisualMesh key={visual.id} visual={visual} />
+        ),
+      )}
     </group>
   );
 }

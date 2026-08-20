@@ -4,10 +4,12 @@ import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { ModuleColliders } from "../modules/render/ModuleColliders";
+import { INITIAL_KINEMATIC_CLOCK, KINEMATIC_FIXED_STEP_SECONDS } from "../modules/kinematics";
 import { SCALE } from "../race/scale";
 import { percentile, shuffleCoefficient } from "../validator/metrics";
 import { CameraFraming } from "./CameraFraming";
 import { Feeder, type FeedMode } from "./Feeder";
+import { KinematicClock } from "./KinematicClock";
 import { EMPTY_LIVE_METRICS, MetricsReadout, type LiveMetricsState } from "./MetricsReadout";
 import { defaultParamValues, ParamPanel, type ParamValues } from "./ParamPanel";
 import { MODULES, type ShowcaseEntry } from "./registry";
@@ -37,6 +39,7 @@ export function Showcase() {
   // running totals themselves don't need to be React state.
   const dwellSecondsByIdRef = useRef(new Map<number, number | null>());
   const exitSpeedsRef = useRef<number[]>([]);
+  const kinematicClockRef = useRef(INITIAL_KINEMATIC_CLOCK);
 
   const spec = useMemo(() => selected.buildSpec(params), [selected, params]);
 
@@ -179,8 +182,12 @@ export function Showcase() {
            * position only ever suited the chute; the vortex bowl's bounds
            * run more than twice as wide. */}
           <CameraFraming bounds={framingBounds} />
-          <Physics gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}>
-            <ModuleColliders spec={spec} />
+          <Physics
+            gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}
+            timeStep={KINEMATIC_FIXED_STEP_SECONDS}
+          >
+            <KinematicClock clockRef={kinematicClockRef} />
+            <ModuleColliders spec={spec} step={selected.step} clockRef={kinematicClockRef} />
             <Feeder
               entry={spec.footprint.entry}
               exit={spec.footprint.exit}

@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 4 — in-progress
+- Current phase: 4 — done
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -42,7 +42,15 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   and combined-extreme param combinations, all zero-stall with real
   `minDisplacementPerSecond` margin) on the first implementation — no
   correction attempts, so fresh review stayed not required.
-- Phase 4 — Whoops: in-progress
+- Phase 4 — Whoops: done. Its one sine centreline drives both the smooth
+  visual mesh and its fixed cuboid plates; rails follow the same samples.
+  Default guardrails passed at 20 seeds × 5 marbles: zero stalls, Dwell p50
+  ~0.98 s / p99 ~1.32 s, min displacement ~0.078 m/s, and non-zero Shuffle
+  across every seed. Each slider extreme and the combined amplitude-max /
+  wavelength-min / length-max / grade-min case also passed at 5 seeds × 5
+  marbles. The original grade minimum (0.4) read ~0.011 m/s, below the
+  universal visible-motion floor, so it is constrained to 0.45+ rather than
+  exposing a green-looking but too-slow setting.
 - Phase 5 — Funnel choke: pending
 - Phase 6 — Kinematic `step` application: pending
 - Phase 7 — Windmill: pending
@@ -206,8 +214,8 @@ Fresh review: not required
 - [x] Add `src/modules/whoops/whoops.test.ts`: universal guardrails, its own Dwell range, and a non-zero `shuffleCoefficient` across seeds. Also assert no marble leaves the channel laterally at the crest of a hump — the compression-and-stretch this Module trades on is one parameter step away from launching marbles out.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/geometry/sweep.test.ts src/modules/geometry/sweep.ts src/modules/registry.ts src/modules/whoops/index.ts src/modules/whoops/whoops.test.ts` — 30 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] Marbles ride the humps and compress into a bunch, rather than launching off a crest.

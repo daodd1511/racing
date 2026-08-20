@@ -7,6 +7,7 @@ import { staircase } from "./staircase";
 import { steepZigzag } from "./steepZigzag";
 import type { KinematicTransform, ModuleDefinition, ModuleMeta, Role, Spec } from "./types";
 import { vortexBowl } from "./vortexBowl";
+import { whoops } from "./whoops";
 
 // The Module registry CONTEXT.md -> "Assembler" already names: every Module
 // in the catalogue, listed once, here -- so adding a Module (Phase 2 onward)
@@ -50,6 +51,7 @@ export const ALL_MODULES: readonly RegisteredModule[] = [
   toRegisteredModule(rumbleStrip),
   toRegisteredModule(staircase),
   toRegisteredModule(frictionLanes),
+  toRegisteredModule(whoops),
 ];
 
 export function modulesByRole(role: Role): readonly RegisteredModule[] {

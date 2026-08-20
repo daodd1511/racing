@@ -17,17 +17,49 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 2 — in-progress (checklist complete, fresh review pending)
+- Current phase: 2 — in-progress (checklist complete, blocked on re-review findings — see below)
 - Phase 1 — Shared channel geometry and Module registry: done
-- Phase 2 — Steep zigzag, pin field, rumble strip: in-progress
+- Phase 2 — Steep zigzag, pin field, rumble strip: in-progress, stopped for user
+  direction per the rulebook's one-re-review cap. Fresh review found P1/P2
+  issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
+  spawn-outside-rails bug live, pinField's rowPitch lacking a clog floor,
+  rumbleStrip's unfalsifiable Dwell-budget claim); all fixed and committed
+  (`fix(modules): correct bounds, gap, and schema issues from fresh review`).
+  The one allowed re-review then found: rumbleStrip's `barHeight` at its own
+  schema maximum still stalls 4/100 marbles at default everything-else
+  (confirmed independently — the implementer's own stress-test claim to the
+  contrary used a stale, wrong `barSpacing` default value and was false);
+  the pinField `minDisplacementPerSecond`-degrades-at-extremes gap (accepted
+  as scoped-out, matching chute's own default-only guardrail precedent) was
+  never recorded in this STATUS block, which the reviewer correctly flagged
+  as making "Verification debt: none" below inaccurate; and a code comment
+  in rumbleStrip misattributes `MAX_FLOOR_GRADE`'s value to the chute's
+  grade schema max (it's actually steepZigzag's). No further autonomous
+  fix-and-re-review — surfaced to the user.
 - Phase 3 — Staircase, friction lanes: pending
 - Phase 4 — Whoops: pending
 - Phase 5 — Funnel choke: pending
 - Phase 6 — Kinematic `step` application: pending
 - Phase 7 — Windmill: pending
-- Verification debt: none. Inherited and explicitly **not** this spec's to
-  close: the vortex bowl's guardrail test and Showcase tuning, deferred by the
-  user to after Specs 2–4 — see `../marble-race-rebuild/EXECUTION.md` → STATUS.
+- Verification debt:
+  - rumbleStrip: `barHeight` at its schema maximum (marbleRadius * 0.5),
+    default `barSpacing`/`barCount`/`restitution` otherwise, stalls 4/100
+    marbles (20 seeds × 5 marbles) — confirmed directly, not transient (still
+    stalled at `maxSimulationSeconds: 30`). Not `[~]`: this is unresolved
+    correctness debt, not an environment block.
+  - pinField: `minDisplacementPerSecond` drops below
+    `MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND` (though stalls stay at zero) at
+    several individual schema extremes — measured: `postWidth` at max alone
+    ~0.0045; all sliders combined at their extremes ~0.0023. The Module's own
+    default-param guardrail test (the actual Phase 2 checklist deliverable)
+    passes with margin (~0.027). Left unresolved pending the user's call on
+    whether default-param-only coverage is sufficient scope for this phase,
+    matching chute's own precedent (its guardrail test also only covers
+    default-ish params, not a full schema sweep) — not the vortex bowl's
+    debt, which is a wholly missing test, a materially different gap.
+  - Inherited and explicitly **not** this spec's to close: the vortex bowl's
+    guardrail test and Showcase tuning, deferred by the user to after
+    Specs 2–4 — see `../marble-race-rebuild/EXECUTION.md` → STATUS.
 
 ## Phase 1 — Shared channel geometry and Module registry
 

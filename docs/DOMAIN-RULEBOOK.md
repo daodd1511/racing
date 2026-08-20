@@ -1,4 +1,5 @@
 # Domain Model & Decisions
+
 <!-- domain-rulebook v1 -->
 
 Three homes for terminology and decisions — keep them from bleeding into each

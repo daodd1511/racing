@@ -45,7 +45,14 @@ export interface MetricsReadoutProps {
 
 export function MetricsReadout({ metrics }: MetricsReadoutProps) {
   return (
-    <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.25rem 0.75rem", margin: 0 }}>
+    <dl
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        gap: "0.25rem 0.75rem",
+        margin: 0,
+      }}
+    >
       <dt>Dwell p50 / p99</dt>
       <dd style={{ margin: 0 }}>
         {formatSeconds(metrics.dwellSecondsP50)} / {formatSeconds(metrics.dwellSecondsP99)}

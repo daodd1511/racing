@@ -1,6 +1,7 @@
 # Marble Race Picker
 
 ## Domain Model & Decisions
+
 <!-- domain-rulebook v1 -->
 
 `CONTEXT.md` (repo root) is the project's glossary. Use its canonical terms — and avoid the
@@ -12,6 +13,7 @@ routes between `CONTEXT.md`, `docs/adr/`, and a spec's `PLAN.md`, and defines wh
 doesn't qualify as an ADR.
 
 ## Spec-Driven Execution Workflow
+
 <!-- spec-workflow v1 -->
 
 Specs live under `specs/`. A feature's plan is `specs/<feature-slug>/PLAN.md` and its phased
@@ -23,6 +25,7 @@ named `<feature-slug>/phase-<n>-<desc>`: that branch shape means a spec is mid-e
 git is its state store, so do not commit, squash, rebase, push, or open a PR on one by hand.
 
 ## Three.js and R3F Work
+
 <!-- threejs-skills v1 -->
 
 Before writing or reviewing three.js code, check the available `threejs-*` skills and load

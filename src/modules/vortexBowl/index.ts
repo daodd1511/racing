@@ -319,7 +319,11 @@ function buildEntryRamp(rimEntryPosition: ThreeVector3, rimTangent: ThreeVector3
       id: "entry-floor",
       shape: {
         kind: "cuboid",
-        halfExtents: [ENTRY_CHANNEL_WIDTH / 2, ENTRY_FLOOR_THICKNESS / 2, ENTRY_APPROACH_LENGTH / 2],
+        halfExtents: [
+          ENTRY_CHANNEL_WIDTH / 2,
+          ENTRY_FLOOR_THICKNESS / 2,
+          ENTRY_APPROACH_LENGTH / 2,
+        ],
       },
       position: floorCenter,
       rotation: pitch,
@@ -363,7 +367,11 @@ function buildSpec(params: VortexBowlParams): Spec {
   // and a ring of flat cuboid plates -- the chute's own collider shape,
   // already proven at this scale -- carries the marble.
   const basinVisualShape = revolveProfile(basinProfile.rings, REVOLVE_SEGMENTS, SCALE.marbleRadius);
-  const basinPlates = revolveProfileToPlates(basinProfile.rings, COLLIDER_SEGMENTS_REQUEST, SCALE.marbleRadius);
+  const basinPlates = revolveProfileToPlates(
+    basinProfile.rings,
+    COLLIDER_SEGMENTS_REQUEST,
+    SCALE.marbleRadius,
+  );
   const basinMaterial = { restitution: BOWL_RESTITUTION, friction: params.wallFriction };
 
   // The entry point is the profile's own `entryRing`, one ring inside the

@@ -173,7 +173,11 @@ export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: Fee
     const currentEntry = entryRef.current;
     const lateral = normalize(cross(currentEntry.tangent, currentEntry.up));
     const basePosition = addScaled(
-      addScaled(currentEntry.position, currentEntry.tangent, SCALE.marbleRadius * ENTRY_MARGIN_RADII),
+      addScaled(
+        currentEntry.position,
+        currentEntry.tangent,
+        SCALE.marbleRadius * ENTRY_MARGIN_RADII,
+      ),
       currentEntry.up,
       SCALE.marbleRadius * ENTRY_LIFT_RADII,
     );
@@ -182,7 +186,10 @@ export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: Fee
   }, []);
 
   const spawnOne = useCallback(() => {
-    setMarbles((existing) => [...existing, { id: nextIdRef.current++, spawnPosition: makeSpawnPosition() }]);
+    setMarbles((existing) => [
+      ...existing,
+      { id: nextIdRef.current++, spawnPosition: makeSpawnPosition() },
+    ]);
   }, [makeSpawnPosition]);
 
   const spawnBurst = useCallback(

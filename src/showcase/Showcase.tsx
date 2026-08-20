@@ -76,7 +76,9 @@ export function Showcase() {
       dwellSecondsP50: percentile(exitedDwellSeconds, 0.5),
       dwellSecondsP99: percentile(exitedDwellSeconds, 0.99),
       meanExitSpeed:
-        exitSpeeds.length > 0 ? exitSpeeds.reduce((sum, speed) => sum + speed, 0) / exitSpeeds.length : null,
+        exitSpeeds.length > 0
+          ? exitSpeeds.reduce((sum, speed) => sum + speed, 0) / exitSpeeds.length
+          : null,
       shuffleCoefficient: shuffleCoefficient(orderedById),
     });
   }, []);
@@ -125,9 +127,18 @@ export function Showcase() {
   }, []);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "12rem 1fr 16rem", height: "100%", color: "#eef3f6" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "12rem 1fr 16rem",
+        height: "100%",
+        color: "#eef3f6",
+      }}
+    >
       <aside style={{ background: "#1a1d1f", padding: "0.75rem", overflowY: "auto" }}>
-        <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Modules</h2>
+        <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          Modules
+        </h2>
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
           {MODULES.map((entry) => (
             <li key={entry.id}>
@@ -183,7 +194,15 @@ export function Showcase() {
             <Bloom intensity={0.6} luminanceThreshold={0.4} luminanceSmoothing={0.2} mipmapBlur />
           </EffectComposer>
         </Canvas>
-        <div style={{ position: "absolute", bottom: "0.75rem", left: "0.75rem", display: "flex", gap: "0.5rem" }}>
+        <div
+          style={{
+            position: "absolute",
+            bottom: "0.75rem",
+            left: "0.75rem",
+            display: "flex",
+            gap: "0.5rem",
+          }}
+        >
           {FEED_MODES.map((mode) => (
             <button
               key={mode}
@@ -205,7 +224,13 @@ export function Showcase() {
             <button
               type="button"
               onClick={triggerFeed}
-              style={{ padding: "0.3rem 0.6rem", background: "#2b2f33", color: "#eef3f6", border: "none", cursor: "pointer" }}
+              style={{
+                padding: "0.3rem 0.6rem",
+                background: "#2b2f33",
+                color: "#eef3f6",
+                border: "none",
+                cursor: "pointer",
+              }}
             >
               Feed
             </button>
@@ -213,13 +238,25 @@ export function Showcase() {
         </div>
       </div>
 
-      <aside style={{ background: "#1a1d1f", padding: "0.75rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <aside
+        style={{
+          background: "#1a1d1f",
+          padding: "0.75rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
         <section>
-          <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Params</h2>
+          <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Params
+          </h2>
           <ParamPanel schema={selected.meta.params} values={params} onChange={updateParam} />
         </section>
         <section>
-          <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Metrics</h2>
+          <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Metrics
+          </h2>
           <MetricsReadout metrics={metrics} />
         </section>
       </aside>

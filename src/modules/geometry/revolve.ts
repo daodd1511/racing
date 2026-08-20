@@ -155,11 +155,7 @@ function dot(a: Vector3, b: Vector3): number {
 }
 
 function cross(a: Vector3, b: Vector3): Vector3 {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
-  ];
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 function length(v: Vector3): number {
@@ -178,9 +174,15 @@ function normalize(v: Vector3): Vector3 {
  * rotation); verified in revolve.test.ts by applying the result back to the
  * local axes and checking it reproduces u/v/w, not trusted by inspection. */
 function quaternionFromBasis(u: Vector3, v: Vector3, w: Vector3): Quaternion {
-  const m11 = u[0], m21 = u[1], m31 = u[2];
-  const m12 = v[0], m22 = v[1], m32 = v[2];
-  const m13 = w[0], m23 = w[1], m33 = w[2];
+  const m11 = u[0],
+    m21 = u[1],
+    m31 = u[2];
+  const m12 = v[0],
+    m22 = v[1],
+    m32 = v[2];
+  const m13 = w[0],
+    m23 = w[1],
+    m33 = w[2];
   const trace = m11 + m22 + m33;
 
   if (trace > 0) {
@@ -247,9 +249,7 @@ export function revolveProfileToPlates(
       // cell is close enough to planar that this converges to the same
       // basis either way, and averaging is cheap insurance against the one
       // edge picked happening to be the noisier of the two.
-      const circumferentialRaw = normalize(
-        add(subtract(p01, p00), subtract(p11, p10)),
-      );
+      const circumferentialRaw = normalize(add(subtract(p01, p00), subtract(p11, p10)));
       const radialRaw = normalize(add(subtract(p10, p00), subtract(p11, p01)));
 
       // Gram-Schmidt: re-orthogonalize the radial direction against the

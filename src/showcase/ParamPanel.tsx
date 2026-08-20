@@ -29,7 +29,10 @@ export function ParamPanel({ schema, values, onChange }: ParamPanelProps) {
         if (field.kind === "number") {
           const value = numberValueOrDefault(values, field.key, field.default);
           return (
-            <label key={field.key} style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+            <label
+              key={field.key}
+              style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+            >
               <span>
                 {field.label} ({value})
               </span>

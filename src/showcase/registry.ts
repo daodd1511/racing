@@ -1,6 +1,12 @@
 import { chute } from "../modules/chute";
 import { vortexBowl } from "../modules/vortexBowl";
-import type { KinematicTransform, ModuleDefinition, ModuleMeta, Role, Spec } from "../modules/types";
+import type {
+  KinematicTransform,
+  ModuleDefinition,
+  ModuleMeta,
+  Role,
+  Spec,
+} from "../modules/types";
 import type { ParamValues } from "./ParamPanel";
 
 // The Showcase's module list. `ModuleDefinition<P>` is generic per Module
@@ -38,4 +44,7 @@ function toShowcaseEntry<P>(module: ModuleDefinition<P>): ShowcaseEntry {
   };
 }
 
-export const MODULES: readonly ShowcaseEntry[] = [toShowcaseEntry(chute), toShowcaseEntry(vortexBowl)];
+export const MODULES: readonly ShowcaseEntry[] = [
+  toShowcaseEntry(chute),
+  toShowcaseEntry(vortexBowl),
+];

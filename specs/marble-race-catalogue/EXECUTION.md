@@ -17,8 +17,8 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Shared channel geometry and Module registry: pending
+- Current phase: 1 — done
+- Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: pending
 - Phase 3 — Staircase, friction lanes: pending
 - Phase 4 — Whoops: pending
@@ -53,17 +53,17 @@ and `type ParamValues`, both moved out of `src/showcase/ParamPanel.tsx`.
 
 Fresh review: not required
 
-- [ ] Add `src/modules/geometry/channel.ts`: `buildChannel` emits a floor cuboid plus two rail cuboids per segment, chaining segment to segment, and returns the entry/exit `Anchor`s and local-space `bounds`. Derive each segment's rotation with `setFromUnitVectors` over `start → end`, never a hand-picked axis-angle sign — see the comment at `src/modules/chute/index.ts:88` for the bug that convention exists to prevent. Reuse the chute's `FLOOR_THICKNESS`/`RAIL_THICKNESS`/`RAIL_HEIGHT` values as the module-level defaults.
-- [ ] Add `src/modules/geometry/channel.test.ts`: a single segment reproduces the chute's current collider set; a two-segment chain leaves no gap at the joint (consecutive floor faces touch within one marble radius); `entry`/`exit` tangents and ups are unit vectors; a zero-length segment is rejected.
-- [ ] Rewrite `src/modules/chute/index.ts` to build its floor and rails through `buildChannel`, keeping `ChuteParams`, `PARAM_SCHEMA`, defaults, and the emitted `Spec` unchanged. `src/modules/purity.test.ts`'s existing chute cases are the regression check.
-- [ ] Move `defaultParamValues` and `ParamValues` from `src/showcase/ParamPanel.tsx` into a new `src/modules/params.ts` and re-export from `ParamPanel.tsx` so the Showcase imports do not change. They move because `src/modules/purity.test.ts` and `src/modules/registry.ts` need them and must not import a React component to get them.
-- [ ] Add `src/modules/registry.ts` with `ALL_MODULES` (`chute`, `vortexBowl`) and `modulesByRole`. This is the "Module registry" `CONTEXT.md` → "Assembler" already names; Spec 3 consumes it. Move `toShowcaseEntry`'s type-erasure here as the registry's own boundary and keep its `P`-unconstrained signature and single `as P` cast — `src/showcase/registry.ts`'s comment records why a `Record`-shaped constraint fails, so do not re-derive it.
-- [ ] Rewrite `src/showcase/registry.ts` to re-export `MODULES` from `ALL_MODULES`, so adding a Module is one line in `src/modules/registry.ts` and zero lines in the Showcase.
-- [ ] Generalize `src/modules/purity.test.ts` to iterate `ALL_MODULES`, building params from each Module's own `meta.params` defaults via `defaultParamValues`, and keep the chute's three explicit param cases alongside. Every Module added in a later phase is then covered by construction.
+- [x] Add `src/modules/geometry/channel.ts`: `buildChannel` emits a floor cuboid plus two rail cuboids per segment, chaining segment to segment, and returns the entry/exit `Anchor`s and local-space `bounds`. Derive each segment's rotation with `setFromUnitVectors` over `start → end`, never a hand-picked axis-angle sign — see the comment at `src/modules/chute/index.ts:88` for the bug that convention exists to prevent. Reuse the chute's `FLOOR_THICKNESS`/`RAIL_THICKNESS`/`RAIL_HEIGHT` values as the module-level defaults.
+- [x] Add `src/modules/geometry/channel.test.ts`: a single segment reproduces the chute's current collider set; a two-segment chain leaves no gap at the joint (consecutive floor faces touch within one marble radius); `entry`/`exit` tangents and ups are unit vectors; a zero-length segment is rejected.
+- [x] Rewrite `src/modules/chute/index.ts` to build its floor and rails through `buildChannel`, keeping `ChuteParams`, `PARAM_SCHEMA`, defaults, and the emitted `Spec` unchanged. `src/modules/purity.test.ts`'s existing chute cases are the regression check.
+- [x] Move `defaultParamValues` and `ParamValues` from `src/showcase/ParamPanel.tsx` into a new `src/modules/params.ts` and re-export from `ParamPanel.tsx` so the Showcase imports do not change. They move because `src/modules/purity.test.ts` and `src/modules/registry.ts` need them and must not import a React component to get them.
+- [x] Add `src/modules/registry.ts` with `ALL_MODULES` (`chute`, `vortexBowl`) and `modulesByRole`. This is the "Module registry" `CONTEXT.md` → "Assembler" already names; Spec 3 consumes it. Move `toShowcaseEntry`'s type-erasure here as the registry's own boundary and keep its `P`-unconstrained signature and single `as P` cast — `src/showcase/registry.ts`'s comment records why a `Record`-shaped constraint fails, so do not re-derive it.
+- [x] Rewrite `src/showcase/registry.ts` to re-export `MODULES` from `ALL_MODULES`, so adding a Module is one line in `src/modules/registry.ts` and zero lines in the Showcase.
+- [x] Generalize `src/modules/purity.test.ts` to iterate `ALL_MODULES`, building params from each Module's own `meta.params` defaults via `defaultParamValues`, and keep the chute's three explicit param cases alongside. Every Module added in a later phase is then covered by construction.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/chute/index.ts src/modules/purity.test.ts src/showcase/ParamPanel.tsx src/showcase/registry.ts src/modules/geometry/channel.test.ts src/modules/geometry/channel.ts src/modules/params.ts src/modules/registry.ts` — 13 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] The chute in the Showcase looks and behaves exactly as before the refactor.

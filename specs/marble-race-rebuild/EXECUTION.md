@@ -19,7 +19,7 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 - Phase 3 — Showcase: done
 - Phase 4 — Vortex bowl: parked 2026-08-20, by the user, after the first actual visual look at it
   (the Showcase had no working camera until this session's last commit -- see "Parked 2026-08-20"
-  below). The first attempt (trimesh basin, WIP commit `afcca58`) could not be made to orbit; see
+  below). The first attempt (trimesh basin, WIP commit `8579a4b`) could not be made to orbit; see
   Phase 4's "Amended 2026-08-19" note for that account. The cuboid-plate rebuild that followed
   (`revolveProfileToPlates`, `vortexBowl/index.ts` rewired, 9 new geometry tests, "Result, 2026-08-20")
   eliminated rim-escape ejection entirely in headless sweeps and reported orbit counts of 1-2.4 --
@@ -257,7 +257,7 @@ runtime bugs; this phase has less runtime confirmation available, not more.
 
 **Amended 2026-08-19 — why the construction changed.** Kept as the record behind the amended items
 above and behind ADR 0003; a cold agent needs to know what was already ruled out. The first attempt
-(WIP commit `afcca58`) put a revolved-trimesh basin in `src/modules/vortexBowl/index.ts` with the
+(WIP commit `8579a4b`) put a revolved-trimesh basin in `src/modules/vortexBowl/index.ts` with the
 module contract and six-param schema. Three real, independently-confirmed bugs were found and fixed
 along the way, and **all three carry forward** — they are properties of the mechanism, not of the mesh
 (each is documented inline where fixed):

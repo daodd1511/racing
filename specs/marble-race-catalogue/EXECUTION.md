@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — done
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -37,7 +37,11 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   combination against the *real* default `barSpacing`; the comment
   misattribution fixed. See "Verification debt" below for what remains
   open by the user's own direction, not by omission.
-- Phase 3 — Staircase, friction lanes: pending
+- Phase 3 — Staircase, friction lanes: done. Both Modules cleared their
+  guardrail sweep and a proactive schema-extreme stress pass (11 single-
+  and combined-extreme param combinations, all zero-stall with real
+  `minDisplacementPerSecond` margin) on the first implementation — no
+  correction attempts, so fresh review stayed not required.
 - Phase 4 — Whoops: pending
 - Phase 5 — Funnel choke: pending
 - Phase 6 — Kinematic `step` application: pending
@@ -157,15 +161,15 @@ ModuleDefinition<FrictionLanesParams>` from `src/modules/frictionLanes/index.ts`
 
 Fresh review: not required
 
-- [ ] Add `src/modules/staircase/index.ts` — `role: "sort"`. Full-width treads with a riser cuboid per step, per OBSTACLE-IDEAS → "Staircase drop", built as chained `buildChannel` segments plus riser colliders rather than by displacing a mesh (there is no bed trimesh to displace any more). `StaircaseParams`: `stepCount`, `tread`, `riseHeight`, `width`. The sort effect is that a fast marble carries over two treads while a slow one drops into every riser — the test asserts that separation, not just that marbles exit.
-- [ ] Add `src/modules/frictionLanes/index.ts` — `role: "sort"`. Parallel lanes down one channel, divided by thin longitudinal walls, each lane's floor carrying its own `ColliderMaterial` friction, per OBSTACLE-IDEAS → "Friction patches". `FrictionLanesParams`: `laneCount`, `length`, `slowFriction`, `fastFriction`, `dividerHeight`. Marbles have no agency about which lane they land in; that is the point.
-- [ ] Give the two lane materials distinct `VisualMaterial` colors so the fast and slow lanes are visually distinguishable, per `../marble-race-rebuild/PLAN.md` → "Art direction". Color is the only cue here, so state in a comment that lane identity is also readable from lane position, not color alone.
-- [ ] Register both in `src/modules/registry.ts`.
-- [ ] Add `src/modules/staircase/staircase.test.ts` and `src/modules/frictionLanes/frictionLanes.test.ts`: the universal guardrails, each Module's own Dwell range, and for both a `sort` assertion — exit-time spread across a multi-marble run must widen relative to the spread at entry. A `sort` Module that does not spread the field is not doing its Role.
+- [x] Add `src/modules/staircase/index.ts` — `role: "sort"`. Full-width treads with a riser cuboid per step, per OBSTACLE-IDEAS → "Staircase drop", built as chained `buildChannel` segments plus riser colliders rather than by displacing a mesh (there is no bed trimesh to displace any more). `StaircaseParams`: `stepCount`, `tread`, `riseHeight`, `width`. The sort effect is that a fast marble carries over two treads while a slow one drops into every riser — the test asserts that separation, not just that marbles exit.
+- [x] Add `src/modules/frictionLanes/index.ts` — `role: "sort"`. Parallel lanes down one channel, divided by thin longitudinal walls, each lane's floor carrying its own `ColliderMaterial` friction, per OBSTACLE-IDEAS → "Friction patches". `FrictionLanesParams`: `laneCount`, `length`, `slowFriction`, `fastFriction`, `dividerHeight`. Marbles have no agency about which lane they land in; that is the point.
+- [x] Give the two lane materials distinct `VisualMaterial` colors so the fast and slow lanes are visually distinguishable, per `../marble-race-rebuild/PLAN.md` → "Art direction". Color is the only cue here, so state in a comment that lane identity is also readable from lane position, not color alone.
+- [x] Register both in `src/modules/registry.ts`.
+- [x] Add `src/modules/staircase/staircase.test.ts` and `src/modules/frictionLanes/frictionLanes.test.ts`: the universal guardrails, each Module's own Dwell range, and for both a `sort` assertion — exit-time spread across a multi-marble run must widen relative to the spread at entry. A `sort` Module that does not spread the field is not doing its Role. *(amended 2026-08-20)* "Spread at entry" is ~0 by construction (every marble's own run starts at t=0 in `validateModule`'s own frame), so a literal exit-spread-greater-than-zero check is trivially true for any Module. Both tests instead compare relative spread (`dwellSecondsP99 / dwellSecondsP50`, scale-independent) against a live chute run at the same seed sweep — a Module with no sort mechanism at all — and assert the sort Module's ratio is strictly larger. Both pass: chute 1.163, staircase 1.218, frictionLanes 1.281.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/frictionLanes/frictionLanes.test.ts src/modules/frictionLanes/index.ts src/modules/registry.ts src/modules/staircase/index.ts src/modules/staircase/staircase.test.ts` — 16 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] Marbles visibly bounce down the staircase rather than sliding over it as a ramp.

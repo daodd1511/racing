@@ -1,5 +1,6 @@
 import { chute } from "./chute";
 import { frictionLanes } from "./frictionLanes";
+import { funnelChoke } from "./funnelChoke";
 import type { ParamValues } from "./params";
 import { pinField } from "./pinField";
 import { rumbleStrip } from "./rumbleStrip";
@@ -52,6 +53,7 @@ export const ALL_MODULES: readonly RegisteredModule[] = [
   toRegisteredModule(staircase),
   toRegisteredModule(frictionLanes),
   toRegisteredModule(whoops),
+  toRegisteredModule(funnelChoke),
 ];
 
 export function modulesByRole(role: Role): readonly RegisteredModule[] {

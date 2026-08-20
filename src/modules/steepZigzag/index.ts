@@ -88,10 +88,18 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       default: DEFAULT_PARAMS.turnAngle,
     } satisfies NumberParamField,
     {
+      // (amended 2026-08-20) `min` pinned to `SCALE.channelWidth`, not a
+      // real range down to 0.3: the spawn-spread bug this default fixed
+      // (see `DEFAULT_PARAMS.width`'s comment) is reachable from the
+      // Showcase too -- `Feeder.tsx`'s continuous spawn, not only
+      // `validateModule.ts`'s sweep, hardcodes its lateral spread to
+      // `SCALE.channelWidth` regardless of a Module's own width. Fixing
+      // that at the source is shared Spec-1 infrastructure, out of this
+      // phase's scope; pinning the slider is the safe fix available here.
       kind: "number",
       key: "width",
       label: "Width (m)",
-      min: 0.3,
+      min: SCALE.channelWidth,
       max: SCALE.channelWidth,
       step: 0.02,
       default: DEFAULT_PARAMS.width,

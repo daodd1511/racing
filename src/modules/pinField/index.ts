@@ -60,13 +60,22 @@ const POST_WIDTH_MAX = MARBLE_DIAMETER * 1.1;
 // directly: seeds 4 and 5 at this Module's prior spacing, before this fix).
 const POST_DIAGONAL_MAX = POST_WIDTH_MAX * Math.SQRT2;
 const POST_SPACING_MIN = POST_DIAGONAL_MAX + MIN_POST_GAP;
+// (amended 2026-08-20) The same gap floor, applied to the *longitudinal*
+// axis: `rowPitch` had no floor tied to `postWidth` at all, so a
+// schema-legal combination (`rowPitch` at its old minimum with `postWidth`
+// at its maximum) left less than one marble diameter of raw clearance
+// between staggered rows -- the exact clog `postSpacing`'s own floor exists
+// to prevent, just on the other axis. A post's diagonal reach is the same
+// in both directions (it's a square), so the same `POST_DIAGONAL_MAX` term
+// applies.
+const ROW_PITCH_MIN = POST_DIAGONAL_MAX + MIN_POST_GAP;
 
 const DEFAULT_PARAMS: PinFieldParams = Object.freeze({
   rowCount: 5,
   postSpacing: POST_SPACING_MIN * 1.3,
   postHeight: DEFAULT_POST_HEIGHT,
   postWidth: DEFAULT_POST_WIDTH,
-  rowPitch: MARBLE_DIAMETER * 5,
+  rowPitch: ROW_PITCH_MIN * 1.7,
 });
 
 const PARAM_SCHEMA: ParamSchema = Object.freeze({
@@ -111,8 +120,8 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       kind: "number",
       key: "rowPitch",
       label: "Row pitch (m)",
-      min: MARBLE_DIAMETER * 2,
-      max: MARBLE_DIAMETER * 6,
+      min: ROW_PITCH_MIN,
+      max: ROW_PITCH_MIN * 2.5,
       step: 0.002,
       default: DEFAULT_PARAMS.rowPitch,
     } satisfies NumberParamField,
@@ -152,8 +161,34 @@ function toQuaternion(q: ThreeQuaternion): Quaternion {
   return [q.x, q.y, q.z, q.w];
 }
 
-/** Evenly spaced lateral offsets spanning `channelWidth`, symmetric about
- * the centerline, alternating rows shifted by half a pitch for the classic
+/** The 8 corners of a cuboid with the given half-extents, position, and
+ * rotation -- the same helper `channel.ts` and `steepZigzag/index.ts` use to
+ * accumulate an axis-aligned `bounds` box that actually accounts for a
+ * rotated collider's true extent, rather than a shortcut that only accounts
+ * for part of the rotation. */
+function cuboidCorners(
+  halfExtents: Vector3,
+  position: ThreeVector3,
+  rotation: ThreeQuaternion,
+): ThreeVector3[] {
+  const corners: ThreeVector3[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        corners.push(
+          new ThreeVector3(sx * halfExtents[0], sy * halfExtents[1], sz * halfExtents[2])
+            .applyQuaternion(rotation)
+            .add(position),
+        );
+      }
+    }
+  }
+  return corners;
+}
+
+/** Evenly spaced lateral offsets spanning `channelWidth`, nominally centered
+ * but shifted a quarter-spacing off the centerline (see the comment inside),
+ * alternating rows shifted by a further half a pitch for the classic
  * Galton-board stagger. `usableWidth` leaves a margin so a post's own
  * half-extent (post-rotation, its footprint reaches out to `postSpacing`'s
  * own scale, not just `postWidth/2`) doesn't collide with the rails. */
@@ -208,6 +243,16 @@ function buildSpec(params: PinFieldParams): Spec {
 
   const min: [number, number, number] = [...bounds.min];
   const max: [number, number, number] = [...bounds.max];
+  const accumulate = (corners: readonly ThreeVector3[]) => {
+    for (const corner of corners) {
+      min[0] = Math.min(min[0], corner.x);
+      min[1] = Math.min(min[1], corner.y);
+      min[2] = Math.min(min[2], corner.z);
+      max[0] = Math.max(max[0], corner.x);
+      max[1] = Math.max(max[1], corner.y);
+      max[2] = Math.max(max[2], corner.z);
+    }
+  };
 
   for (let row = 0; row < rowCount; row += 1) {
     const rowZ = LEAD_IN + row * rowPitch;
@@ -237,19 +282,14 @@ function buildSpec(params: PinFieldParams): Spec {
         rotation: toQuaternion(postRotation),
       });
 
-      // A post's footprint after the 45-degree spin reaches diagonal
-      // (halfExtent * sqrt(2)) from its center in every horizontal
-      // direction -- widen the accumulated bounds by that reach rather
-      // than the pre-rotation half-extent.
-      const diagonalReach = (postWidth / 2) * Math.SQRT2;
-      const postTop = position.y + postHeight / 2 + FLOOR_THICKNESS / 2;
-      const postBottom = position.y - postHeight / 2 - FLOOR_THICKNESS / 2;
-      min[0] = Math.min(min[0], position.x - diagonalReach);
-      min[1] = Math.min(min[1], postBottom);
-      min[2] = Math.min(min[2], position.z - diagonalReach);
-      max[0] = Math.max(max[0], position.x + diagonalReach);
-      max[1] = Math.max(max[1], postTop);
-      max[2] = Math.max(max[2], position.z + diagonalReach);
+      // (amended 2026-08-20) Full 8-corner transform under the *compound*
+      // rotation (channel pitch + 45-degree spin), not a diagonal-reach
+      // shortcut against a plain vertical Y and pre-tilt Z: the channel's
+      // own slope tilt mixes Y and Z for every post, the same way it does
+      // for `buildChannel`'s own floor and rails (see `channel.ts`'s
+      // `cuboidCorners`) -- a shortcut that only accounts for the spin
+      // undercounts true extent once the channel is graded at all.
+      accumulate(cuboidCorners(postHalfExtents, position, postRotation));
     });
   }
 

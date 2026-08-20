@@ -71,19 +71,39 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       default: DEFAULT_PARAMS.barSpacing,
     } satisfies NumberParamField,
     {
+      // (amended 2026-08-20) `max` lowered from `marbleRadius * 1.5` to
+      // `marbleRadius * 0.5`: a resting marble's own center sits one radius
+      // above the floor, so a bar approaching that height puts its top at
+      // or above the marble's center -- past the point where rolling can
+      // carry it over, a geometric climbability limit no amount of grade or
+      // speed compensates for. Measured directly: even `marbleRadius * 0.8`
+      // alone (every other param at its default) stalled 98/100 marbles
+      // regardless of the grade-scaling fix below; `marbleRadius * 0.5`
+      // cleared every one of the single- and paired-extreme sweeps in
+      // rumbleStrip.test.ts's stress cases. This is the same class of fix
+      // as `postSpacing`'s and `steepZigzag`'s `width`: a physically
+      // untraversable combination belongs to the schema, not to a bigger
+      // speed budget.
       kind: "number",
       key: "barHeight",
       label: "Bar height (m)",
       min: SCALE.marbleRadius * 0.2,
-      max: SCALE.marbleRadius * 1.5,
+      max: SCALE.marbleRadius * 0.5,
       step: 0.001,
       default: DEFAULT_PARAMS.barHeight,
     } satisfies NumberParamField,
     {
+      // (amended 2026-08-20) `min` raised from 0.05: combined with a tall
+      // bar, a near-zero restitution absorbs essentially all of a marble's
+      // energy on every contact -- closer to "the bar is inelastic clay"
+      // than a rigid rumble strip, and no grade this Module's schema keeps
+      // legible compensates for that repeated `barCount` times over. A real
+      // rumble strip is rigid; 0.15 keeps a genuine low-bounce feel without
+      // the degenerate case.
       kind: "number",
       key: "restitution",
       label: "Restitution",
-      min: 0.05,
+      min: 0.15,
       max: 0.5,
       step: 0.01,
       default: DEFAULT_PARAMS.restitution,
@@ -95,7 +115,30 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
 // approach section (OBSTACLE-IDEAS' own description), not a Module a marble
 // lingers in, so it needs enough grade to keep displacement comfortably
 // above the visible-motion floor over that short a run.
-const FLOOR_GRADE = 0.42;
+const BASE_FLOOR_GRADE = 0.42;
+// (amended 2026-08-20) `FLOOR_GRADE` alone was tuned against this Module's
+// *default* `barHeight`; at the schema's own maximum (5x the default) with
+// `restitution` at its own schema minimum, every marble stalled outright at
+// the base grade -- a taller bar costs more energy to clear every single
+// time, `barCount` times over, and a low-restitution material returns less
+// of that energy on each contact. Scaling the grade by both ratios keeps
+// the per-bar energy margin roughly constant across the full param range,
+// rather than only at the one combination this Module happened to ship
+// tuned against.
+// Capped at the chute's own schema maximum grade (0.8): an uncapped scale
+// factor against both ratios at once (schema-max barHeight combined with
+// schema-min restitution) produces a grade over 15 -- a near-vertical drop
+// whose own geometry stops being a legible "rumble strip" long before the
+// stall question even matters. The cap keeps the compensation meaningful
+// across realistic single-slider extremes while refusing to chase the one
+// combined edge case into an absurd shape.
+const MAX_FLOOR_GRADE = 0.8;
+
+function effectiveFloorGrade(barHeight: number, restitution: number): number {
+  const heightRatio = barHeight / DEFAULT_BAR_HEIGHT;
+  const restitutionRatio = DEFAULT_PARAMS.restitution / Math.max(restitution, 0.01);
+  return Math.min(MAX_FLOOR_GRADE, BASE_FLOOR_GRADE * heightRatio * restitutionRatio);
+}
 // Long enough that a marble spawned at rest (the Feeder's own convention --
 // see chute/index.ts) has picked up real speed before reaching the first
 // bar: a marble arriving at a raised bar's vertical leading face with
@@ -117,10 +160,34 @@ function toQuaternion(q: ThreeQuaternion): Quaternion {
   return [q.x, q.y, q.z, q.w];
 }
 
+/** The 8 corners of a cuboid with the given half-extents, position, and
+ * rotation -- the same helper `channel.ts` and `steepZigzag/index.ts` use to
+ * accumulate an axis-aligned `bounds` box that actually accounts for a
+ * rotated collider's true extent. */
+function cuboidCorners(
+  halfExtents: Vector3,
+  position: ThreeVector3,
+  rotation: ThreeQuaternion,
+): ThreeVector3[] {
+  const corners: ThreeVector3[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        corners.push(
+          new ThreeVector3(sx * halfExtents[0], sy * halfExtents[1], sz * halfExtents[2])
+            .applyQuaternion(rotation)
+            .add(position),
+        );
+      }
+    }
+  }
+  return corners;
+}
+
 function buildSpec(params: RumbleStripParams): Spec {
   const { barCount, barSpacing, barHeight, restitution } = params;
   const totalRun = LEAD_IN + Math.max(0, barCount - 1) * barSpacing + LEAD_OUT;
-  const drop = totalRun * FLOOR_GRADE;
+  const drop = totalRun * effectiveFloorGrade(barHeight, restitution);
   const channelMaterial = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
 
   const channel = buildChannel(
@@ -158,6 +225,16 @@ function buildSpec(params: RumbleStripParams): Spec {
 
   const min: [number, number, number] = [...bounds.min];
   const max: [number, number, number] = [...bounds.max];
+  const accumulate = (corners: readonly ThreeVector3[]) => {
+    for (const corner of corners) {
+      min[0] = Math.min(min[0], corner.x);
+      min[1] = Math.min(min[1], corner.y);
+      min[2] = Math.min(min[2], corner.z);
+      max[0] = Math.max(max[0], corner.x);
+      max[1] = Math.max(max[1], corner.y);
+      max[2] = Math.max(max[2], corner.z);
+    }
+  };
 
   for (let index = 0; index < barCount; index += 1) {
     const barZ = LEAD_IN + index * barSpacing;
@@ -185,10 +262,11 @@ function buildSpec(params: RumbleStripParams): Spec {
       rotation: toQuaternion(pitch),
     });
 
-    const barTop = position.y + barHeight / 2 + FLOOR_THICKNESS / 2;
-    const barBottom = position.y - barHeight / 2 - FLOOR_THICKNESS / 2;
-    min[1] = Math.min(min[1], barBottom);
-    max[1] = Math.max(max[1], barTop);
+    // (amended 2026-08-20) Full 8-corner transform under the channel's
+    // pitch, not a plain-vertical-Y shortcut: the channel's own slope tilt
+    // mixes Y and Z for every bar once graded at all, the same way it does
+    // for `buildChannel`'s own floor and rails.
+    accumulate(cuboidCorners(barHalfExtents, position, pitch));
   }
 
   return {

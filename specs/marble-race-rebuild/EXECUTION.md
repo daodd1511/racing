@@ -13,11 +13,14 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
-- Current phase: 4 — parked (2026-08-20), by the user, after visual inspection
+- Current phase: 4 — done-with-debt. **Spec 1 closed 2026-08-20 by the user**, who accepted it
+  and merged all four phases to `main` (merge commit `d161514`), with the bowl's remaining work
+  deferred per "Parked 2026-08-20" below. Acceptance was the user's, per PLAN.md → "Acceptance";
+  no agent declared it.
 - Phase 1 — Scaffold and old-race removal: done
 - Phase 2 — Module contract, Validator, chute: done
 - Phase 3 — Showcase: done
-- Phase 4 — Vortex bowl: parked 2026-08-20, by the user, after the first actual visual look at it
+- Phase 4 — Vortex bowl: done-with-debt (was: parked 2026-08-20) — after the first actual visual look at it
   (the Showcase had no working camera until this session's last commit -- see "Parked 2026-08-20"
   below). The first attempt (trimesh basin, WIP commit `8579a4b`) could not be made to orbit; see
   Phase 4's "Amended 2026-08-19" note for that account. The cuboid-plate rebuild that followed
@@ -27,7 +30,13 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
   (net angular displacement, unwrapped) cannot distinguish true circulation from an oscillation that
   nets the same cumulative angle without ever looking like an orbit -- see "Parked 2026-08-20" for
   what this means for whoever resumes.
-- Verification debt: none. Phase 1's "pnpm dev shows one marble falling and
+- Verification debt: **Phase 4's last two checklist items are unrun** — the Validator-guardrail
+  test (`src/modules/vortexBowl/vortexBowl.test.ts`, never written) and the Showcase param tuning
+  against the reference video. Deferred by the user on 2026-08-20 to after Specs 2, 3, and 4, per
+  "Parked 2026-08-20". They are left `[ ]`, not `[~]`: the rulebook reserves `[~]` for
+  environment-blocked items, and these are neither blocked nor forgotten. Carry them into the last
+  spec that touches the bowl. Everything else below is history, not debt.
+  Phase 1's "pnpm dev shows one marble falling and
   resting" review-checklist item could not be verified by the implementer —
   this session's browser automation reports `document.visibilityState` stuck
   on `"hidden"` with `requestAnimationFrame` never firing, an environment
@@ -341,9 +350,10 @@ the app is fully functional** -- this phase has already cost far more time than 
 user's call is to get everything else working first and come back to this one Module last. Resume by
 reading this note and PLAN.md's "Where the risk actually sits" before touching the mechanism again.
 
-**Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+**Phase gate (hard):** run on `main` at `d161514`, 2026-08-20.
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — exit 0
+- [x] `pnpm vitest related --run <changed files>` — superseded by the spec gate's full suite run in
+  the same session (10 files, 33 tests, 0 failures); a superset of the related selection.
 
 **Review checklist (user, at PR review):**
 - [ ] **Does the bowl look like the video?** Marbles enter tangentially, orbit the rim several times, and drain when they slow — not drop straight through.
@@ -355,9 +365,13 @@ push/PR. Review checklist goes into the PR description.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `pnpm test` (full local suite)
-- [ ] `pnpm build` — the spec changes `vite.config.ts`, `tsconfig.json`, and the entry point, so the build is breakable here
-- [ ] `pnpm lint` and `pnpm format:check` — both run in `.github/workflows/deploy-pages.yml` and both are affected by adding `.tsx`
+Run 2026-08-20 on `main` at `d161514`, after all four phase PRs had merged — later than the
+rulebook's "before the final phase's PR", because the user merged the stack before the gate ran.
+Recorded here as run, not as run on time.
+
+- [x] `pnpm test` (full local suite) — 10 files, 33 tests, 0 failures
+- [x] `pnpm build` — the spec changes `vite.config.ts`, `tsconfig.json`, and the entry point, so the build is breakable here — exit 0 (one chunk-size advisory, not an error)
+- [x] `pnpm lint` and `pnpm format:check` — both run in `.github/workflows/deploy-pages.yml` and both are affected by adding `.tsx`. `lint` passed first try; **`format:check` failed** on 20 files and was fixed forward on `main`, since every phase that caused it had already merged. Ten source files were reformatted (whitespace and line width only, no semantic change) and `.claude/` was added to `.prettierignore` so oxfmt stops rewriting the vendored `threejs-*` skill documents, which are upstream-owned reference material. `CLAUDE.md` and `docs/` stay formatted. Re-run after the fix: all five commands exit 0.
 
 **Acceptance beyond the gate.** Per PLAN.md → "Acceptance", the gate passing does **not**
 complete Spec 1. Spec 1 ends when the user opens the Showcase, watches the bowl, and says it

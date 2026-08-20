@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 4 — done
+- Current phase: 5 — done
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -51,7 +51,15 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   marbles. The original grade minimum (0.4) read ~0.011 m/s, below the
   universal visible-motion floor, so it is constrained to 0.45+ rather than
   exposing a green-looking but too-slow setting.
-- Phase 5 — Funnel choke: pending
+- Phase 5 — Funnel choke: done. The full 15-marble feed initially
+  exposed two physical defects: wall transforms applied the channel midpoint
+  twice, then an entry-face pinch formed a stable arch. The walls now use the
+  channel's entry frame and begin after a downhill run; the legal throat range
+  has a one-diameter buffer above the six-diameter brief floor. Fresh review
+  was required because clearing the same packed-feed behavior needed two
+  geometry corrections; it found no P0-P2 findings. The Phase 5 gate passed:
+  `pnpm typecheck`, plus 18 dependency-related tests. The default 20-seed ×
+  15-marble Queue and every legal throat-width sweep cleared with zero stalls.
 - Phase 6 — Kinematic `step` application: pending
 - Phase 7 — Windmill: pending
 - Verification debt:
@@ -237,17 +245,19 @@ Consumes: `buildChannel`, `ChannelParts`, `SCALE`, `ALL_MODULES`,
 Produces: `funnelChoke: ModuleDefinition<FunnelChokeParams>` from
 `src/modules/funnelChoke/index.ts`.
 
-Fresh review: not required
+Fresh review: required — 15-marble packed-feed clearance needed two geometry corrections
 
-- [ ] Add `src/modules/funnelChoke/index.ts` — `role: "queue"`. Angled walls narrowing the channel to a throat, then flaring back out, per OBSTACLE-IDEAS → "Funnel choke". Build each side as two chained straight walls rather than one long rotated cuboid. `FunnelChokeParams`: `throatWidth`, `approachAngle`, `wallFriction`, `wallRestitution`, `length`. Slippery walls (low friction, low restitution) so marbles slide along rather than stick.
-- [ ] Enforce a `throatWidth` schema minimum of at least 6 marble diameters. OBSTACLE-IDEAS gives that floor and then violates it in its own build note (2.2 m throat against a 4.2 m floor); take the ratio, not the number, and record in a comment that the two disagree so nobody re-derives the smaller value from that document.
-- [ ] Register in `src/modules/registry.ts`.
-- [ ] Add `src/modules/funnelChoke/funnelChoke.test.ts`: universal guardrails at **15 marbles**, not the 5 the other Modules use — a choke only jams under a full pack, so testing it with a light one tests nothing. Assert a non-zero `shuffleCoefficient` and that exit times separate into a queue rather than arriving together.
-- [ ] Sweep `throatWidth` across its full schema range at 15 marbles and assert zero stalls at every step. This is the Module most able to strand a race, and PLAN.md → "Duration is an outcome" rules out a timer rescuing it.
+Fresh review result: no P0-P2 findings
+
+- [x] Add `src/modules/funnelChoke/index.ts` — `role: "queue"`. Angled walls narrowing the channel to a throat, then flaring back out, per OBSTACLE-IDEAS → "Funnel choke". Build each side as two chained straight walls rather than one long rotated cuboid. `FunnelChokeParams`: `throatWidth`, `approachAngle`, `wallFriction`, `wallRestitution`, `length`. Slippery walls (low friction, low restitution) so marbles slide along rather than stick.
+- [x] Enforce a `throatWidth` schema minimum of at least 6 marble diameters. OBSTACLE-IDEAS gives that floor and then violates it in its own build note (2.2 m throat against a 4.2 m floor); take the ratio, not the number, and record in a comment that the two disagree so nobody re-derives the smaller value from that document.
+- [x] Register in `src/modules/registry.ts`.
+- [x] Add `src/modules/funnelChoke/funnelChoke.test.ts`: universal guardrails at **15 marbles**, not the 5 the other Modules use — a choke only jams under a full pack, so testing it with a light one tests nothing. Assert a non-zero `shuffleCoefficient` and that exit times separate into a queue rather than arriving together.
+- [x] Sweep `throatWidth` across its full schema range at 15 marbles and assert zero stalls at every step. This is the Module most able to strand a race, and PLAN.md → "Duration is an outcome" rules out a timer rescuing it.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`)
+- [x] `pnpm vitest related --run src/modules/funnelChoke/funnelChoke.test.ts src/modules/funnelChoke/index.ts src/modules/registry.ts` (18 tests passed)
 
 **Review checklist (user, at PR review):**
 - [ ] Feed 15 marbles at once: they pile at the mouth and squeeze through one at a time, and the pile always clears.

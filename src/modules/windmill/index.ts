@@ -13,32 +13,40 @@ import type {
   VisualSpec,
 } from "../types";
 
-// A rotating paddle wheel meters a continuously arriving field into batches.
-// Every blade carries the motion data needed by `step`, so the Validator and
-// renderer can evaluate the exact same pure function from the same Spec.
+// A cross-channel paddle axle meters a continuously arriving field into
+// batches. Every blade carries the motion data needed by `step`, so the
+// Validator and renderer can evaluate the exact same pure function from the
+// same Spec.
 
 export interface WindmillParams {
   readonly bladeCount: number;
   /** Hub-to-tip blade length, in meters. */
   readonly bladeLength: number;
   readonly bladeThickness: number;
-  /** Radians per second around the channel tangent. */
+  /** Radians per second around the cross-channel axle. */
   readonly angularVelocity: number;
   /** Perpendicular distance from the floor surface to the hub centre. */
   readonly hubHeight: number;
 }
 
 const CHANNEL_LENGTH = 1.2;
-const FLOOR_GRADE = 0.52;
+// A held pack needs enough downhill force to resume visibly as the paddle
+// clears. The queue guardrail below rejects a grade that merely avoids a
+// formal stall while allowing marbles to creep between blade passes.
+const FLOOR_GRADE = 0.6;
 const HUB_DISTANCE_FRACTION = 0.52;
-const HUB_RADIUS = SCALE.marbleRadius * 1.5;
-const HUB_HALF_DEPTH = SCALE.marbleRadius * 0.75;
-const DEFAULT_BLADE_LENGTH = 0.19;
+const HUB_RADIUS = SCALE.marbleRadius * 1.25;
+const HUB_HALF_AXLE_LENGTH = SCALE.channelWidth / 2 - 0.01;
 const BLADE_LENGTH_MAX = 0.22;
+const DEFAULT_BLADE_LENGTH = BLADE_LENGTH_MAX;
 const DEFAULT_BLADE_THICKNESS = SCALE.marbleRadius * 0.85;
 const MAX_BLADE_THICKNESS = SCALE.marbleRadius * 1.15;
 const FLOOR_CLEARANCE = FLOOR_THICKNESS / 2 + SCALE.marbleRadius * 0.15;
-const DEFAULT_HUB_HEIGHT = DEFAULT_BLADE_LENGTH + DEFAULT_BLADE_THICKNESS / 2 + FLOOR_CLEARANCE;
+// The hub must clear the longest, thickest legal blade as it rotates down to
+// the floor. Shorter blade settings lift their tip clear of the bed; the
+// default uses the maximum length so its paddles meter the Queue at the floor.
+const MINIMUM_HUB_HEIGHT = BLADE_LENGTH_MAX + MAX_BLADE_THICKNESS / 2 + FLOOR_CLEARANCE;
+const DEFAULT_HUB_HEIGHT = MINIMUM_HUB_HEIGHT;
 const MARBLE_DIAMETER = SCALE.marbleRadius * 2;
 const FIXED_STEP_SECONDS = 1 / 60;
 const TIP_STEP_SAFETY_FRACTION = 0.9;
@@ -59,7 +67,7 @@ const DEFAULT_PARAMS: WindmillParams = Object.freeze({
   bladeCount: 4,
   bladeLength: DEFAULT_BLADE_LENGTH,
   bladeThickness: DEFAULT_BLADE_THICKNESS,
-  angularVelocity: 1.6,
+  angularVelocity: 1.1,
   hubHeight: DEFAULT_HUB_HEIGHT,
 });
 
@@ -105,7 +113,7 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       kind: "number",
       key: "hubHeight",
       label: "Hub height (m)",
-      min: DEFAULT_BLADE_LENGTH + DEFAULT_BLADE_THICKNESS / 2 + FLOOR_CLEARANCE,
+      min: MINIMUM_HUB_HEIGHT,
       max: 0.3,
       step: 0.005,
       default: DEFAULT_PARAMS.hubHeight,
@@ -145,7 +153,6 @@ function buildSpec(params: WindmillParams): Spec {
     new ThreeVector3(0, 0, 1),
     end.clone().sub(start).normalize(),
   );
-  const tangent = new ThreeVector3(0, 0, 1).applyQuaternion(pitch).normalize();
   const hubPosition = new ThreeVector3(
     0,
     params.hubHeight + FLOOR_THICKNESS / 2,
@@ -156,10 +163,14 @@ function buildSpec(params: WindmillParams): Spec {
     .multiply(
       new ThreeQuaternion().setFromUnitVectors(
         new ThreeVector3(0, 1, 0),
-        new ThreeVector3(0, 0, 1),
+        new ThreeVector3(1, 0, 0),
       ),
     );
-  const hubShape = { kind: "cylinder" as const, radius: HUB_RADIUS, halfHeight: HUB_HALF_DEPTH };
+  const hubShape = {
+    kind: "cylinder" as const,
+    radius: HUB_RADIUS,
+    halfHeight: HUB_HALF_AXLE_LENGTH,
+  };
   const hubCollider: ColliderSpec = {
     id: "windmill-hub",
     shape: hubShape,
@@ -179,19 +190,22 @@ function buildSpec(params: WindmillParams): Spec {
   const bladeShape = {
     kind: "cuboid" as const,
     halfExtents: [
+      SCALE.channelWidth / 2 - 0.01,
       params.bladeThickness / 2,
       params.bladeLength / 2,
-      params.bladeThickness / 2,
     ] as Vector3,
   };
-  const axis = toVector(tangent);
+  // The axle crosses the channel, so the broad paddle face sweeps along the
+  // flow at bed level. Rotating around `tangent` made a vertical wheel that
+  // left most of the channel open; the user chose this flow-gating geometry.
+  const axis = toVector(new ThreeVector3(1, 0, 0).applyQuaternion(pitch).normalize());
   const pivot = toVector(hubPosition);
 
   for (let index = 0; index < params.bladeCount; index += 1) {
     const phase = (Math.PI * 2 * index) / params.bladeCount;
-    const spin = new ThreeQuaternion().setFromAxisAngle(new ThreeVector3(0, 0, 1), phase);
+    const spin = new ThreeQuaternion().setFromAxisAngle(new ThreeVector3(1, 0, 0), phase);
     const rotation = pitch.clone().multiply(spin);
-    const radialOffset = new ThreeVector3(0, params.bladeLength / 2, 0).applyQuaternion(spin);
+    const radialOffset = new ThreeVector3(0, 0, params.bladeLength / 2).applyQuaternion(spin);
     const position = hubPosition.clone().add(radialOffset.applyQuaternion(pitch));
     const id = `windmill-blade-${index}`;
     const collider: ColliderSpec = {

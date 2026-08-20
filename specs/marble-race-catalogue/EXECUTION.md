@@ -333,8 +333,9 @@ Fresh review: not required
 - [x] Implement `step(spec, tSeconds)` returning one `KinematicTransform` per blade at `angle = angularVelocity * tSeconds`, read from the blade's own id. Pure in `tSeconds`: no accumulated state, no `Math.random`, no wall clock — a stateful `step` costs the Validator its reproducibility, per `../marble-race-rebuild/PLAN.md` → "The Module contract".
 - [x] Cap `angularVelocity`'s schema maximum so the blade tip sweeps under one marble diameter per 1/60 step. Marbles have CCD; kinematic colliders do not, so a fast blade passes through a marble instead of hitting it — OBSTACLE-IDEAS' constraint 5, restated at toy scale. Derive the cap from `bladeLength` and `SCALE.marbleRadius` in a comment, do not pick a round number.
 - [x] Register in `src/modules/registry.ts`.
-- [ ] Add `src/modules/windmill/windmill.test.ts`: universal guardrails, its own Dwell range, `step` purity (same `tSeconds` gives a deep-equal result on repeat calls and is independent of call order), and a tunnelling assertion — sweep `angularVelocity` to its schema maximum and confirm no marble ever ends up on the far side of a blade it should have been struck by.
-- [ ] Confirm `src/modules/purity.test.ts`'s generalized loop covers the windmill's non-empty `step`, and extend it if the existing static-`step` assertion assumes `[]`.
+- [x] (amended 2026-08-21, user-directed) Replace the planned tangent-axis rotor with a cross-channel axle. Full-width paddles sweep along the flow at bed level, so they gate the whole Queue instead of leaving the channel sides open beneath a vertical wheel.
+- [x] Add `src/modules/windmill/windmill.test.ts`: universal guardrails, its own Dwell range, `step` purity (same `tSeconds` gives a deep-equal result on repeat calls and is independent of call order), and a tunnelling assertion — sweep `angularVelocity` to its schema maximum and confirm no marble ever ends up on the far side of a blade it should have been struck by.
+- [x] Confirm `src/modules/purity.test.ts`'s generalized loop covers the windmill's non-empty `step`, and extend it if the existing static-`step` assertion assumes `[]`.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

@@ -58,5 +58,15 @@ describe("Module buildSpec purity", () => {
       const params = defaultParamValues(module.meta.params);
       assertBuildSpecIsPure(module, params);
     });
+
+    it("step is pure at a fixed time regardless of call order", () => {
+      const params = defaultParamValues(module.meta.params);
+      const spec = module.buildSpec(params);
+      const atTargetTime = module.step(spec, 1.25);
+
+      module.step(spec, 0.5);
+
+      expect(module.step(spec, 1.25)).toEqual(atTargetTime);
+    });
   });
 });

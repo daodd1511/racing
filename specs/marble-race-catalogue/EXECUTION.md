@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 7 — in progress
+- Current phase: 7 — done
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -65,7 +65,12 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   live R3F world. R3F applies each next transform before every solver substep
   and synchronizes visuals in `useFrame`. The phase gate passed: `pnpm
   typecheck` plus 34 related tests, including cross-path divergence coverage.
-- Phase 7 — Windmill: in progress
+- Phase 7 — Windmill: done. The cross-channel kinematic paddle axle meters a
+  20-seed × 15-marble Queue. `step` carries purely Spec-derived motion to both
+  paths; the allowable speed keeps tips below one diameter per 1/60 step. The
+  Phase gate passed: typecheck plus 31 related tests. Final Spec gate passed:
+  99 tests, production build, lint, and format check. Fresh review corrected
+  one slider-constraint P2 and re-review found no P0-P2 findings.
 - Verification debt:
   - pinField: `minDisplacementPerSecond` drops below
     `MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND` (though stalls stay at zero) at
@@ -326,7 +331,11 @@ Produces: `windmill: ModuleDefinition<WindmillParams>` from
 KinematicRotationMotion` so a pure `step(spec, tSeconds)` can evaluate its
 parameter-controlled motion without hidden runtime state.
 
-Fresh review: not required
+Fresh review: required — the Queue behavior needed a user-directed geometry
+correction and repeated physical tuning
+
+Fresh review result: the initial P2 slider-boundary finding was corrected;
+the allowed re-review found no P0-P2 findings
 
 - [x] (amended 2026-08-21) Add optional `ColliderSpec.motion?: KinematicRotationMotion`. The existing Spec cannot otherwise retain slider-controlled angular velocity for a pure `step(spec, tSeconds)`; a closure or a value encoded into ids would make the two construction paths depend on hidden data rather than their shared input.
 - [x] Add `src/modules/windmill/index.ts` — `role: "queue"`. A hub with cuboid blades rotating about the channel's tangent axis, low enough that a blade sweeps the floor at any moment, per OBSTACLE-IDEAS → "Windmill paddle wheel". `WindmillParams`: `bladeCount`, `bladeLength`, `bladeThickness`, `angularVelocity`, `hubHeight`. Blade colliders carry `kinematic: true`; the hub and the surrounding channel stay fixed.
@@ -336,10 +345,12 @@ Fresh review: not required
 - [x] (amended 2026-08-21, user-directed) Replace the planned tangent-axis rotor with a cross-channel axle. Full-width paddles sweep along the flow at bed level, so they gate the whole Queue instead of leaving the channel sides open beneath a vertical wheel.
 - [x] Add `src/modules/windmill/windmill.test.ts`: universal guardrails, its own Dwell range, `step` purity (same `tSeconds` gives a deep-equal result on repeat calls and is independent of call order), and a tunnelling assertion — sweep `angularVelocity` to its schema maximum and confirm no marble ever ends up on the far side of a blade it should have been struck by.
 - [x] Confirm `src/modules/purity.test.ts`'s generalized loop covers the windmill's non-empty `step`, and extend it if the existing static-`step` assertion assumes `[]`.
+- [x] (amended 2026-08-21) Format the 21 pre-existing paths reported by the final `pnpm format:check`, including the local Three.js skill instructions. The command is a Spec gate and cannot pass while files outside the Phase 7 diff remain nonconformant.
+- [x] (amended 2026-08-21, fresh review P2) Pin the incompatible `bladeLength` and `hubHeight` schema pair to the floor-contact geometry, and add boundary coverage. The generic schema cannot express their required relationship; legal independent values lifted the full-width paddle above marbles and disabled the Queue.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/types.ts src/modules/windmill/index.ts src/modules/windmill/windmill.test.ts src/modules/registry.ts src/modules/purity.test.ts` — 31 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] The blades turn smoothly in the Showcase at a rate that matches the slider.
@@ -351,6 +362,8 @@ before push/PR. Review checklist goes into the PR description.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `pnpm test` (full local suite)
-- [ ] `pnpm build` — Phase 6 changes `ModuleColliders.tsx` and the `Spec` types the entry point pulls in, so the build is breakable here
-- [ ] `pnpm lint` and `pnpm format:check` — both run in `.github/workflows/deploy-pages.yml`, and `format:check` is what Spec 1's spec gate caught late
+- [x] `pnpm test` (full local suite) — 99 tests passed
+- [x] `pnpm build` — passed; the Phase 6 rendering and type entry points build
+- [x] `pnpm lint` and `pnpm format:check` — passed. Lint reports two
+  non-failing `react-hooks/exhaustive-deps` cleanup warnings in
+  `ModuleColliders.tsx`; the production bundle-size warning is also non-failing.

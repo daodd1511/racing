@@ -1,7 +1,9 @@
 import { chute } from "./chute";
+import { frictionLanes } from "./frictionLanes";
 import type { ParamValues } from "./params";
 import { pinField } from "./pinField";
 import { rumbleStrip } from "./rumbleStrip";
+import { staircase } from "./staircase";
 import { steepZigzag } from "./steepZigzag";
 import type { KinematicTransform, ModuleDefinition, ModuleMeta, Role, Spec } from "./types";
 import { vortexBowl } from "./vortexBowl";
@@ -46,6 +48,8 @@ export const ALL_MODULES: readonly RegisteredModule[] = [
   toRegisteredModule(steepZigzag),
   toRegisteredModule(pinField),
   toRegisteredModule(rumbleStrip),
+  toRegisteredModule(staircase),
+  toRegisteredModule(frictionLanes),
 ];
 
 export function modulesByRole(role: Role): readonly RegisteredModule[] {

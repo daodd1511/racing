@@ -69,6 +69,9 @@ export interface ColliderSpec {
   /** Stable within one Spec; `KinematicTransform.id` targets this to move a
    * specific collider (e.g. a windmill blade) without touching the rest. */
   readonly id: string;
+  /** A position-based kinematic body. Omitted or false keeps the collider
+   * fixed in both the live R3F world and the headless Validator. */
+  readonly kinematic?: boolean;
   readonly shape: Shape;
   readonly position: Vector3;
   readonly rotation: Quaternion;

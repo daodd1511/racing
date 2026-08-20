@@ -133,7 +133,7 @@ describe("whoops guardrails", () => {
   it("keeps a pack inside the channel laterally through every crest", async () => {
     await RAPIER.init();
     const spec = whoops.buildSpec(params);
-    const world = buildWorld([spec]);
+    const { world } = buildWorld([spec]);
     const { entry } = spec.footprint;
     const lateral = cross(entry.tangent, entry.up);
     const lateralOffsets = [-0.18, -0.09, 0, 0.09, 0.18];

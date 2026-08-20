@@ -1,10 +1,18 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 
 import type { ModuleDefinition, Spec } from "../modules/types";
+import {
+  INITIAL_KINEMATIC_CLOCK,
+  KINEMATIC_FIXED_STEP_SECONDS,
+  advanceKinematicClock,
+  kinematicSeconds,
+  kinematicTransformsAt,
+} from "../modules/kinematics";
 import { createSeededRandom } from "../race/random";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
 import { buildWorld } from "./buildWorld";
+import { applyStep } from "./applyStep";
 import {
   displacementPerSecond,
   measureDwell,
@@ -14,7 +22,6 @@ import {
   type MarbleRun,
 } from "./metrics";
 
-const FIXED_TIME_STEP_SECONDS = 1 / 60;
 /** ~0.1s at 60fps -- long enough to clear the from-rest spawn transient,
  * short enough not to hide genuinely slow motion happening soon after. */
 const DISPLACEMENT_WARMUP_FRAMES = 6;
@@ -130,7 +137,7 @@ export async function validateModule<P>(
   await RAPIER.init();
 
   const spec = module.buildSpec(params);
-  const maxSteps = Math.ceil(options.maxSimulationSeconds / FIXED_TIME_STEP_SECONDS);
+  const maxSteps = Math.ceil(options.maxSimulationSeconds / KINEMATIC_FIXED_STEP_SECONDS);
 
   const allDwellSeconds: number[] = [];
   const allExitSpeeds: number[] = [];
@@ -140,13 +147,16 @@ export async function validateModule<P>(
   let anyExited = false;
 
   for (let seed = 0; seed < options.seedCount; seed += 1) {
-    const world = buildWorld([spec]);
-    const bodies = spawnMarbles(world, spec, options.marbleCount, seed);
+    const builtWorld = buildWorld([spec]);
+    const bodies = spawnMarbles(builtWorld.world, spec, options.marbleCount, seed);
     const runs: MarbleRun[] = bodies.map(() => ({ frames: [] }));
+    let clock = INITIAL_KINEMATIC_CLOCK;
 
     for (let step = 0; step < maxSteps; step += 1) {
-      world.step();
-      const tSeconds = (step + 1) * FIXED_TIME_STEP_SECONDS;
+      clock = advanceKinematicClock(clock);
+      const tSeconds = kinematicSeconds(clock);
+      applyStep(kinematicTransformsAt(module.step, spec, tSeconds), builtWorld.kinematicBodies);
+      builtWorld.world.step();
       bodies.forEach((body, index) => {
         const translation = body.translation();
         (runs[index].frames as FrameSample[]).push({
@@ -190,7 +200,7 @@ export async function validateModule<P>(
       }
     }
 
-    world.free();
+    builtWorld.world.free();
   }
 
   allDwellSeconds.sort((a, b) => a - b);

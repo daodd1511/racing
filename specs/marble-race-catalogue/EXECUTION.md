@@ -17,7 +17,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 3 — done
+- Current phase: 4 — in-progress
 - Phase 1 — Shared channel geometry and Module registry: done
 - Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
   P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
@@ -42,7 +42,7 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
   and combined-extreme param combinations, all zero-stall with real
   `minDisplacementPerSecond` margin) on the first implementation — no
   correction attempts, so fresh review stayed not required.
-- Phase 4 — Whoops: pending
+- Phase 4 — Whoops: in-progress
 - Phase 5 — Funnel choke: pending
 - Phase 6 — Kinematic `step` application: pending
 - Phase 7 — Windmill: pending
@@ -198,9 +198,9 @@ the collider and visual emitters over one shared centreline. And
 
 Fresh review: not required
 
-- [ ] Add `src/modules/geometry/sweep.ts`: both emitters consume the same sampled centreline, mirroring how `src/modules/geometry/revolve.ts` pairs `revolveProfile` with `revolveProfileToPlates`. Colliders are cuboid plates; the visual is a trimesh. **Do not emit a concave trimesh collider** — ADR 0003, and see `../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Amended 2026-08-19 — why the construction changed" for the failure that rule came from.
+- [x] Add `src/modules/geometry/sweep.ts`: both emitters consume the same sampled centreline, mirroring how `src/modules/geometry/revolve.ts` pairs `revolveProfile` with `revolveProfileToPlates`. Colliders are cuboid plates; the visual is a trimesh. **Do not emit a concave trimesh collider** — ADR 0003, and see `../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Amended 2026-08-19 — why the construction changed" for the failure that rule came from.
 - [ ] Size the plate count from the marble-radius sagitta margin, the same way `revolveProfileToPlates` does, and request the collider segment count at its true floor rather than reusing the visual's — `src/modules/vortexBowl/index.ts`'s `COLLIDER_SEGMENTS_REQUEST` comment records why (693 plates versus 1584).
-- [ ] Add `src/modules/geometry/sweep.test.ts`: every plate's rotation is a unit, orthonormal, upward-facing basis; plate count matches one-per-cell against the mesh emitter's own tiling over the identical centreline; every plate's surface stays within the marble-radius sagitta margin of its sampled corners; a fewer-than-two-samples centreline is rejected. These are `revolve.test.ts`'s checks applied to the swept case; read it before writing them.
+- [x] Add `src/modules/geometry/sweep.test.ts`: every plate's rotation is a unit, orthonormal, upward-facing basis; plate count matches one-per-cell against the mesh emitter's own tiling over the identical centreline; every plate's surface stays within the marble-radius sagitta margin of its sampled corners; a fewer-than-two-samples centreline is rejected. These are `revolve.test.ts`'s checks applied to the swept case; read it before writing them.
 - [ ] Add `src/modules/whoops/index.ts` — `role: "shuffle"`. Centreline displaced along `up` by `amplitude * sin(2π * distance / wavelength)` over a descending run, per OBSTACLE-IDEAS → "Wave / whoops section". `WhoopsParams`: `amplitude`, `wavelength`, `length`, `grade`, `width`. Rails follow the displaced centreline, not an undisplaced one — OBSTACLE-IDEAS flags that exact mistake.
 - [ ] Register in `src/modules/registry.ts`.
 - [ ] Add `src/modules/whoops/whoops.test.ts`: universal guardrails, its own Dwell range, and a non-zero `shuffleCoefficient` across seeds. Also assert no marble leaves the channel laterally at the crest of a hump — the compression-and-stretch this Module trades on is one parameter step away from launching marbles out.

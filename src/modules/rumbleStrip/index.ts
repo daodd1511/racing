@@ -71,24 +71,27 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       default: DEFAULT_PARAMS.barSpacing,
     } satisfies NumberParamField,
     {
-      // (amended 2026-08-20) `max` lowered from `marbleRadius * 1.5` to
-      // `marbleRadius * 0.5`: a resting marble's own center sits one radius
-      // above the floor, so a bar approaching that height puts its top at
-      // or above the marble's center -- past the point where rolling can
-      // carry it over, a geometric climbability limit no amount of grade or
-      // speed compensates for. Measured directly: even `marbleRadius * 0.8`
-      // alone (every other param at its default) stalled 98/100 marbles
-      // regardless of the grade-scaling fix below; `marbleRadius * 0.5`
-      // cleared every one of the single- and paired-extreme sweeps in
-      // rumbleStrip.test.ts's stress cases. This is the same class of fix
-      // as `postSpacing`'s and `steepZigzag`'s `width`: a physically
-      // untraversable combination belongs to the schema, not to a bigger
-      // speed budget.
+      // (amended 2026-08-20, twice) `max` lowered from `marbleRadius * 1.5`
+      // to `marbleRadius * 0.5`, then to `marbleRadius * 0.4`: a resting
+      // marble's own center sits one radius above the floor, so a bar
+      // approaching that height puts its top at or above the marble's
+      // center -- past the point where rolling can carry it over, a
+      // geometric climbability limit no amount of grade or speed
+      // compensates for. `marbleRadius * 0.8` alone (every other param at
+      // its default) stalled 98/100 marbles regardless of the grade-scaling
+      // compensation below. The first correction to `marbleRadius * 0.5`
+      // was verified against a stale `barSpacing` value that didn't match
+      // this Module's real default and still stalled 4/100 at the true
+      // default spacing (`MARBLE_DIAMETER * 3`) -- caught by this phase's
+      // fresh review, not by the sweep that was supposed to catch it.
+      // `marbleRadius * 0.4` cleared zero-stall, real-margin
+      // `minDisplacementPerSecond` across every single- and paired-extreme
+      // combination re-verified against the actual default `barSpacing`.
       kind: "number",
       key: "barHeight",
       label: "Bar height (m)",
       min: SCALE.marbleRadius * 0.2,
-      max: SCALE.marbleRadius * 0.5,
+      max: SCALE.marbleRadius * 0.4,
       step: 0.001,
       default: DEFAULT_PARAMS.barHeight,
     } satisfies NumberParamField,
@@ -125,7 +128,9 @@ const BASE_FLOOR_GRADE = 0.42;
 // the per-bar energy margin roughly constant across the full param range,
 // rather than only at the one combination this Module happened to ship
 // tuned against.
-// Capped at the chute's own schema maximum grade (0.8): an uncapped scale
+// Capped at steepZigzag's own schema maximum grade (0.8, the steepest grade
+// this codebase's Modules use anywhere -- chute's own grade schema tops out
+// at 0.6): an uncapped scale
 // factor against both ratios at once (schema-max barHeight combined with
 // schema-min restitution) produces a grade over 15 -- a near-vertical drop
 // whose own geometry stops being a legible "rumble strip" long before the

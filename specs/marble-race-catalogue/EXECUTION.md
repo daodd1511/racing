@@ -17,17 +17,74 @@ Universal on every Module: zero stalls, and `minDisplacementPerSecond` above
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Shared channel geometry and Module registry: pending
-- Phase 2 — Steep zigzag, pin field, rumble strip: pending
-- Phase 3 — Staircase, friction lanes: pending
-- Phase 4 — Whoops: pending
-- Phase 5 — Funnel choke: pending
-- Phase 6 — Kinematic `step` application: pending
-- Phase 7 — Windmill: pending
-- Verification debt: none. Inherited and explicitly **not** this spec's to
-  close: the vortex bowl's guardrail test and Showcase tuning, deferred by the
-  user to after Specs 2–4 — see `../marble-race-rebuild/EXECUTION.md` → STATUS.
+- Current phase: 7 — done
+- Phase 1 — Shared channel geometry and Module registry: done
+- Phase 2 — Steep zigzag, pin field, rumble strip: done. Fresh review found
+  P1/P2 issues (bounds-accumulation bugs, a schema gap allowing steepZigzag's
+  spawn-outside-rails bug live, pinField's rowPitch lacking a clog floor,
+  rumbleStrip's unfalsifiable Dwell-budget claim); all fixed and committed.
+  The one allowed re-review then found rumbleStrip's `barHeight` still
+  stalled 4/100 marbles at its own schema maximum (the implementer's prior
+  stress-test claim to the contrary was false — it used a stale, wrong
+  `barSpacing` value), a code-comment misattribution, and that pinField's
+  known `minDisplacementPerSecond`-at-extremes gap wasn't recorded here.
+  Per the rulebook's one-re-review cap this was surfaced to the user rather
+  than auto-corrected again; the user directed: fix rumbleStrip fully,
+  accept pinField's gap as scoped to its default-param guardrail (the
+  phase's actual checklist deliverable). `barHeight`'s schema max lowered
+  to `marbleRadius * 0.4` (from `marbleRadius * 0.5`), re-verified
+  zero-stall with real margin across every single- and paired-extreme
+  combination against the *real* default `barSpacing`; the comment
+  misattribution fixed. See "Verification debt" below for what remains
+  open by the user's own direction, not by omission.
+- Phase 3 — Staircase, friction lanes: done. Both Modules cleared their
+  guardrail sweep and a proactive schema-extreme stress pass (11 single-
+  and combined-extreme param combinations, all zero-stall with real
+  `minDisplacementPerSecond` margin) on the first implementation — no
+  correction attempts, so fresh review stayed not required.
+- Phase 4 — Whoops: done. Its one sine centreline drives both the smooth
+  visual mesh and its fixed cuboid plates; rails follow the same samples.
+  Default guardrails passed at 20 seeds × 5 marbles: zero stalls, Dwell p50
+  ~0.98 s / p99 ~1.32 s, min displacement ~0.078 m/s, and non-zero Shuffle
+  across every seed. Each slider extreme and the combined amplitude-max /
+  wavelength-min / length-max / grade-min case also passed at 5 seeds × 5
+  marbles. The original grade minimum (0.4) read ~0.011 m/s, below the
+  universal visible-motion floor, so it is constrained to 0.45+ rather than
+  exposing a green-looking but too-slow setting.
+- Phase 5 — Funnel choke: done. The full 15-marble feed initially
+  exposed two physical defects: wall transforms applied the channel midpoint
+  twice, then an entry-face pinch formed a stable arch. The walls now use the
+  channel's entry frame and begin after a downhill run; the legal throat range
+  has a one-diameter buffer above the six-diameter brief floor. Fresh review
+  was required because clearing the same packed-feed behavior needed two
+  geometry corrections; it found no P0-P2 findings. The Phase 5 gate passed:
+  `pnpm typecheck`, plus 18 dependency-related tests. The default 20-seed ×
+  15-marble Queue and every legal throat-width sweep cleared with zero stalls.
+- Phase 6 — Kinematic `step` application: done. The shared integer fixed-step
+  clock drives position-based kinematic colliders in both the Validator and
+  live R3F world. R3F applies each next transform before every solver substep
+  and synchronizes visuals in `useFrame`. The phase gate passed: `pnpm
+  typecheck` plus 34 related tests, including cross-path divergence coverage.
+- Phase 7 — Windmill: done. The cross-channel kinematic paddle axle meters a
+  20-seed × 15-marble Queue. `step` carries purely Spec-derived motion to both
+  paths; the allowable speed keeps tips below one diameter per 1/60 step. The
+  Phase gate passed: typecheck plus 31 related tests. Final Spec gate passed:
+  99 tests, production build, lint, and format check. Fresh review corrected
+  one slider-constraint P2 and re-review found no P0-P2 findings.
+- Verification debt:
+  - pinField: `minDisplacementPerSecond` drops below
+    `MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND` (though stalls stay at zero) at
+    several individual schema extremes — measured: `postWidth` at max alone
+    ~0.0045; all sliders combined at their extremes ~0.0023. The Module's own
+    default-param guardrail test (the actual Phase 2 checklist deliverable)
+    passes with margin (~0.027). Accepted by explicit user direction
+    2026-08-20 as scoped to default-param coverage, matching chute's own
+    precedent (its guardrail test also only covers default-ish params, not a
+    full schema sweep) — not the vortex bowl's debt, which is a wholly
+    missing test, a materially different gap.
+  - Inherited and explicitly **not** this spec's to close: the vortex bowl's
+    guardrail test and Showcase tuning, deferred by the user to after
+    Specs 2–4 — see `../marble-race-rebuild/EXECUTION.md` → STATUS.
 
 ## Phase 1 — Shared channel geometry and Module registry
 
@@ -53,17 +110,17 @@ and `type ParamValues`, both moved out of `src/showcase/ParamPanel.tsx`.
 
 Fresh review: not required
 
-- [ ] Add `src/modules/geometry/channel.ts`: `buildChannel` emits a floor cuboid plus two rail cuboids per segment, chaining segment to segment, and returns the entry/exit `Anchor`s and local-space `bounds`. Derive each segment's rotation with `setFromUnitVectors` over `start → end`, never a hand-picked axis-angle sign — see the comment at `src/modules/chute/index.ts:88` for the bug that convention exists to prevent. Reuse the chute's `FLOOR_THICKNESS`/`RAIL_THICKNESS`/`RAIL_HEIGHT` values as the module-level defaults.
-- [ ] Add `src/modules/geometry/channel.test.ts`: a single segment reproduces the chute's current collider set; a two-segment chain leaves no gap at the joint (consecutive floor faces touch within one marble radius); `entry`/`exit` tangents and ups are unit vectors; a zero-length segment is rejected.
-- [ ] Rewrite `src/modules/chute/index.ts` to build its floor and rails through `buildChannel`, keeping `ChuteParams`, `PARAM_SCHEMA`, defaults, and the emitted `Spec` unchanged. `src/modules/purity.test.ts`'s existing chute cases are the regression check.
-- [ ] Move `defaultParamValues` and `ParamValues` from `src/showcase/ParamPanel.tsx` into a new `src/modules/params.ts` and re-export from `ParamPanel.tsx` so the Showcase imports do not change. They move because `src/modules/purity.test.ts` and `src/modules/registry.ts` need them and must not import a React component to get them.
-- [ ] Add `src/modules/registry.ts` with `ALL_MODULES` (`chute`, `vortexBowl`) and `modulesByRole`. This is the "Module registry" `CONTEXT.md` → "Assembler" already names; Spec 3 consumes it. Move `toShowcaseEntry`'s type-erasure here as the registry's own boundary and keep its `P`-unconstrained signature and single `as P` cast — `src/showcase/registry.ts`'s comment records why a `Record`-shaped constraint fails, so do not re-derive it.
-- [ ] Rewrite `src/showcase/registry.ts` to re-export `MODULES` from `ALL_MODULES`, so adding a Module is one line in `src/modules/registry.ts` and zero lines in the Showcase.
-- [ ] Generalize `src/modules/purity.test.ts` to iterate `ALL_MODULES`, building params from each Module's own `meta.params` defaults via `defaultParamValues`, and keep the chute's three explicit param cases alongside. Every Module added in a later phase is then covered by construction.
+- [x] Add `src/modules/geometry/channel.ts`: `buildChannel` emits a floor cuboid plus two rail cuboids per segment, chaining segment to segment, and returns the entry/exit `Anchor`s and local-space `bounds`. Derive each segment's rotation with `setFromUnitVectors` over `start → end`, never a hand-picked axis-angle sign — see the comment at `src/modules/chute/index.ts:88` for the bug that convention exists to prevent. Reuse the chute's `FLOOR_THICKNESS`/`RAIL_THICKNESS`/`RAIL_HEIGHT` values as the module-level defaults.
+- [x] Add `src/modules/geometry/channel.test.ts`: a single segment reproduces the chute's current collider set; a two-segment chain leaves no gap at the joint (consecutive floor faces touch within one marble radius); `entry`/`exit` tangents and ups are unit vectors; a zero-length segment is rejected.
+- [x] Rewrite `src/modules/chute/index.ts` to build its floor and rails through `buildChannel`, keeping `ChuteParams`, `PARAM_SCHEMA`, defaults, and the emitted `Spec` unchanged. `src/modules/purity.test.ts`'s existing chute cases are the regression check.
+- [x] Move `defaultParamValues` and `ParamValues` from `src/showcase/ParamPanel.tsx` into a new `src/modules/params.ts` and re-export from `ParamPanel.tsx` so the Showcase imports do not change. They move because `src/modules/purity.test.ts` and `src/modules/registry.ts` need them and must not import a React component to get them.
+- [x] Add `src/modules/registry.ts` with `ALL_MODULES` (`chute`, `vortexBowl`) and `modulesByRole`. This is the "Module registry" `CONTEXT.md` → "Assembler" already names; Spec 3 consumes it. Move `toShowcaseEntry`'s type-erasure here as the registry's own boundary and keep its `P`-unconstrained signature and single `as P` cast — `src/showcase/registry.ts`'s comment records why a `Record`-shaped constraint fails, so do not re-derive it.
+- [x] Rewrite `src/showcase/registry.ts` to re-export `MODULES` from `ALL_MODULES`, so adding a Module is one line in `src/modules/registry.ts` and zero lines in the Showcase.
+- [x] Generalize `src/modules/purity.test.ts` to iterate `ALL_MODULES`, building params from each Module's own `meta.params` defaults via `defaultParamValues`, and keep the chute's three explicit param cases alongside. Every Module added in a later phase is then covered by construction.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/chute/index.ts src/modules/purity.test.ts src/showcase/ParamPanel.tsx src/showcase/registry.ts src/modules/geometry/channel.test.ts src/modules/geometry/channel.ts src/modules/params.ts src/modules/registry.ts` — 13 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] The chute in the Showcase looks and behaves exactly as before the refactor.
@@ -86,18 +143,24 @@ Produces: `steepZigzag: ModuleDefinition<SteepZigzagParams>` from
 from `src/modules/pinField/index.ts`; `rumbleStrip:
 ModuleDefinition<RumbleStripParams>` from `src/modules/rumbleStrip/index.ts`.
 
-Fresh review: not required
+Fresh review: required — upgraded at completion. Each of the three Modules
+needed multiple rounds of empirical correction to reach zero stalls
+(spawn-width mismatch, joint V-notches, a dead-center post collision, a
+too-short run-up before the first obstacle), well past the rulebook's
+"same behavior needed two correction attempts" trigger, and rumbleStrip's
+actual Dwell budget came in far outside what this phase's own checklist
+item originally described (see its amended item).
 
-- [ ] Add `src/modules/steepZigzag/index.ts` — `role: "accel"`. A chain of `buildChannel` segments alternating lateral direction down a steep grade, so the marble gains speed while staying inside a compact footprint. `SteepZigzagParams`: `legLength`, `grade`, `legCount`, `turnAngle`, `width`. Each leg's outer rail must be tall enough to contain a marble arriving at the leg's own terminal speed — size it from `v²/(2g)`, the same calculation that fixed the vortex bowl's rim escapes (`../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Result, 2026-08-20"), not by trying values.
-- [ ] Add `src/modules/pinField/index.ts` — `role: "scatter"`. Staggered rows of cuboid posts rotated 45° about `up` so each presents an edge to oncoming marbles, per OBSTACLE-IDEAS → "Diamond pin field". `PinFieldParams`: `rowCount`, `postSpacing`, `postHeight`, `postWidth`, `rowPitch`. Keep the post gap at or above the ratio OBSTACLE-IDEAS gives (1.2 m against a 0.7 m marble diameter ≈ 1.7 diameters) or a 15-marble pack clogs instead of draining.
-- [ ] Add `src/modules/rumbleStrip/index.ts` — `role: "scatter"`. Low transverse bars spanning the channel width, per OBSTACLE-IDEAS → "Rumble strip". `RumbleStripParams`: `barCount`, `barSpacing`, `barHeight`, `restitution`. Bars are for disruption, not holding: this Module's Dwell budget is well under a second and its guardrail test must say so rather than inheriting the bowl's 4–8 s.
-- [ ] Register all three in `src/modules/registry.ts`.
-- [ ] Add `src/modules/steepZigzag/steepZigzag.test.ts`, `src/modules/pinField/pinField.test.ts`, `src/modules/rumbleStrip/rumbleStrip.test.ts`, each driving `validateModule` over at least 20 seeds × 5 marbles and asserting: zero stalls, `minDisplacementPerSecond > MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND`, and that Module's own declared Dwell p50/p99 range. State the chosen range and the reasoning in a comment beside the assertion — a bare number is what made the bowl's guardrails unfalsifiable.
-- [ ] Assert exit speed rises across the steep zigzag (`accel` earns its Role) and that `shuffleCoefficient` is non-zero across seeds for the pin field and rumble strip (`scatter` earns theirs). A Module whose Role its own metrics cannot demonstrate is mis-tagged, and the Arc places by Role.
+- [x] Add `src/modules/steepZigzag/index.ts` — `role: "accel"`. A chain of `buildChannel` segments alternating lateral direction down a steep grade, so the marble gains speed while staying inside a compact footprint. `SteepZigzagParams`: `legLength`, `grade`, `legCount`, `turnAngle`, `width`. Each leg's outer rail must be tall enough to contain a marble arriving at the leg's own terminal speed — size it from `v²/(2g)`, the same calculation that fixed the vortex bowl's rim escapes (`../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Result, 2026-08-20"), not by trying values. *(amended 2026-08-20)* `width` defaults to `SCALE.channelWidth` rather than a narrower value — the Validator's multi-marble spawn spread is hardcoded to `SCALE.channelWidth` regardless of a Module's own width, so a narrower default spread marbles outside this Module's own rails. Turning legs also needed a small joint overlap (their rails only touch at a point at each corner, leaving a V-notch a slow marble sticks in) plus a gentler default `turnAngle` and higher restitution/lower friction to reach zero stalls across the guardrail sweep.
+- [x] Add `src/modules/pinField/index.ts` — `role: "scatter"`. Staggered rows of cuboid posts rotated 45° about `up` so each presents an edge to oncoming marbles, per OBSTACLE-IDEAS → "Diamond pin field". `PinFieldParams`: `rowCount`, `postSpacing`, `postHeight`, `postWidth`, `rowPitch`. Keep the post gap at or above the ratio OBSTACLE-IDEAS gives (1.2 m against a 0.7 m marble diameter ≈ 1.7 diameters) or a 15-marble pack clogs instead of draining. *(amended 2026-08-20)* The gap is sized against a post's real diagonal reach after the 45° turn (`postWidth * √2`), not its pre-rotation width — sizing off the narrower value packed posts closer than the ratio actually allows. A post landing exactly on the spawn centerline was also a dead-center hit with no left/right bias to deflect off, parking a marble near-motionless for many frames; `postLateralOffsets` now keeps every row off that line by a quarter-spacing.
+- [x] Add `src/modules/rumbleStrip/index.ts` — `role: "scatter"`. Low transverse bars spanning the channel width, per OBSTACLE-IDEAS → "Rumble strip". `RumbleStripParams`: `barCount`, `barSpacing`, `barHeight`, `restitution`. Bars are for disruption, not holding: this Module's Dwell budget is well under a second and its guardrail test must say so rather than inheriting the bowl's 4–8 s. *(amended 2026-08-20)* Measured, this Module's Dwell budget is **not** well under a second — p50 ~2.1 s, p99 ~2.8 s across the guardrail sweep, dominated by the run-up length (`LEAD_IN`) a marble needs before the first bar. A short `LEAD_IN` (originally `MARBLE_DIAMETER * 3`, matching the "brief approach section" framing) parked every marble dead-still at the first bar: zero horizontal speed against a raised leading face is a wall, not a bump, regardless of friction. `rumbleStrip.test.ts`'s Dwell range and its comment record the actual measured budget and why "well under a second" describes each bar's own disruption, not this Module's total transit time.
+- [x] Register all three in `src/modules/registry.ts`.
+- [x] Add `src/modules/steepZigzag/steepZigzag.test.ts`, `src/modules/pinField/pinField.test.ts`, `src/modules/rumbleStrip/rumbleStrip.test.ts`, each driving `validateModule` over at least 20 seeds × 5 marbles and asserting: zero stalls, `minDisplacementPerSecond > MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND`, and that Module's own declared Dwell p50/p99 range. State the chosen range and the reasoning in a comment beside the assertion — a bare number is what made the bowl's guardrails unfalsifiable.
+- [x] Assert exit speed rises across the steep zigzag (`accel` earns its Role) and that `shuffleCoefficient` is non-zero across seeds for the pin field and rumble strip (`scatter` earns theirs). A Module whose Role its own metrics cannot demonstrate is mis-tagged, and the Arc places by Role.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/pinField/index.ts src/modules/pinField/pinField.test.ts src/modules/registry.ts src/modules/rumbleStrip/index.ts src/modules/rumbleStrip/rumbleStrip.test.ts src/modules/steepZigzag/index.ts src/modules/steepZigzag/steepZigzag.test.ts` — 16 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] Each of the three appears in the Showcase sidebar and its sliders move real geometry.
@@ -123,15 +186,15 @@ ModuleDefinition<FrictionLanesParams>` from `src/modules/frictionLanes/index.ts`
 
 Fresh review: not required
 
-- [ ] Add `src/modules/staircase/index.ts` — `role: "sort"`. Full-width treads with a riser cuboid per step, per OBSTACLE-IDEAS → "Staircase drop", built as chained `buildChannel` segments plus riser colliders rather than by displacing a mesh (there is no bed trimesh to displace any more). `StaircaseParams`: `stepCount`, `tread`, `riseHeight`, `width`. The sort effect is that a fast marble carries over two treads while a slow one drops into every riser — the test asserts that separation, not just that marbles exit.
-- [ ] Add `src/modules/frictionLanes/index.ts` — `role: "sort"`. Parallel lanes down one channel, divided by thin longitudinal walls, each lane's floor carrying its own `ColliderMaterial` friction, per OBSTACLE-IDEAS → "Friction patches". `FrictionLanesParams`: `laneCount`, `length`, `slowFriction`, `fastFriction`, `dividerHeight`. Marbles have no agency about which lane they land in; that is the point.
-- [ ] Give the two lane materials distinct `VisualMaterial` colors so the fast and slow lanes are visually distinguishable, per `../marble-race-rebuild/PLAN.md` → "Art direction". Color is the only cue here, so state in a comment that lane identity is also readable from lane position, not color alone.
-- [ ] Register both in `src/modules/registry.ts`.
-- [ ] Add `src/modules/staircase/staircase.test.ts` and `src/modules/frictionLanes/frictionLanes.test.ts`: the universal guardrails, each Module's own Dwell range, and for both a `sort` assertion — exit-time spread across a multi-marble run must widen relative to the spread at entry. A `sort` Module that does not spread the field is not doing its Role.
+- [x] Add `src/modules/staircase/index.ts` — `role: "sort"`. Full-width treads with a riser cuboid per step, per OBSTACLE-IDEAS → "Staircase drop", built as chained `buildChannel` segments plus riser colliders rather than by displacing a mesh (there is no bed trimesh to displace any more). `StaircaseParams`: `stepCount`, `tread`, `riseHeight`, `width`. The sort effect is that a fast marble carries over two treads while a slow one drops into every riser — the test asserts that separation, not just that marbles exit.
+- [x] Add `src/modules/frictionLanes/index.ts` — `role: "sort"`. Parallel lanes down one channel, divided by thin longitudinal walls, each lane's floor carrying its own `ColliderMaterial` friction, per OBSTACLE-IDEAS → "Friction patches". `FrictionLanesParams`: `laneCount`, `length`, `slowFriction`, `fastFriction`, `dividerHeight`. Marbles have no agency about which lane they land in; that is the point.
+- [x] Give the two lane materials distinct `VisualMaterial` colors so the fast and slow lanes are visually distinguishable, per `../marble-race-rebuild/PLAN.md` → "Art direction". Color is the only cue here, so state in a comment that lane identity is also readable from lane position, not color alone.
+- [x] Register both in `src/modules/registry.ts`.
+- [x] Add `src/modules/staircase/staircase.test.ts` and `src/modules/frictionLanes/frictionLanes.test.ts`: the universal guardrails, each Module's own Dwell range, and for both a `sort` assertion — exit-time spread across a multi-marble run must widen relative to the spread at entry. A `sort` Module that does not spread the field is not doing its Role. *(amended 2026-08-20)* "Spread at entry" is ~0 by construction (every marble's own run starts at t=0 in `validateModule`'s own frame), so a literal exit-spread-greater-than-zero check is trivially true for any Module. Both tests instead compare relative spread (`dwellSecondsP99 / dwellSecondsP50`, scale-independent) against a live chute run at the same seed sweep — a Module with no sort mechanism at all — and assert the sort Module's ratio is strictly larger. Both pass: chute 1.163, staircase 1.218, frictionLanes 1.281.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/frictionLanes/frictionLanes.test.ts src/modules/frictionLanes/index.ts src/modules/registry.ts src/modules/staircase/index.ts src/modules/staircase/staircase.test.ts` — 16 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] Marbles visibly bounce down the staircase rather than sliding over it as a ramp.
@@ -160,16 +223,16 @@ the collider and visual emitters over one shared centreline. And
 
 Fresh review: not required
 
-- [ ] Add `src/modules/geometry/sweep.ts`: both emitters consume the same sampled centreline, mirroring how `src/modules/geometry/revolve.ts` pairs `revolveProfile` with `revolveProfileToPlates`. Colliders are cuboid plates; the visual is a trimesh. **Do not emit a concave trimesh collider** — ADR 0003, and see `../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Amended 2026-08-19 — why the construction changed" for the failure that rule came from.
-- [ ] Size the plate count from the marble-radius sagitta margin, the same way `revolveProfileToPlates` does, and request the collider segment count at its true floor rather than reusing the visual's — `src/modules/vortexBowl/index.ts`'s `COLLIDER_SEGMENTS_REQUEST` comment records why (693 plates versus 1584).
-- [ ] Add `src/modules/geometry/sweep.test.ts`: every plate's rotation is a unit, orthonormal, upward-facing basis; plate count matches one-per-cell against the mesh emitter's own tiling over the identical centreline; every plate's surface stays within the marble-radius sagitta margin of its sampled corners; a fewer-than-two-samples centreline is rejected. These are `revolve.test.ts`'s checks applied to the swept case; read it before writing them.
-- [ ] Add `src/modules/whoops/index.ts` — `role: "shuffle"`. Centreline displaced along `up` by `amplitude * sin(2π * distance / wavelength)` over a descending run, per OBSTACLE-IDEAS → "Wave / whoops section". `WhoopsParams`: `amplitude`, `wavelength`, `length`, `grade`, `width`. Rails follow the displaced centreline, not an undisplaced one — OBSTACLE-IDEAS flags that exact mistake.
-- [ ] Register in `src/modules/registry.ts`.
-- [ ] Add `src/modules/whoops/whoops.test.ts`: universal guardrails, its own Dwell range, and a non-zero `shuffleCoefficient` across seeds. Also assert no marble leaves the channel laterally at the crest of a hump — the compression-and-stretch this Module trades on is one parameter step away from launching marbles out.
+- [x] Add `src/modules/geometry/sweep.ts`: both emitters consume the same sampled centreline, mirroring how `src/modules/geometry/revolve.ts` pairs `revolveProfile` with `revolveProfileToPlates`. Colliders are cuboid plates; the visual is a trimesh. **Do not emit a concave trimesh collider** — ADR 0003, and see `../marble-race-rebuild/EXECUTION.md` → Phase 4 → "Amended 2026-08-19 — why the construction changed" for the failure that rule came from.
+- [x] Size the plate count from the marble-radius sagitta margin, the same way `revolveProfileToPlates` does, and request the collider segment count at its true floor rather than reusing the visual's — `src/modules/vortexBowl/index.ts`'s `COLLIDER_SEGMENTS_REQUEST` comment records why (693 plates versus 1584).
+- [x] Add `src/modules/geometry/sweep.test.ts`: every plate's rotation is a unit, orthonormal, upward-facing basis; plate count matches one-per-cell against the mesh emitter's own tiling over the identical centreline; every plate's surface stays within the marble-radius sagitta margin of its sampled corners; a fewer-than-two-samples centreline is rejected. These are `revolve.test.ts`'s checks applied to the swept case; read it before writing them.
+- [x] Add `src/modules/whoops/index.ts` — `role: "shuffle"`. Centreline displaced along `up` by `amplitude * sin(2π * distance / wavelength)` over a descending run, per OBSTACLE-IDEAS → "Wave / whoops section". `WhoopsParams`: `amplitude`, `wavelength`, `length`, `grade`, `width`. Rails follow the displaced centreline, not an undisplaced one — OBSTACLE-IDEAS flags that exact mistake.
+- [x] Register in `src/modules/registry.ts`.
+- [x] Add `src/modules/whoops/whoops.test.ts`: universal guardrails, its own Dwell range, and a non-zero `shuffleCoefficient` across seeds. Also assert no marble leaves the channel laterally at the crest of a hump — the compression-and-stretch this Module trades on is one parameter step away from launching marbles out.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/geometry/sweep.test.ts src/modules/geometry/sweep.ts src/modules/registry.ts src/modules/whoops/index.ts src/modules/whoops/whoops.test.ts` — 30 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] Marbles ride the humps and compress into a bunch, rather than launching off a crest.
@@ -191,17 +254,19 @@ Consumes: `buildChannel`, `ChannelParts`, `SCALE`, `ALL_MODULES`,
 Produces: `funnelChoke: ModuleDefinition<FunnelChokeParams>` from
 `src/modules/funnelChoke/index.ts`.
 
-Fresh review: not required
+Fresh review: required — 15-marble packed-feed clearance needed two geometry corrections
 
-- [ ] Add `src/modules/funnelChoke/index.ts` — `role: "queue"`. Angled walls narrowing the channel to a throat, then flaring back out, per OBSTACLE-IDEAS → "Funnel choke". Build each side as two chained straight walls rather than one long rotated cuboid. `FunnelChokeParams`: `throatWidth`, `approachAngle`, `wallFriction`, `wallRestitution`, `length`. Slippery walls (low friction, low restitution) so marbles slide along rather than stick.
-- [ ] Enforce a `throatWidth` schema minimum of at least 6 marble diameters. OBSTACLE-IDEAS gives that floor and then violates it in its own build note (2.2 m throat against a 4.2 m floor); take the ratio, not the number, and record in a comment that the two disagree so nobody re-derives the smaller value from that document.
-- [ ] Register in `src/modules/registry.ts`.
-- [ ] Add `src/modules/funnelChoke/funnelChoke.test.ts`: universal guardrails at **15 marbles**, not the 5 the other Modules use — a choke only jams under a full pack, so testing it with a light one tests nothing. Assert a non-zero `shuffleCoefficient` and that exit times separate into a queue rather than arriving together.
-- [ ] Sweep `throatWidth` across its full schema range at 15 marbles and assert zero stalls at every step. This is the Module most able to strand a race, and PLAN.md → "Duration is an outcome" rules out a timer rescuing it.
+Fresh review result: no P0-P2 findings
+
+- [x] Add `src/modules/funnelChoke/index.ts` — `role: "queue"`. Angled walls narrowing the channel to a throat, then flaring back out, per OBSTACLE-IDEAS → "Funnel choke". Build each side as two chained straight walls rather than one long rotated cuboid. `FunnelChokeParams`: `throatWidth`, `approachAngle`, `wallFriction`, `wallRestitution`, `length`. Slippery walls (low friction, low restitution) so marbles slide along rather than stick.
+- [x] Enforce a `throatWidth` schema minimum of at least 6 marble diameters. OBSTACLE-IDEAS gives that floor and then violates it in its own build note (2.2 m throat against a 4.2 m floor); take the ratio, not the number, and record in a comment that the two disagree so nobody re-derives the smaller value from that document.
+- [x] Register in `src/modules/registry.ts`.
+- [x] Add `src/modules/funnelChoke/funnelChoke.test.ts`: universal guardrails at **15 marbles**, not the 5 the other Modules use — a choke only jams under a full pack, so testing it with a light one tests nothing. Assert a non-zero `shuffleCoefficient` and that exit times separate into a queue rather than arriving together.
+- [x] Sweep `throatWidth` across its full schema range at 15 marbles and assert zero stalls at every step. This is the Module most able to strand a race, and PLAN.md → "Duration is an outcome" rules out a timer rescuing it.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`)
+- [x] `pnpm vitest related --run src/modules/funnelChoke/funnelChoke.test.ts src/modules/funnelChoke/index.ts src/modules/registry.ts` (18 tests passed)
 
 **Review checklist (user, at PR review):**
 - [ ] Feed 15 marbles at once: they pile at the mouth and squeeze through one at a time, and the pile always clears.
@@ -232,18 +297,19 @@ colliders under their own `<RigidBody type="kinematicPosition">`, driven by
 
 Fresh review: not required
 
-- [ ] Add `readonly kinematic?: boolean` to `ColliderSpec` in `src/modules/types.ts`. Absent or `false` means fixed, so every existing Module and both existing construction paths are unchanged by the addition.
-- [ ] Change `src/validator/buildWorld.ts` to return `BuiltWorld` and attach `RigidBodyDesc.kinematicPositionBased()` for kinematic colliders, keyed by `ColliderSpec.id`. Update `src/validator/validateModule.ts`'s call site.
-- [ ] Add `src/validator/applyStep.ts` with `applyStep`, and call `module.step(spec, tSeconds)` once per fixed 1/60 step inside `validateModule`'s loop, before `world.step()`. `tSeconds` is the accumulated fixed-step time already computed there — never wall clock, per the contract's "pure in `tSeconds`".
-- [ ] Change `src/modules/render/ModuleColliders.tsx` to mount kinematic colliders under a separate `<RigidBody type="kinematicPosition">` per collider id, and drive them from `step` via `useFrame` using an accumulated fixed-step clock, not `delta`. Feeding R3F's variable frame delta here is what would make the renderer and the Validator disagree; the whole phase exists to prevent that.
-- [ ] Pass the elapsed clock into `<ModuleColliders>` explicitly rather than reading it inside — the Showcase owns time, and Spec 3's race loop will own it differently.
-- [ ] Add `src/validator/applyStep.test.ts`: a synthetic two-collider `Spec` with one kinematic collider whose `step` returns a known rotation at known times; assert the body's transform matches the returned `KinematicTransform` exactly at several `tSeconds`, and that the fixed collider never moves.
-- [ ] Add `src/modules/divergence.test.ts` asserting the two paths agree: for a synthetic kinematic Module, the transform `applyStep` writes at `t` and the transform the renderer's own clock computes at the same `t` are identical. This is the test ADR 0002 has needed since the second path existed; a rendering-free extraction of the renderer's clock arithmetic is what makes it testable, so extract it rather than mounting React.
-- [ ] Keep `Footprint.cells` empty and change nothing about `buildSpec` purity — `step` is the only thing gaining a consumer here.
+- [x] Add `readonly kinematic?: boolean` to `ColliderSpec` in `src/modules/types.ts`. Absent or `false` means fixed, so every existing Module and both existing construction paths are unchanged by the addition.
+- [x] Change `src/validator/buildWorld.ts` to return `BuiltWorld` and attach `RigidBodyDesc.kinematicPositionBased()` for kinematic colliders, keyed by `ColliderSpec.id`. Update `src/validator/validateModule.ts`'s call site.
+- [x] Add `src/validator/applyStep.ts` with `applyStep`, and call `module.step(spec, tSeconds)` once per fixed 1/60 step inside `validateModule`'s loop, before `world.step()`. `tSeconds` is the accumulated fixed-step time already computed there — never wall clock, per the contract's "pure in `tSeconds`".
+- [x] Change `src/modules/render/ModuleColliders.tsx` to mount kinematic colliders under a separate `<RigidBody type="kinematicPosition">` per collider id, set their next transforms via `useBeforePhysicsStep` on the accumulated fixed-step clock, and synchronize the matching visuals in `useFrame`. Feeding R3F's variable frame delta here is what would make the renderer and the Validator disagree; the whole phase exists to prevent that.
+- [x] Pass the elapsed clock into `<ModuleColliders>` explicitly rather than reading it inside — the Showcase owns time, and Spec 3's race loop will own it differently.
+- [x] (amended 2026-08-21) Add `src/modules/kinematics.ts` and `src/showcase/KinematicClock.tsx`: share an integer fixed-step clock between the Validator and Showcase. Use `useBeforePhysicsStep` to set collider transforms before **every** Rapier substep, while `useFrame` synchronizes the rendered visual. A `useFrame`-only collider update would run once per rendered frame but Rapier can run multiple 1/60 substeps in that frame, diverging from the Validator exactly when the display hitches.
+- [x] Add `src/validator/applyStep.test.ts`: a synthetic two-collider `Spec` with one kinematic collider whose `step` returns a known rotation at known times; assert the body's transform matches the returned `KinematicTransform` exactly at several `tSeconds`, and that the fixed collider never moves.
+- [x] Add `src/modules/divergence.test.ts` asserting the two paths agree: for a synthetic kinematic Module, the transform `applyStep` writes at `t` and the transform the renderer's own clock computes at the same `t` are identical. This is the test ADR 0002 has needed since the second path existed; a rendering-free extraction of the renderer's clock arithmetic is what makes it testable, so extract it rather than mounting React.
+- [x] Keep `Footprint.cells` empty and change nothing about `buildSpec` purity — `step` is the only thing gaining a consumer here.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/types.ts src/modules/kinematics.ts src/modules/divergence.test.ts src/modules/render/ModuleColliders.tsx src/showcase/KinematicClock.tsx src/showcase/Showcase.tsx src/validator/applyStep.ts src/validator/applyStep.test.ts src/validator/buildWorld.ts src/validator/validateModule.ts src/modules/whoops/whoops.test.ts` — 34 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] The chute and vortex bowl in the Showcase are unchanged — no Module has moving parts yet, so anything that looks different is a regression.
@@ -261,20 +327,30 @@ because it is the only one that can prove Phase 6's infrastructure works.
 Consumes: `buildChannel`, `ColliderSpec.kinematic`, `applyStep`, `BuiltWorld`,
 `KinematicTransform`, `ALL_MODULES`, `SCALE`, `validateModule`.
 Produces: `windmill: ModuleDefinition<WindmillParams>` from
-`src/modules/windmill/index.ts`.
+`src/modules/windmill/index.ts`, plus `ColliderSpec.motion?:
+KinematicRotationMotion` so a pure `step(spec, tSeconds)` can evaluate its
+parameter-controlled motion without hidden runtime state.
 
-Fresh review: not required
+Fresh review: required — the Queue behavior needed a user-directed geometry
+correction and repeated physical tuning
 
-- [ ] Add `src/modules/windmill/index.ts` — `role: "queue"`. A hub with cuboid blades rotating about the channel's tangent axis, low enough that a blade sweeps the floor at any moment, per OBSTACLE-IDEAS → "Windmill paddle wheel". `WindmillParams`: `bladeCount`, `bladeLength`, `bladeThickness`, `angularVelocity`, `hubHeight`. Blade colliders carry `kinematic: true`; the hub and the surrounding channel stay fixed.
-- [ ] Implement `step(spec, tSeconds)` returning one `KinematicTransform` per blade at `angle = angularVelocity * tSeconds`, read from the blade's own id. Pure in `tSeconds`: no accumulated state, no `Math.random`, no wall clock — a stateful `step` costs the Validator its reproducibility, per `../marble-race-rebuild/PLAN.md` → "The Module contract".
-- [ ] Cap `angularVelocity`'s schema maximum so the blade tip sweeps under one marble diameter per 1/60 step. Marbles have CCD; kinematic colliders do not, so a fast blade passes through a marble instead of hitting it — OBSTACLE-IDEAS' constraint 5, restated at toy scale. Derive the cap from `bladeLength` and `SCALE.marbleRadius` in a comment, do not pick a round number.
-- [ ] Register in `src/modules/registry.ts`.
-- [ ] Add `src/modules/windmill/windmill.test.ts`: universal guardrails, its own Dwell range, `step` purity (same `tSeconds` gives a deep-equal result on repeat calls and is independent of call order), and a tunnelling assertion — sweep `angularVelocity` to its schema maximum and confirm no marble ever ends up on the far side of a blade it should have been struck by.
-- [ ] Confirm `src/modules/purity.test.ts`'s generalized loop covers the windmill's non-empty `step`, and extend it if the existing static-`step` assertion assumes `[]`.
+Fresh review result: the initial P2 slider-boundary finding was corrected;
+the allowed re-review found no P0-P2 findings
+
+- [x] (amended 2026-08-21) Add optional `ColliderSpec.motion?: KinematicRotationMotion`. The existing Spec cannot otherwise retain slider-controlled angular velocity for a pure `step(spec, tSeconds)`; a closure or a value encoded into ids would make the two construction paths depend on hidden data rather than their shared input.
+- [x] Add `src/modules/windmill/index.ts` — `role: "queue"`. A hub with cuboid blades rotating about the channel's tangent axis, low enough that a blade sweeps the floor at any moment, per OBSTACLE-IDEAS → "Windmill paddle wheel". `WindmillParams`: `bladeCount`, `bladeLength`, `bladeThickness`, `angularVelocity`, `hubHeight`. Blade colliders carry `kinematic: true`; the hub and the surrounding channel stay fixed.
+- [x] Implement `step(spec, tSeconds)` returning one `KinematicTransform` per blade at `angle = angularVelocity * tSeconds`, read from the blade's own id. Pure in `tSeconds`: no accumulated state, no `Math.random`, no wall clock — a stateful `step` costs the Validator its reproducibility, per `../marble-race-rebuild/PLAN.md` → "The Module contract".
+- [x] Cap `angularVelocity`'s schema maximum so the blade tip sweeps under one marble diameter per 1/60 step. Marbles have CCD; kinematic colliders do not, so a fast blade passes through a marble instead of hitting it — OBSTACLE-IDEAS' constraint 5, restated at toy scale. Derive the cap from `bladeLength` and `SCALE.marbleRadius` in a comment, do not pick a round number.
+- [x] Register in `src/modules/registry.ts`.
+- [x] (amended 2026-08-21, user-directed) Replace the planned tangent-axis rotor with a cross-channel axle. Full-width paddles sweep along the flow at bed level, so they gate the whole Queue instead of leaving the channel sides open beneath a vertical wheel.
+- [x] Add `src/modules/windmill/windmill.test.ts`: universal guardrails, its own Dwell range, `step` purity (same `tSeconds` gives a deep-equal result on repeat calls and is independent of call order), and a tunnelling assertion — sweep `angularVelocity` to its schema maximum and confirm no marble ever ends up on the far side of a blade it should have been struck by.
+- [x] Confirm `src/modules/purity.test.ts`'s generalized loop covers the windmill's non-empty `step`, and extend it if the existing static-`step` assertion assumes `[]`.
+- [x] (amended 2026-08-21) Format the 21 pre-existing paths reported by the final `pnpm format:check`, including the local Three.js skill instructions. The command is a Spec gate and cannot pass while files outside the Phase 7 diff remain nonconformant.
+- [x] (amended 2026-08-21, fresh review P2) Pin the incompatible `bladeLength` and `hubHeight` schema pair to the floor-contact geometry, and add boundary coverage. The generic schema cannot express their required relationship; legal independent values lifted the full-width paddle above marbles and disabled the Queue.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>` (fill from the real diff)
+- [x] `pnpm typecheck` (project-wide `tsc -b`) — passed
+- [x] `pnpm vitest related --run src/modules/types.ts src/modules/windmill/index.ts src/modules/windmill/windmill.test.ts src/modules/registry.ts src/modules/purity.test.ts` — 31 tests passed
 
 **Review checklist (user, at PR review):**
 - [ ] The blades turn smoothly in the Showcase at a rate that matches the slider.
@@ -286,6 +362,8 @@ before push/PR. Review checklist goes into the PR description.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `pnpm test` (full local suite)
-- [ ] `pnpm build` — Phase 6 changes `ModuleColliders.tsx` and the `Spec` types the entry point pulls in, so the build is breakable here
-- [ ] `pnpm lint` and `pnpm format:check` — both run in `.github/workflows/deploy-pages.yml`, and `format:check` is what Spec 1's spec gate caught late
+- [x] `pnpm test` (full local suite) — 99 tests passed
+- [x] `pnpm build` — passed; the Phase 6 rendering and type entry points build
+- [x] `pnpm lint` and `pnpm format:check` — passed. Lint reports two
+  non-failing `react-hooks/exhaustive-deps` cleanup warnings in
+  `ModuleColliders.tsx`; the production bundle-size warning is also non-failing.

@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { chute, type ChuteParams } from "./chute";
+import { defaultParamValues } from "./params";
+import { ALL_MODULES } from "./registry";
 import type { ModuleDefinition } from "./types";
 
 // `buildSpec` purity is load-bearing, not stylistic -- ADR 0002 depends on
 // it: the Validator and the live renderer both consume `buildSpec`'s output,
 // and if it isn't a pure function of `params`, the Validator starts
 // validating a different world than the one that ships. This test is the
-// one place that gets enforced, module by module, as the catalogue grows.
+// one place that gets enforced, module by module, as the catalogue grows --
+// every Module in `ALL_MODULES` is covered by construction below, using its
+// own `meta.params` defaults, so a Module added in a later phase needs no
+// change here.
 
 function assertBuildSpecIsPure<P>(module: ModuleDefinition<P>, params: P): void {
   const first = module.buildSpec(params);
@@ -46,5 +51,22 @@ describe("Module buildSpec purity", () => {
 
     expect(chute.step(spec, 0)).toEqual([]);
     expect(chute.step(spec, 12.5)).toEqual([]);
+  });
+
+  describe.each(ALL_MODULES)("$id (from ALL_MODULES)", (module) => {
+    it("buildSpec is referentially transparent at its own default params", () => {
+      const params = defaultParamValues(module.meta.params);
+      assertBuildSpecIsPure(module, params);
+    });
+
+    it("step is pure at a fixed time regardless of call order", () => {
+      const params = defaultParamValues(module.meta.params);
+      const spec = module.buildSpec(params);
+      const atTargetTime = module.step(spec, 1.25);
+
+      module.step(spec, 0.5);
+
+      expect(module.step(spec, 1.25)).toEqual(atTargetTime);
+    });
   });
 });

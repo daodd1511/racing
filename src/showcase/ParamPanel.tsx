@@ -1,10 +1,17 @@
 import type { ParamSchema } from "../modules/types";
+import { defaultParamValues } from "../modules/params";
+import type { ParamValues } from "../modules/params";
 
 // Generated from a Module's `meta.params` schema -- never a hand-written
 // panel per Module, per PLAN.md -> "Showcase". Adding a Module with new
 // params needs no change here; it only needs an accurate `ParamSchema`.
 
-export type ParamValues = Readonly<Record<string, number | boolean>>;
+// `ParamValues` and `defaultParamValues` live in `../modules/params` now --
+// `src/modules/purity.test.ts` and `src/modules/registry.ts` need them and
+// must not import a React component to get them. Re-exported here so this
+// file's own imports elsewhere in the Showcase do not change.
+export type { ParamValues };
+export { defaultParamValues };
 
 function numberValueOrDefault(values: ParamValues, key: string, fallback: number): number {
   const value = values[key];
@@ -62,14 +69,4 @@ export function ParamPanel({ schema, values, onChange }: ParamPanelProps) {
       })}
     </div>
   );
-}
-
-/** The schema's own defaults, as a `ParamValues` -- used to (re)initialize
- * the Showcase's param state whenever the selected Module changes. */
-export function defaultParamValues(schema: ParamSchema): ParamValues {
-  const values: Record<string, number | boolean> = {};
-  for (const field of schema.fields) {
-    values[field.key] = field.default;
-  }
-  return values;
 }

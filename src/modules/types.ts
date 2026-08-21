@@ -65,10 +65,25 @@ export interface ColliderMaterial {
   readonly friction: number;
 }
 
+/** Pure rotational motion a Module's `step` can evaluate from its Spec.
+ * `axis` must be unit length and `pivot` is in the Module's local space. */
+export interface KinematicRotationMotion {
+  readonly kind: "rotation";
+  readonly axis: Vector3;
+  readonly pivot: Vector3;
+  readonly angularVelocity: number;
+}
+
 export interface ColliderSpec {
   /** Stable within one Spec; `KinematicTransform.id` targets this to move a
    * specific collider (e.g. a windmill blade) without touching the rest. */
   readonly id: string;
+  /** A position-based kinematic body. Omitted or false keeps the collider
+   * fixed in both the live R3F world and the headless Validator. */
+  readonly kinematic?: boolean;
+  /** Optional pure motion data for a kinematic collider. The shared Module
+   * `step` reads it from the Spec rather than retaining runtime state. */
+  readonly motion?: KinematicRotationMotion;
   readonly shape: Shape;
   readonly position: Vector3;
   readonly rotation: Quaternion;

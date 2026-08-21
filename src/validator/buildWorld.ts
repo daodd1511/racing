@@ -28,9 +28,9 @@ function colliderDescForShape(shape: Shape): RAPIER.ColliderDesc {
   }
 }
 
-function attachCollider(world: RAPIER.World, spec: ColliderSpec): void {
+function attachCollider(world: RAPIER.World, spec: ColliderSpec): RAPIER.RigidBody {
   const body = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed()
+    (spec.kinematic ? RAPIER.RigidBodyDesc.kinematicPositionBased() : RAPIER.RigidBodyDesc.fixed())
       .setTranslation(spec.position[0], spec.position[1], spec.position[2])
       .setRotation({
         x: spec.rotation[0],
@@ -44,23 +44,34 @@ function attachCollider(world: RAPIER.World, spec: ColliderSpec): void {
     .setFriction(spec.material.friction);
 
   world.createCollider(desc, body);
+  return body;
 }
 
-/** Builds a fresh Rapier world from one or more Modules' `Spec`s, with every
- * collider attached as a fixed body. Assumes `RAPIER.init()` has already
- * resolved -- callers (`validateModule`) own that. */
-export function buildWorld(specs: readonly Spec[]): RAPIER.World {
+export interface BuiltWorld {
+  readonly world: RAPIER.World;
+  readonly kinematicBodies: ReadonlyMap<string, RAPIER.RigidBody>;
+}
+
+/** Builds a fresh Rapier world from one or more Modules' `Spec`s. Each
+ * kinematic collider receives its own position-based body, addressable by
+ * `ColliderSpec.id`; all other colliders stay fixed. Assumes `RAPIER.init()`
+ * has already resolved -- callers (`validateModule`) own that. */
+export function buildWorld(specs: readonly Spec[]): BuiltWorld {
   const world = new RAPIER.World({
     x: SCALE.gravity[0],
     y: SCALE.gravity[1],
     z: SCALE.gravity[2],
   });
+  const kinematicBodies = new Map<string, RAPIER.RigidBody>();
 
   for (const spec of specs) {
     for (const collider of spec.colliders) {
-      attachCollider(world, collider);
+      const body = attachCollider(world, collider);
+      if (collider.kinematic) {
+        kinematicBodies.set(collider.id, body);
+      }
     }
   }
 
-  return world;
+  return { world, kinematicBodies };
 }

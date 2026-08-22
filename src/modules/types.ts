@@ -40,6 +40,10 @@ export interface Footprint {
   readonly cells: readonly Cell[];
   readonly entry: Anchor;
   readonly exit: Anchor;
+  /** Ordered local-space centreline from `entry` to `exit`. Progress,
+   * connectivity checks, and the minimap all consume this same path rather
+   * than reconstructing one from rendered geometry. */
+  readonly route: readonly Vector3[];
   readonly bounds: { readonly min: Vector3; readonly max: Vector3 };
 }
 

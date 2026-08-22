@@ -225,6 +225,7 @@ function buildSpec(params: WhoopsParams): Spec {
       cells: [],
       entry: railChannel.entry,
       exit: railChannel.exit,
+      route: centreline,
       bounds: boundsFor(colliders),
     },
   };

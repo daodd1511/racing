@@ -259,6 +259,7 @@ function buildSpec(params: FunnelChokeParams): Spec {
       cells: [],
       entry: channel.entry,
       exit: channel.exit,
+      route: channel.route,
       bounds: { min, max },
     },
   };

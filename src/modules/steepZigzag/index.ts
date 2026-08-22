@@ -229,6 +229,7 @@ function buildSpec(params: SteepZigzagParams): Spec {
   const colliders: ColliderSpec[] = [...channel.colliders];
   const visuals: VisualSpec[] = [...channel.visuals];
   const { entry, exit, bounds } = channel;
+  const route: Vector3[] = [toVector(legs[0].start), ...legs.map((leg) => toVector(leg.end))];
 
   const min: [number, number, number] = [...bounds.min];
   const max: [number, number, number] = [...bounds.max];
@@ -311,6 +312,7 @@ function buildSpec(params: SteepZigzagParams): Spec {
       cells: [],
       entry,
       exit,
+      route,
       bounds: { min, max },
     },
   };

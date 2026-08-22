@@ -30,6 +30,7 @@ export interface ChannelParts {
   readonly visuals: readonly VisualSpec[];
   readonly entry: Anchor;
   readonly exit: Anchor;
+  readonly route: readonly Vector3[];
   readonly bounds: Footprint["bounds"];
 }
 
@@ -123,6 +124,7 @@ export function buildChannel(
 
   let entry: Anchor | undefined;
   let exit: Anchor | undefined;
+  const route: Vector3[] = [];
 
   segments.forEach((segment, index) => {
     const { start, end, width } = segment;
@@ -207,10 +209,17 @@ export function buildChannel(
     if (index === segments.length - 1) {
       exit = { position: toVector(endVector), tangent: toVector(tangent), up: toVector(up) };
     }
+
+    const routeStart = toVector(startVector);
+    const previous = route.at(-1);
+    if (previous?.some((coordinate, axis) => coordinate !== routeStart[axis]) ?? true) {
+      route.push(routeStart);
+    }
+    route.push(toVector(endVector));
   });
 
   // Always assigned: the loop above runs at least once (the length-0 guard
   // above already rejected an empty `segments`) and sets `entry` on its
   // first iteration and `exit` on its last.
-  return { colliders, visuals, entry: entry!, exit: exit!, bounds: { min, max } };
+  return { colliders, visuals, entry: entry!, exit: exit!, route, bounds: { min, max } };
 }

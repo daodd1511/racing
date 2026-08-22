@@ -205,7 +205,7 @@ function buildSpec(params: RumbleStripParams): Spec {
   );
   const colliders: ColliderSpec[] = [...channel.colliders];
   const visuals: VisualSpec[] = [...channel.visuals];
-  const { entry, exit, bounds } = channel;
+  const { entry, exit, route, bounds } = channel;
 
   // Recomputed rather than exposed by `buildChannel` -- see pinField's
   // identical comment on why: bars need the same per-segment frame the
@@ -286,6 +286,7 @@ function buildSpec(params: RumbleStripParams): Spec {
       cells: [],
       entry,
       exit,
+      route,
       bounds: { min, max },
     },
   };

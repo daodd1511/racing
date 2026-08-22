@@ -245,6 +245,7 @@ function buildSpec(params: FrictionLanesParams): Spec {
       cells: [],
       entry,
       exit,
+      route: channel.route,
       bounds: { min, max },
     },
   };

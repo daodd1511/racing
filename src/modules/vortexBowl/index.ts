@@ -152,6 +152,7 @@ const ENTRY_CHANNEL_WIDTH = SCALE.marbleRadius * 4;
 const ENTRY_FLOOR_THICKNESS = 0.01;
 const ENTRY_RAIL_THICKNESS = 0.006;
 const ENTRY_RAIL_HEIGHT = 0.03;
+const ROUTE_ORBITS = 3;
 
 function smoothstep(t: number): number {
   const clamped = Math.min(1, Math.max(0, t));
@@ -469,6 +470,24 @@ function buildSpec(params: VortexBowlParams): Spec {
   const exitLocalUp = new ThreeVector3(1, 0, 0);
 
   const halfSpan = basinProfile.rings[0].radius + ENTRY_APPROACH_LENGTH;
+  const route: Vector3[] = [toVector(tilt(entryRamp.entryPosition))];
+  const routeRings = basinProfile.rings.slice(1);
+  routeRings.forEach((ring, index) => {
+    const progress = index / Math.max(1, routeRings.length - 1);
+    const angle = progress * ROUTE_ORBITS * Math.PI * 2;
+    route.push(
+      toVector(
+        tilt(
+          new ThreeVector3(
+            ring.radius * Math.cos(angle),
+            ring.height,
+            ring.radius * Math.sin(angle),
+          ),
+        ),
+      ),
+    );
+  });
+  route.push(toVector(tilt(exitLocalPosition)));
   const footprint: Footprint = {
     cells: [],
     entry: {
@@ -481,6 +500,7 @@ function buildSpec(params: VortexBowlParams): Spec {
       tangent: toVector(exitWorldTangent),
       up: toVector(tilt(exitLocalUp).normalize()),
     },
+    route,
     bounds: {
       min: [-halfSpan, -halfSpan, -halfSpan],
       max: [halfSpan, halfSpan, halfSpan],

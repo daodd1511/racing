@@ -68,7 +68,7 @@ function buildSpec(params: ChuteParams): Spec {
   // Empty `idPrefix`: a chute is always a single segment, and `buildChannel`
   // then emits bare ids ("floor", "rail-left", "rail-right") matching this
   // Module's own pre-`buildChannel` output exactly.
-  const { colliders, visuals, entry, exit, bounds } = buildChannel(
+  const { colliders, visuals, entry, exit, route, bounds } = buildChannel(
     [{ start: [0, 0, 0], end: [0, -drop, length], width }],
     material,
     "",
@@ -83,6 +83,7 @@ function buildSpec(params: ChuteParams): Spec {
       cells: [],
       entry,
       exit,
+      route,
       bounds,
     },
   };

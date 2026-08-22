@@ -230,7 +230,7 @@ function buildSpec(params: PinFieldParams): Spec {
   );
   const colliders: ColliderSpec[] = [...channel.colliders];
   const visuals: VisualSpec[] = [...channel.visuals];
-  const { entry, exit, bounds } = channel;
+  const { entry, exit, route, bounds } = channel;
 
   // Recomputed rather than exposed by `buildChannel`: posts need the same
   // per-segment pitch/floorCenter frame the floor and rails were placed
@@ -309,6 +309,7 @@ function buildSpec(params: PinFieldParams): Spec {
       cells: [],
       entry,
       exit,
+      route,
       bounds: { min, max },
     },
   };

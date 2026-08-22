@@ -9,9 +9,9 @@ the installed CLI requires the first branch as an argument; later phases use
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done
 - Phase 1 — Course contracts and placement: done
-- Phase 2 — Arc and Assembler: in-progress
+- Phase 2 — Arc and Assembler: done
 - Phase 3 — Course Validator and live race: pending
 - Phase 4 — Board camera, minimap, and harness: pending
 - Verification debt: inherited vortex-bowl orbit/reference-video work remains
@@ -36,7 +36,7 @@ Produces: `Footprint.route: readonly Vector3[]`; `RaceRandomStream`,
 CoursePlacement, idPrefix: string): Spec`; `rasterizeFootprintCells(footprint:
 Footprint, board: BoardSpec): readonly Cell[]`.
 
-Fresh review: required — upgraded after multiple Cell-overlap corrections; initial review found two P2 issues
+Fresh review: not required
 
 - [x] Add required `route: readonly Vector3[]` to `Footprint` in `src/modules/types.ts`; change `ChannelParts` in `src/modules/geometry/channel.ts` to return its ordered segment-centreline route with exact entry/exit endpoints.
 - [x] Populate `Footprint.route` from the geometry-driving centreline/profile in `src/modules/chute/index.ts`, `src/modules/steepZigzag/index.ts`, `src/modules/pinField/index.ts`, `src/modules/rumbleStrip/index.ts`, `src/modules/staircase/index.ts`, `src/modules/frictionLanes/index.ts`, `src/modules/whoops/index.ts`, `src/modules/funnelChoke/index.ts`, `src/modules/windmill/index.ts`, and `src/modules/vortexBowl/index.ts`; the bowl route follows its entry ramp and inward spiral rather than an entry/exit chord.
@@ -81,7 +81,7 @@ readonly KinematicTransform[]`;
 Course`; `stepCourse(course: Course, tSeconds: number): readonly
 KinematicTransform[]`.
 
-Fresh review: not required
+Fresh review: required — upgraded after multiple Cell-overlap corrections; initial review and re-review findings corrected
 
 - [x] Add `src/course/arc.ts` with the fixed nine-Slot 3×3 serpentine `ARC`, exhaustive `enumerateRoleSelections` in stable Role order, and `selectRoleModules` using only the tagged Course substream; one selection per Role is reused by all matching Slots.
 - [x] Add `src/course/connectors.ts`: `buildCourseConnector` emits short continuously descending same-row channels and multi-segment downhill row-end hairpins through `buildChannel`, with overlapping physical joints, route samples, and outer rail height derived from incoming terminal speed (`v²/(2g)`), never connector padding for duration.
@@ -99,8 +99,8 @@ Fresh review: not required
 - [x] (amended 2026-08-22, fresh review P2) Derive matched seam Cells from the Anchor's projected tangent with exactly one marble radius of longitudinal tolerance and a bounded two-radius cross-section; add a regression proving a Cell outside that neighborhood cannot satisfy the seam check.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>`
+- [x] `pnpm typecheck` (project-wide `tsc -b`)
+- [x] `pnpm vitest related --run <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Inspect three fixed-seed Course fixtures: all keep the same 3×3 Board/Arc while Module choices change only by Role and all three Build Slots reuse one `accel` choice.

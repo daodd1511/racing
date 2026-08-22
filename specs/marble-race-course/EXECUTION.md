@@ -2,9 +2,10 @@
 
 Spec: [PLAN.md](PLAN.md). Rulebook: `specs/RULEBOOK.md`.
 Integration branch: `main`. Branch model: stacked via `gh stack` (default) —
-the CLI and repository support stacks. `main` still belongs to historical
-merged stacks, so Phase 1 first needs user approval to prune those merged
-branches before initializing this spec's stack.
+the CLI and repository support stacks. Phase 1 initializes the stack with
+`gh stack init --base main marble-race-course/phase-1-course-contracts` because
+the installed CLI requires the first branch as an argument; later phases use
+`gh stack add` from the stack top.
 
 ## STATUS
 
@@ -19,7 +20,8 @@ branches before initializing this spec's stack.
 
 ## Phase 1 — Course contracts and placement
 
-Branch: `marble-race-course/phase-1-course-contracts` (stacked: `gh stack add`)
+Branch: `marble-race-course/phase-1-course-contracts` (stack root: `gh stack
+init --base main marble-race-course/phase-1-course-contracts`)
 
 Nothing can assemble until every Module exposes a route and a pure placement
 layer can transform Specs onto the fixed Board grid.

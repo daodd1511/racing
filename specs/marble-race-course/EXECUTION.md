@@ -9,10 +9,10 @@ the installed CLI requires the first branch as an argument; later phases use
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — in-progress
 - Phase 1 — Course contracts and placement: done
 - Phase 2 — Arc and Assembler: done
-- Phase 3 — Course Validator and live race: pending
+- Phase 3 — Course Validator and live race: in-progress
 - Phase 4 — Board camera, minimap, and harness: pending
 - Verification debt: inherited vortex-bowl orbit/reference-video work remains
   deferred per `../marble-race-rebuild/EXECUTION.md`; this spec exercises but
@@ -135,10 +135,10 @@ Promise<CourseValidationReport>`; `LiveRaceProps`, `<LiveRace>`.
 
 Fresh review: required — the live/headless dual construction paths and honest watchdog outcome are the spec's core correctness boundary
 
-- [ ] Add the exact live contracts from PLAN.md → "Live race exports state, not app behavior" to `src/race/liveTypes.ts`, including a completed/watchdog discriminated union and no imports from `src/storage/` or result UI.
-- [ ] Add `src/race/startAssignment.ts`: `assignStartPositions` validates Roster size 1–15 and uses only the tagged Start substream to shuffle indices across the fixed 5×3 corral; Course-substream draws cannot change the assignment.
+- [x] Add the exact live contracts from PLAN.md → "Live race exports state, not app behavior" to `src/race/liveTypes.ts`, including a completed/watchdog discriminated union and no imports from `src/storage/` or result UI.
+- [x] Add `src/race/startAssignment.ts`: `assignStartPositions` validates Roster size 1–15 and uses only the tagged Start substream to shuffle indices across the fixed 5×3 corral; Course-substream draws cannot change the assignment.
 - [ ] Add `src/race/progress.ts`: immutable checkpoint/split-time/finish state, route projection restricted by the highest passed Slot checkpoint, first-forward-crossing deduplication, `first` leader and `last` trailing-unfinished decisive selection, partial-progress `finalRanking` for `first`, complete crossing ranking for `last`, and exactly one terminal outcome.
-- [ ] Add `src/race/fixedStepBacklog.ts`: accumulate wall delta into fixed 1/60 work, return a bounded number of steps per rendered frame, retain rather than drop backlog, and expose simulation time independently of wall time.
+- [x] Add `src/race/fixedStepBacklog.ts`: accumulate wall delta into fixed 1/60 work, return a bounded number of steps per rendered frame, retain rather than drop backlog, and expose simulation time independently of wall time.
 - [ ] Add `src/validator/buildCourseWorld.ts` so a Course builds from its materialized Specs, namespaced kinematic bodies, 5×3 marble assignments, and finite Finish sensor while leaving Module validation in `buildWorld.ts`; sensor/collision events use the same ids consumed by live progress.
 - [ ] Add `src/validator/validateCourse.ts`: enumerate all 32 Role selections, run five tagged Start seeds × 15 marbles through fixed-step `stepCourse`, stop each run when all marbles finish or 120 simulation seconds elapse, and return finite duration/Dwell/exit-speed/Shuffle metrics plus stalls/watchdogs.
 - [ ] Add `src/validator/courseValidation.test.ts`: every one of the 160 packed races finishes all 15 marbles before the watchdog with zero stalls and finite metrics; record measured duration percentiles in the assertion comment without imposing a target range.

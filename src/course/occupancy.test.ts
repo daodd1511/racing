@@ -8,6 +8,9 @@ const BOARD: BoardSpec = {
   columns: 3,
   rows: 2,
   cellPitch: 0.1,
+  bayWidth: 0.1,
+  bayHeight: 0.1,
+  edgeMargin: 0,
   bounds: { min: [0, 0, -1], max: [0.3, 0.2, 1] },
 };
 

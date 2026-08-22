@@ -6,6 +6,9 @@ export interface BoardSpec {
   readonly columns: number;
   readonly rows: number;
   readonly cellPitch: number;
+  readonly bayWidth: number;
+  readonly bayHeight: number;
+  readonly edgeMargin: number;
   readonly bounds: Footprint["bounds"];
 }
 

@@ -1,6 +1,11 @@
 import { Vector3 as ThreeVector3 } from "three";
 
-import { RAIL_HEIGHT, buildChannel, type ChannelSegment } from "../modules/geometry/channel";
+import {
+  RAIL_HEIGHT,
+  RAIL_THICKNESS,
+  buildChannel,
+  type ChannelSegment,
+} from "../modules/geometry/channel";
 import type { Anchor, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
@@ -9,6 +14,7 @@ import type { CourseConnector } from "./types";
 const GRAVITY_MAGNITUDE = Math.hypot(...SCALE.gravity);
 const JOINT_OVERLAP = SCALE.marbleRadius;
 const HAIRPIN_REACH = SCALE.channelWidth / 2 + SCALE.marbleRadius * 4;
+export const CONNECTOR_EDGE_CLEARANCE = HAIRPIN_REACH + SCALE.channelWidth / 2 + RAIL_THICKNESS;
 const CONNECTOR_MATERIAL = Object.freeze({
   restitution: SCALE.defaultRestitution,
   friction: SCALE.defaultFriction,

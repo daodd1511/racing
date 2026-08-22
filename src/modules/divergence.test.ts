@@ -1,8 +1,14 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { enumerateRoleSelections } from "../course/arc";
+import { assembleCourseFromRoleSelection } from "../course/assembleCourse";
+import { stepStartGate } from "../course/startFinish";
+import { stepCourse } from "../course/stepCourse";
+import { ALL_MODULES } from "./registry";
 import {
   INITIAL_KINEMATIC_CLOCK,
+  KINEMATIC_FIXED_STEP_SECONDS,
   advanceKinematicClock,
   kinematicSeconds,
   kinematicTransformsAt,
@@ -113,5 +119,44 @@ describe("kinematic renderer and Validator agreement", () => {
       position: [0, 0.1, 0.3],
       rotation: IDENTITY_ROTATION,
     });
+  });
+
+  it("applies one placed windmill and Start gate identically at fixed Course steps", () => {
+    const selection = enumerateRoleSelections().find(({ queue }) => queue === "windmill");
+    if (!selection) {
+      throw new Error("expected a Role selection containing windmill");
+    }
+    const course = assembleCourseFromRoleSelection(29, selection);
+    const placedWindmill = course.modules.find(({ moduleId }) => moduleId === "windmill");
+    const windmill = ALL_MODULES.find(({ id }) => id === "windmill");
+    if (!placedWindmill || !windmill) {
+      throw new Error("expected placed and registered windmill");
+    }
+
+    const builtWorld = buildWorld([course.start, placedWindmill.spec]);
+    for (const stepCount of [0, 1, 6, 30]) {
+      const tSeconds = stepCount * KINEMATIC_FIXED_STEP_SECONDS;
+      const liveTransforms = [
+        ...kinematicTransformsAt(stepStartGate, course.start, tSeconds),
+        ...kinematicTransformsAt(windmill.step, placedWindmill.spec, tSeconds),
+      ];
+      const headlessTransforms = stepCourse(course, tSeconds);
+      expect(headlessTransforms).toEqual(liveTransforms);
+      expect(stepCourse(course, tSeconds)).toEqual(headlessTransforms);
+
+      applyStep(headlessTransforms, builtWorld.kinematicBodies);
+      builtWorld.world.step();
+      for (const transform of liveTransforms) {
+        const body = builtWorld.kinematicBodies.get(transform.id);
+        if (!body || !transform.position || !transform.rotation) {
+          throw new Error(`expected complete kinematic transform for ${transform.id}`);
+        }
+        const translation = body.translation();
+        const rotation = body.rotation();
+        expectTupleClose([translation.x, translation.y, translation.z], transform.position);
+        expectTupleClose([rotation.x, rotation.y, rotation.z, rotation.w], transform.rotation);
+      }
+    }
+    builtWorld.world.free();
   });
 });

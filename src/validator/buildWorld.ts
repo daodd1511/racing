@@ -28,7 +28,12 @@ function colliderDescForShape(shape: Shape): RAPIER.ColliderDesc {
   }
 }
 
-function attachCollider(world: RAPIER.World, spec: ColliderSpec): RAPIER.RigidBody {
+interface AttachedCollider {
+  readonly body: RAPIER.RigidBody;
+  readonly collider: RAPIER.Collider;
+}
+
+function attachCollider(world: RAPIER.World, spec: ColliderSpec): AttachedCollider {
   const body = world.createRigidBody(
     (spec.kinematic ? RAPIER.RigidBodyDesc.kinematicPositionBased() : RAPIER.RigidBodyDesc.fixed())
       .setTranslation(spec.position[0], spec.position[1], spec.position[2])
@@ -41,15 +46,19 @@ function attachCollider(world: RAPIER.World, spec: ColliderSpec): RAPIER.RigidBo
   );
   const desc = colliderDescForShape(spec.shape)
     .setRestitution(spec.material.restitution)
-    .setFriction(spec.material.friction);
+    .setFriction(spec.material.friction)
+    .setSensor(spec.sensor ?? false);
+  if (spec.sensor) {
+    desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+  }
 
-  world.createCollider(desc, body);
-  return body;
+  return { body, collider: world.createCollider(desc, body) };
 }
 
 export interface BuiltWorld {
   readonly world: RAPIER.World;
   readonly kinematicBodies: ReadonlyMap<string, RAPIER.RigidBody>;
+  readonly colliders: ReadonlyMap<string, RAPIER.Collider>;
 }
 
 /** Builds a fresh Rapier world from one or more Modules' `Spec`s. Each
@@ -63,15 +72,17 @@ export function buildWorld(specs: readonly Spec[]): BuiltWorld {
     z: SCALE.gravity[2],
   });
   const kinematicBodies = new Map<string, RAPIER.RigidBody>();
+  const colliders = new Map<string, RAPIER.Collider>();
 
   for (const spec of specs) {
     for (const collider of spec.colliders) {
-      const body = attachCollider(world, collider);
+      const attached = attachCollider(world, collider);
+      colliders.set(collider.id, attached.collider);
       if (collider.kinematic) {
-        kinematicBodies.set(collider.id, body);
+        kinematicBodies.set(collider.id, attached.body);
       }
     }
   }
 
-  return { world, kinematicBodies };
+  return { world, kinematicBodies, colliders };
 }

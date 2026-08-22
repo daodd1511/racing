@@ -9,8 +9,8 @@ the installed CLI requires the first branch as an argument; later phases use
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Course contracts and placement: in-progress
+- Current phase: 1 — done
+- Phase 1 — Course contracts and placement: done
 - Phase 2 — Arc and Assembler: pending
 - Phase 3 — Course Validator and live race: pending
 - Phase 4 — Board camera, minimap, and harness: pending
@@ -50,8 +50,8 @@ Fresh review: not required
 - [x] Add `src/course/board.test.ts`, `src/course/transformSpec.test.ts`, and `src/course/occupancy.test.ts` covering seed-independent dimensions, all default Modules fitting, yaw-only left/right placement, id namespacing, transformed windmill motion, conservative edge-cell inclusion, and out-of-Board rejection.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>`
+- [x] `pnpm typecheck` (project-wide `tsc -b`)
+- [x] `pnpm vitest related --run <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Inspect the transformed chute and windmill fixtures: anchors, routes, ids, and the windmill's motion pivot/axis all share one placement without mutating the source Spec.

@@ -68,12 +68,13 @@ describe("applyStep", () => {
     expectTupleClose([translation.x, translation.y, translation.z], transform.position);
     expectTupleClose([rotation.x, rotation.y, rotation.z, rotation.w], transform.rotation);
 
-    const translations: number[][] = [];
-    builtWorld.world.forEachRigidBody((body) => {
-      const fixedTranslation = body.translation();
-      translations.push([fixedTranslation.x, fixedTranslation.y, fixedTranslation.z]);
-    });
-    expect(translations).toContainEqual([0.75, 0, 0]);
+    const fixed = builtWorld.colliders.get("fixed");
+    expect(fixed).toBeDefined();
+    const fixedTranslation = fixed?.translation();
+    expectTupleClose(
+      fixedTranslation ? [fixedTranslation.x, fixedTranslation.y, fixedTranslation.z] : [],
+      [0.75, 0, 0],
+    );
 
     builtWorld.world.free();
   });

@@ -20,11 +20,8 @@ describe("buildCourseConnector", () => {
       incomingSpeed: 0,
     });
 
-    expect(connector.spec.footprint.route).toEqual([
-      [0, 0, 0],
-      [0.4, -0.05, 0],
-    ]);
-    expect(connector.spec.colliders).toHaveLength(3);
+    expect(connector.spec.footprint.route).toHaveLength(4);
+    expect(connector.spec.colliders).toHaveLength(9);
     expect(connector.spec.footprint.entry.position).toEqual([0, 0, 0]);
     expect(connector.spec.footprint.exit.position).toEqual([0.4, -0.05, 0]);
   });
@@ -50,7 +47,8 @@ describe("buildCourseConnector", () => {
     expect(route[1][0]).toBeGreaterThan(route[0][0]);
     expect(route[2][0]).toBeGreaterThan(route[3][0]);
     expect(route.every((point, index) => index === 0 || point[1] < route[index - 1][1])).toBe(true);
-    expect(connector.spec.colliders).toHaveLength(9);
+    expect(connector.spec.colliders).toHaveLength(10);
+    expect(connector.spec.colliders.some(({ id }) => id.endsWith("outer-wall"))).toBe(true);
     expect(rail?.shape.kind).toBe("cuboid");
     expect(rail?.shape.kind === "cuboid" ? rail.shape.halfExtents[1] * 2 : 0).toBeCloseTo(
       expectedRailHeight,

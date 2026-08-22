@@ -28,14 +28,31 @@ function colliderDescForShape(shape: Shape): RAPIER.ColliderDesc {
   }
 }
 
-interface AttachedCollider {
-  readonly body: RAPIER.RigidBody;
-  readonly collider: RAPIER.Collider;
+function colliderDesc(spec: ColliderSpec, relativeToSharedBody: boolean): RAPIER.ColliderDesc {
+  const desc = colliderDescForShape(spec.shape)
+    .setRestitution(spec.material.restitution)
+    .setFriction(spec.material.friction)
+    .setSensor(spec.sensor ?? false);
+  if (relativeToSharedBody) {
+    desc.setTranslation(spec.position[0], spec.position[1], spec.position[2]).setRotation({
+      x: spec.rotation[0],
+      y: spec.rotation[1],
+      z: spec.rotation[2],
+      w: spec.rotation[3],
+    });
+  }
+  if (spec.sensor) {
+    desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+  }
+  return desc;
 }
 
-function attachCollider(world: RAPIER.World, spec: ColliderSpec): AttachedCollider {
+function attachKinematicCollider(
+  world: RAPIER.World,
+  spec: ColliderSpec,
+): { readonly body: RAPIER.RigidBody; readonly collider: RAPIER.Collider } {
   const body = world.createRigidBody(
-    (spec.kinematic ? RAPIER.RigidBodyDesc.kinematicPositionBased() : RAPIER.RigidBodyDesc.fixed())
+    RAPIER.RigidBodyDesc.kinematicPositionBased()
       .setTranslation(spec.position[0], spec.position[1], spec.position[2])
       .setRotation({
         x: spec.rotation[0],
@@ -44,15 +61,7 @@ function attachCollider(world: RAPIER.World, spec: ColliderSpec): AttachedCollid
         w: spec.rotation[3],
       }),
   );
-  const desc = colliderDescForShape(spec.shape)
-    .setRestitution(spec.material.restitution)
-    .setFriction(spec.material.friction)
-    .setSensor(spec.sensor ?? false);
-  if (spec.sensor) {
-    desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-  }
-
-  return { body, collider: world.createCollider(desc, body) };
+  return { body, collider: world.createCollider(colliderDesc(spec, false), body) };
 }
 
 export interface BuiltWorld {
@@ -61,10 +70,10 @@ export interface BuiltWorld {
   readonly colliders: ReadonlyMap<string, RAPIER.Collider>;
 }
 
-/** Builds a fresh Rapier world from one or more Modules' `Spec`s. Each
- * kinematic collider receives its own position-based body, addressable by
- * `ColliderSpec.id`; all other colliders stay fixed. Assumes `RAPIER.init()`
- * has already resolved -- callers (`validateModule`) own that. */
+/** Builds a fresh Rapier world from one or more Modules' `Spec`s. Each Spec's
+ * static colliders share one fixed body, matching ModuleColliders; every
+ * kinematic collider receives its own addressable position-based body.
+ * Assumes `RAPIER.init()` has already resolved -- callers own that. */
 export function buildWorld(specs: readonly Spec[]): BuiltWorld {
   const world = new RAPIER.World({
     x: SCALE.gravity[0],
@@ -75,11 +84,16 @@ export function buildWorld(specs: readonly Spec[]): BuiltWorld {
   const colliders = new Map<string, RAPIER.Collider>();
 
   for (const spec of specs) {
+    const staticColliders = spec.colliders.filter((collider) => !collider.kinematic);
+    const fixedBody =
+      staticColliders.length > 0 ? world.createRigidBody(RAPIER.RigidBodyDesc.fixed()) : undefined;
     for (const collider of spec.colliders) {
-      const attached = attachCollider(world, collider);
-      colliders.set(collider.id, attached.collider);
       if (collider.kinematic) {
+        const attached = attachKinematicCollider(world, collider);
+        colliders.set(collider.id, attached.collider);
         kinematicBodies.set(collider.id, attached.body);
+      } else if (fixedBody) {
+        colliders.set(collider.id, world.createCollider(colliderDesc(collider, true), fixedBody));
       }
     }
   }

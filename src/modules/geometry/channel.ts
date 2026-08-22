@@ -1,4 +1,8 @@
-import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
+import {
+  Matrix4 as ThreeMatrix4,
+  Quaternion as ThreeQuaternion,
+  Vector3 as ThreeVector3,
+} from "three";
 
 import type { Quaternion, Vector3 } from "../../race/types";
 import type { Anchor, ColliderMaterial, ColliderSpec, Footprint, VisualSpec } from "../types";
@@ -23,6 +27,10 @@ export interface ChannelSegment {
   readonly start: Vector3;
   readonly end: Vector3;
   readonly width: number;
+  /** Optional preferred local-up direction. When provided, the channel
+   * frame keeps width perpendicular to both this hint and travel instead of
+   * accepting the arbitrary roll of a shortest-arc +Z rotation. */
+  readonly up?: Vector3;
   /** Optional full rail height for infrastructure that needs a speed-derived
    * containment wall. Modules retain the shared default when omitted. */
   readonly railHeight?: number;
@@ -142,11 +150,23 @@ export function buildChannel(
       throw new Error("buildChannel: zero-length segment");
     }
 
-    const pitch = new ThreeQuaternion().setFromUnitVectors(
-      new ThreeVector3(0, 0, 1),
-      delta.clone().normalize(),
-    );
-    const tangent = new ThreeVector3(0, 0, 1).applyQuaternion(pitch).normalize();
+    const tangent = delta.clone().normalize();
+    const pitch = (() => {
+      if (!segment.up) {
+        return new ThreeQuaternion().setFromUnitVectors(new ThreeVector3(0, 0, 1), tangent);
+      }
+      const upHint = new ThreeVector3(...segment.up).normalize();
+      const lateral = upHint.clone().cross(tangent);
+      if (lateral.lengthSq() < 1e-12) {
+        lateral.set(0, 0, 1);
+      } else {
+        lateral.normalize();
+      }
+      const correctedUp = tangent.clone().cross(lateral).normalize();
+      return new ThreeQuaternion().setFromRotationMatrix(
+        new ThreeMatrix4().makeBasis(lateral, correctedUp, tangent),
+      );
+    })();
     const up = new ThreeVector3(0, 1, 0).applyQuaternion(pitch).normalize();
 
     const floorCenter = startVector.clone().add(endVector).multiplyScalar(0.5);

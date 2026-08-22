@@ -125,6 +125,7 @@ export function buildCourseWorld(
     throw new Error("Course world requires ordered unique marble assignments");
   }
   const built = buildWorld(courseSpecs(course));
+  built.world.timestep = 1 / 60;
   const colliderIdsByHandle = new Map<number, string>();
   for (const [id, collider] of built.colliders) {
     colliderIdsByHandle.set(collider.handle, id);

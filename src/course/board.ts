@@ -135,7 +135,7 @@ const maximumIncomingEnergyHeight = Math.max(
 // A speed-derived rail can project its full height beyond the hairpin
 // centreline when the sloped channel rotates its local up axis.
 const edgeMargin = roundUpToCell(
-  CONNECTOR_EDGE_CLEARANCE + maximumIncomingEnergyHeight + SCALE.marbleRadius * 2,
+  CONNECTOR_EDGE_CLEARANCE + maximumIncomingEnergyHeight + bayHeight / 2 + SCALE.marbleRadius * 2,
 );
 const boardWidth = SLOT_COLUMNS * bayWidth + edgeMargin * 2;
 const boardHeight = SLOT_ROWS * bayHeight + edgeMargin * 2;

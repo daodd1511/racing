@@ -46,18 +46,18 @@ Content was thin as a consequence: one rumble strip, one pin field, then turns.
 
 ### Duration is an outcome, never a control
 
-A Course is built long and rich enough that a run lands near 60 s. The actual
-number is whatever the marbles do; ±5 s or more is expected and correct. There
-are no timers, no clamps, no speed scaling, and nothing nudges a stuck marble.
+A Course's duration is whatever its Modules and live physics produce. There are
+no timers, clamps, speed scaling, connector padding, or stuck-marble nudges.
+Spec 3 planning corrected the original ~60 s estimate after the completed
+catalogue's measured default Dwell Times showed that the fixed nine-Slot Arc
+cannot reach it without violating those rules.
 
-The Validator measures duration at authoring time to accept or reject a Course
-*design*. It never touches a live race. The product's claim is that physics picks
-the person; the moment the clock becomes a knob, that claim is false.
+The Validator records duration at authoring time and rejects stalls/watchdog
+failures, but duration has no preferred range. It never touches a live race.
+The product's claim is that physics picks the person; the moment the clock
+becomes a knob, that claim is false.
 
-A face-on Board caps how much path exists, so ~60 s cannot come from travel
-alone (20–30 m of path is a 10–15 s race). It comes from a large Board with
-80–120 m of switchback path *plus* genuine Dwell. This yields the governing rule
-for every Module:
+This leaves the governing rule for every Module:
 
 > **Dwell must be paid for with visible motion.** A marble orbiting a bowl for
 > 6 s is spectacle. A marble rolling down a flat 18 m stretch at terminal
@@ -295,9 +295,9 @@ done**, and a green suite grants no authority to close the phase. No exceptions.
 
 ## Sequencing
 
-Four specs, risk front-loaded. Spec 1 is the only one specified in detail here,
-deliberately: its findings will reshape the rest, and planning specs 2–4 against
-a Module contract that does not exist yet would be planning blind.
+Four specs, risk front-loaded. This plan originally detailed only Spec 1 so its
+findings could reshape the rest. Later specs receive their own plans after the
+contracts they depend on have shipped.
 
 ### Spec 1 — Feel and contract
 
@@ -333,7 +333,7 @@ designs fourteen. The windmill is the first Module exercising `step`.
 Board and Cell grid, the Arc and the Assembler, Cell-occupancy overlap checking,
 switchback path generation between Slots, the decisive-marble camera and minimap,
 the live race loop, the runtime watchdog, and Validator coverage over generated
-Courses.
+Courses. Detailed in [`../marble-race-course/PLAN.md`](../marble-race-course/PLAN.md).
 
 ### Spec 4 — Broadcast UI
 
@@ -365,7 +365,8 @@ ADRs. App-wide ones are in `docs/adr/`.
    catalogue.
 5. Role-based fixed Arc, over a weighted random walk with adjacency rules and
    over hand-authored presets.
-6. Duration is an outcome; no `short`/`normal`/`long` setting.
+6. Duration is a measured outcome with no target range and no
+   `short`/`normal`/`long` setting.
 7. Large Board with a decisive-marble follow camera, over a fixed wide shot and
    over a chain of Boards with cuts.
 8. Keep the app shell and delete only what live physics obsoletes, over a

@@ -1,3 +1,20 @@
+export type RaceRandomStream = "course" | "start";
+
+const RACE_STREAM_SALTS: Readonly<Record<RaceRandomStream, number>> = Object.freeze({
+  course: 0x9e37_79b9,
+  start: 0x243f_6a88,
+});
+
+/** Derives an independent unsigned 32-bit seed for one race concern. The
+ * tagged salt makes each stream insensitive to draws and call order in the
+ * other stream. */
+export function deriveRaceSeed(seed: number, stream: RaceRandomStream): number {
+  let value = (seed >>> 0) ^ RACE_STREAM_SALTS[stream];
+  value = Math.imul(value ^ (value >>> 16), 0x21f0_aaad);
+  value = Math.imul(value ^ (value >>> 15), 0x735a_2d97);
+  return (value ^ (value >>> 15)) >>> 0;
+}
+
 export function createSeededRandom(seed: number): () => number {
   let state = seed >>> 0;
 

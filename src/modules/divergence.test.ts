@@ -38,6 +38,10 @@ const spec: Spec = {
     cells: [],
     entry: { position: [0, 0, 0], tangent: [0, 0, 1], up: [0, 1, 0] },
     exit: { position: [0, 0, 1], tangent: [0, 0, 1], up: [0, 1, 0] },
+    route: [
+      [0, 0, 0],
+      [0, 0, 1],
+    ],
     bounds: { min: [-1, -1, -1], max: [1, 1, 1] },
   },
 };

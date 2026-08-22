@@ -23,6 +23,9 @@ export interface ChannelSegment {
   readonly start: Vector3;
   readonly end: Vector3;
   readonly width: number;
+  /** Optional full rail height for infrastructure that needs a speed-derived
+   * containment wall. Modules retain the shared default when omitted. */
+  readonly railHeight?: number;
 }
 
 export interface ChannelParts {
@@ -127,7 +130,10 @@ export function buildChannel(
   const route: Vector3[] = [];
 
   segments.forEach((segment, index) => {
-    const { start, end, width } = segment;
+    const { start, end, width, railHeight = RAIL_HEIGHT } = segment;
+    if (!Number.isFinite(railHeight) || railHeight <= 0) {
+      throw new Error("buildChannel: railHeight must be positive and finite");
+    }
     const startVector = new ThreeVector3(...start);
     const endVector = new ThreeVector3(...end);
     const delta = endVector.clone().sub(startVector);
@@ -176,14 +182,14 @@ export function buildChannel(
       const railCenter = floorCenter
         .clone()
         .add(new ThreeVector3(side * lateral, 0, 0).applyQuaternion(pitch))
-        .add(up.clone().multiplyScalar(RAIL_HEIGHT / 2));
+        .add(up.clone().multiplyScalar(railHeight / 2));
       const railId = segmentId(
         idPrefix,
         side < 0 ? "rail-left" : "rail-right",
         index,
         segments.length,
       );
-      const railHalfExtents: Vector3 = [RAIL_THICKNESS / 2, RAIL_HEIGHT / 2, segmentLength / 2];
+      const railHalfExtents: Vector3 = [RAIL_THICKNESS / 2, railHeight / 2, segmentLength / 2];
       const railShape = { kind: "cuboid" as const, halfExtents: railHalfExtents };
 
       colliders.push({

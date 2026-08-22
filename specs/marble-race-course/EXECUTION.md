@@ -9,9 +9,9 @@ the installed CLI requires the first branch as an argument; later phases use
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — in-progress
 - Phase 1 — Course contracts and placement: done
-- Phase 2 — Arc and Assembler: pending
+- Phase 2 — Arc and Assembler: in-progress
 - Phase 3 — Course Validator and live race: pending
 - Phase 4 — Board camera, minimap, and harness: pending
 - Verification debt: inherited vortex-bowl orbit/reference-video work remains
@@ -81,7 +81,7 @@ KinematicTransform[]`.
 
 Fresh review: not required
 
-- [ ] Add `src/course/arc.ts` with the fixed nine-Slot 3×3 serpentine `ARC`, exhaustive `enumerateRoleSelections` in stable Role order, and `selectRoleModules` using only the tagged Course substream; one selection per Role is reused by all matching Slots.
+- [x] Add `src/course/arc.ts` with the fixed nine-Slot 3×3 serpentine `ARC`, exhaustive `enumerateRoleSelections` in stable Role order, and `selectRoleModules` using only the tagged Course substream; one selection per Role is reused by all matching Slots.
 - [ ] Add `src/course/connectors.ts`: `buildCourseConnector` emits short continuously descending same-row channels and multi-segment downhill row-end hairpins through `buildChannel`, with overlapping physical joints, route samples, and outer rail height derived from incoming terminal speed (`v²/(2g)`), never connector padding for duration.
 - [ ] Add `src/course/startFinish.ts`: the fixed 5×3 Start corral and pure rotating gate motion, plus the photo-finish straight, finite sensor descriptor, and catch tray; neither uses an infinite finish plane.
 - [ ] Add `src/course/assembleCourse.ts`: materialize default-param Modules from one Role selection, place them yaw-only into `BOARD`, namespace/transform their Specs, connect every adjacent pair, concatenate route/checkpoints, populate Cells, and return a deeply immutable Course.

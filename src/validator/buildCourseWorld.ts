@@ -87,12 +87,18 @@ function courseSpecs(course: Course): readonly Spec[] {
 }
 
 function assignmentPosition(course: Course, assignment: StartAssignment): Vector3 {
-  const frame = anchorFrame(course.entry);
+  const horizontalTangent = new ThreeVector3(
+    course.entry.tangent[0],
+    0,
+    course.entry.tangent[2],
+  ).normalize();
+  const up = new ThreeVector3(0, 1, 0);
+  const right = up.clone().cross(horizontalTangent).normalize();
   const local = assignment.position;
   const position = new ThreeVector3(...course.entry.position)
-    .add(frame.right.multiplyScalar(local[0]))
-    .add(frame.up.multiplyScalar(local[1]))
-    .add(frame.tangent.multiplyScalar(local[2]));
+    .add(right.multiplyScalar(local[0]))
+    .add(up.multiplyScalar(local[1]))
+    .add(horizontalTangent.multiplyScalar(local[2]));
   return tuple(position);
 }
 

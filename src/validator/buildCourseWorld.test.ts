@@ -36,6 +36,8 @@ describe("buildCourseWorld", () => {
       const translation = body!.translation();
       expect([translation.x, translation.y, translation.z].every(Number.isFinite)).toBe(true);
     });
+    const firstPosition = built.marbleBodies.get(0)!.translation();
+    expect(firstPosition.y).toBeCloseTo(course.entry.position[1] + assignments[0].position[1], 6);
 
     built.eventQueue.free();
     built.world.free();

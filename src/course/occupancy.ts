@@ -1,6 +1,6 @@
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
-import type { Cell, ColliderSpec, Footprint } from "../modules/types";
+import type { Anchor, Cell, ColliderSpec, Footprint } from "../modules/types";
 import type { BoardSpec } from "./types";
 
 function assertFiniteBounds(footprint: Footprint, board: BoardSpec): void {
@@ -122,6 +122,71 @@ function polygonsOverlap(left: readonly Point2[], right: readonly Point2[]): boo
   });
 }
 
+function cellPolygon(cell: Cell, board: BoardSpec): readonly Point2[] {
+  const cellMinX = board.bounds.min[0] + cell.column * board.cellPitch;
+  const cellMaxY = board.bounds.max[1] - cell.row * board.cellPitch;
+  return [
+    [cellMinX, cellMaxY - board.cellPitch],
+    [cellMinX + board.cellPitch, cellMaxY - board.cellPitch],
+    [cellMinX + board.cellPitch, cellMaxY],
+    [cellMinX, cellMaxY],
+  ];
+}
+
+/** Returns the projected joint neighborhood around an Anchor. The tangent
+ * controls the longitudinal axis; the cross-section remains finite rather
+ * than extending across the Board. */
+export function rasterizeAnchorSeamCells(
+  anchor: Anchor,
+  board: BoardSpec,
+  longitudinalRadius: number,
+  transverseRadius: number,
+): readonly Cell[] {
+  if (
+    !Number.isFinite(longitudinalRadius) ||
+    longitudinalRadius <= 0 ||
+    !Number.isFinite(transverseRadius) ||
+    transverseRadius <= 0
+  ) {
+    throw new Error("Anchor seam radii must be positive and finite");
+  }
+  const projectedLength = Math.hypot(anchor.tangent[0], anchor.tangent[1]);
+  const tangent: Point2 =
+    projectedLength > 1e-12
+      ? [anchor.tangent[0] / projectedLength, anchor.tangent[1] / projectedLength]
+      : [1, 0];
+  const normal: Point2 = [-tangent[1], tangent[0]];
+  const polygon: readonly Point2[] = [-1, 1].flatMap((along) =>
+    [-1, 1].map((across): Point2 => [
+      anchor.position[0] +
+        tangent[0] * longitudinalRadius * along +
+        normal[0] * transverseRadius * across,
+      anchor.position[1] +
+        tangent[1] * longitudinalRadius * along +
+        normal[1] * transverseRadius * across,
+    ]),
+  );
+  const hull = convexHull(polygon);
+  const minX = Math.max(board.bounds.min[0], Math.min(...hull.map(([x]) => x)));
+  const maxX = Math.min(board.bounds.max[0], Math.max(...hull.map(([x]) => x)));
+  const minY = Math.max(board.bounds.min[1], Math.min(...hull.map(([, y]) => y)));
+  const maxY = Math.min(board.bounds.max[1], Math.max(...hull.map(([, y]) => y)));
+  const candidates = rasterizeFootprintCells(
+    {
+      cells: [],
+      entry: anchor,
+      exit: anchor,
+      route: [anchor.position, anchor.position],
+      bounds: {
+        min: [minX, minY, board.bounds.min[2]],
+        max: [maxX, maxY, board.bounds.max[2]],
+      },
+    },
+    board,
+  );
+  return candidates.filter((cell) => polygonsOverlap(hull, cellPolygon(cell, board)));
+}
+
 function cuboidProjection(collider: ColliderSpec): readonly Point2[] {
   if (collider.shape.kind !== "cuboid") {
     throw new Error(`Collider ${collider.id} must be a cuboid for projected Cell rasterization`);
@@ -169,15 +234,7 @@ export function rasterizeCuboidCells(
       board,
     );
     for (const cell of candidates) {
-      const cellMinX = board.bounds.min[0] + cell.column * board.cellPitch;
-      const cellMaxY = board.bounds.max[1] - cell.row * board.cellPitch;
-      const rectangle: readonly Point2[] = [
-        [cellMinX, cellMaxY - board.cellPitch],
-        [cellMinX + board.cellPitch, cellMaxY - board.cellPitch],
-        [cellMinX + board.cellPitch, cellMaxY],
-        [cellMinX, cellMaxY],
-      ];
-      if (polygonsOverlap(polygon, rectangle)) {
+      if (polygonsOverlap(polygon, cellPolygon(cell, board))) {
         occupied.set(`${cell.row}:${cell.column}`, cell);
       }
     }

@@ -8,7 +8,11 @@ import type { Quaternion, Vector3 } from "../race/types";
 import { ARC, selectRoleModules, type RoleSelection } from "./arc";
 import { BOARD } from "./board";
 import { buildCourseConnector } from "./connectors";
-import { rasterizeCuboidCells, rasterizeFootprintCells } from "./occupancy";
+import {
+  rasterizeAnchorSeamCells,
+  rasterizeCuboidCells,
+  rasterizeFootprintCells,
+} from "./occupancy";
 import { buildFinishSpec, buildStartSpec } from "./startFinish";
 import { transformSpec } from "./transformSpec";
 import type {
@@ -189,26 +193,11 @@ function cellKey(cell: Cell): string {
 }
 
 function anchorSeamCells(anchor: Anchor): ReadonlySet<string> {
-  const [x] = anchor.position;
-  const projectedHalfWidth = SCALE.channelWidth / 2 + SCALE.marbleRadius;
-  const min: Vector3 = [
-    Math.max(BOARD.bounds.min[0], x - projectedHalfWidth),
-    BOARD.bounds.min[1],
-    BOARD.bounds.min[2],
-  ];
-  const max: Vector3 = [
-    Math.min(BOARD.bounds.max[0], x + projectedHalfWidth),
-    BOARD.bounds.max[1],
-    BOARD.bounds.max[2],
-  ];
-  const seam: Spec["footprint"] = {
-    cells: [],
-    entry: anchor,
-    exit: anchor,
-    route: [anchor.position, anchor.position],
-    bounds: { min, max },
-  };
-  return new Set(rasterizeFootprintCells(seam, BOARD).map(cellKey));
+  return new Set(
+    rasterizeAnchorSeamCells(anchor, BOARD, SCALE.marbleRadius, SCALE.marbleRadius * 2).map(
+      cellKey,
+    ),
+  );
 }
 
 function assertConnected(previous: CourseElement, next: CourseElement): void {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Footprint } from "../modules/types";
 import type { BoardSpec } from "./types";
-import { rasterizeFootprintCells } from "./occupancy";
+import { rasterizeAnchorSeamCells, rasterizeFootprintCells } from "./occupancy";
 
 const BOARD: BoardSpec = {
   columns: 3,
@@ -54,5 +54,18 @@ describe("rasterizeFootprintCells", () => {
 
     const nonFinite = footprint({ min: [0, 0, 0], max: [Number.NaN, 0.1, 0] });
     expect(() => rasterizeFootprintCells(nonFinite, BOARD)).toThrow(/finite/);
+  });
+
+  it("keeps the matched Anchor seam inside one longitudinal marble radius", () => {
+    const seam = rasterizeAnchorSeamCells(
+      { position: [0.15, 0.1, 0], tangent: [1, 0, 0], up: [0, 1, 0] },
+      BOARD,
+      0.016,
+      0.032,
+    );
+
+    expect(new Set(seam.map(({ column }) => column))).toEqual(new Set([1]));
+    expect(seam).not.toContainEqual({ column: 0, row: 0 });
+    expect(seam).not.toContainEqual({ column: 2, row: 0 });
   });
 });

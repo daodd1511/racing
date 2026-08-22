@@ -36,7 +36,7 @@ Produces: `Footprint.route: readonly Vector3[]`; `RaceRandomStream`,
 CoursePlacement, idPrefix: string): Spec`; `rasterizeFootprintCells(footprint:
 Footprint, board: BoardSpec): readonly Cell[]`.
 
-Fresh review: not required
+Fresh review: required — upgraded after multiple Cell-overlap corrections; initial review found two P2 issues
 
 - [x] Add required `route: readonly Vector3[]` to `Footprint` in `src/modules/types.ts`; change `ChannelParts` in `src/modules/geometry/channel.ts` to return its ordered segment-centreline route with exact entry/exit endpoints.
 - [x] Populate `Footprint.route` from the geometry-driving centreline/profile in `src/modules/chute/index.ts`, `src/modules/steepZigzag/index.ts`, `src/modules/pinField/index.ts`, `src/modules/rumbleStrip/index.ts`, `src/modules/staircase/index.ts`, `src/modules/frictionLanes/index.ts`, `src/modules/whoops/index.ts`, `src/modules/funnelChoke/index.ts`, `src/modules/windmill/index.ts`, and `src/modules/vortexBowl/index.ts`; the bowl route follows its entry ramp and inward spiral rather than an entry/exit chord.
@@ -95,6 +95,8 @@ Fresh review: not required
 - [x] Implement `stepCourse` in `src/course/stepCourse.ts`: combine registry `step` output for every placed Module with the Start gate's pure-in-time transform, preserving namespaced ids and returning call-order-independent results.
 - [x] Add `src/course/arc.test.ts`, `src/course/connectors.test.ts`, `src/course/startFinish.test.ts`, and `src/course/assembleCourse.test.ts`: enumerate exactly 32 unique selections; same seed is deep-equal; unrelated Start-substream draws do not alter Course selection; Board/Arc stay fixed; all 32 selections clear every structural invariant; source Module Specs remain unchanged.
 - [x] Extend `src/modules/divergence.test.ts` with a placed windmill and Start gate at several fixed steps, asserting `stepCourse` produces transforms the headless `applyStep` path can apply identically to the live path's shared kinematic helpers.
+- [x] (amended 2026-08-22, fresh review P2) Deep-freeze every exported `ARC` Slot record as well as the containing array, and cover nested runtime immutability so a consumer cannot mutate later assembly topology.
+- [x] (amended 2026-08-22, fresh review P2) Derive matched seam Cells from the Anchor's projected tangent with exactly one marble radius of longitudinal tolerance and a bounded two-radius cross-section; add a regression proving a Cell outside that neighborhood cannot satisfy the seam check.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck` (project-wide `tsc -b`)

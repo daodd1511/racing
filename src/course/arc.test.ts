@@ -28,6 +28,8 @@ describe("ARC", () => {
       "right",
       "right",
     ]);
+    expect(Object.isFrozen(ARC)).toBe(true);
+    ARC.forEach((slot) => expect(Object.isFrozen(slot)).toBe(true));
   });
 });
 

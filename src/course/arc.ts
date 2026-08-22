@@ -3,7 +3,7 @@ import type { Role } from "../modules/types";
 import { createSeededRandom, deriveRaceSeed } from "../race/random";
 import type { ArcSlot } from "./types";
 
-export const ARC = Object.freeze([
+const ARC_SLOTS = [
   { slotIndex: 0, kind: "start", column: 0, row: 0, direction: "right" },
   { slotIndex: 1, kind: "module", role: "accel", column: 1, row: 0, direction: "right" },
   { slotIndex: 2, kind: "module", role: "scatter", column: 2, row: 0, direction: "right" },
@@ -13,7 +13,11 @@ export const ARC = Object.freeze([
   { slotIndex: 6, kind: "module", role: "accel", column: 0, row: 2, direction: "right" },
   { slotIndex: 7, kind: "module", role: "queue", column: 1, row: 2, direction: "right" },
   { slotIndex: 8, kind: "finish", column: 2, row: 2, direction: "right" },
-] as const satisfies readonly ArcSlot[]);
+] as const satisfies readonly ArcSlot[];
+
+export const ARC: readonly ArcSlot[] = Object.freeze(
+  ARC_SLOTS.map((slot) => Object.freeze({ ...slot })),
+);
 
 const ROLE_ORDER: readonly Role[] = ["accel", "scatter", "shuffle", "sort", "queue"];
 

@@ -98,11 +98,8 @@ const startSize = projectedSpecSize(buildStartSpec(), "Start");
 const finishSize = projectedSpecSize(buildFinishSpec(), "Finish");
 
 function slotSize(slot: (typeof ARC)[number], selection: RoleSelection): ProjectedSize {
-  if (slot.kind === "start") {
-    return startSize;
-  }
-  if (slot.kind === "finish") {
-    return finishSize;
+  if (slot.kind !== "module") {
+    return slot.kind === "start" ? startSize : finishSize;
   }
   return projectedDefaultSize(selection[slot.role]);
 }

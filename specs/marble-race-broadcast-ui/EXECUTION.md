@@ -5,11 +5,11 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 3 — done
+- Current phase: 4 — in-progress
 - Phase 1 — React shell and setup: done
 - Phase 2 — Live broadcast race: done
 - Phase 3 — Terminal outcomes and audio: done
-- Phase 4 — Production routing and release: pending
+- Phase 4 — Production routing and release: in-progress
 - Verification debt: none
 
 ## Phase 1 — React shell and setup
@@ -109,7 +109,7 @@ Produces: production `index.html`/`src/main.tsx`; development `showcase.html`/`s
 
 Fresh review: not required
 
-- [ ] Update `src/main.tsx` and `index.html` so the production entry mounts `App` in React Strict Mode with no Showcase import or inline legacy presentation.
+- [x] Update `src/main.tsx` and `index.html` so the production entry mounts `App` in React Strict Mode with no Showcase import or inline legacy presentation.
 - [ ] Add `showcase.html` and `src/dev/showcase.tsx` for the existing React `Showcase`; keep `course.html`/`src/dev/coursePreview.tsx` as the Course review harness.
 - [ ] Update `vite.config.ts` and routing/build coverage so `index.html`, `showcase.html`, and `course.html` are named inputs and optimized entries under the existing relative asset base.
 - [ ] Finish `src/styles/app.css` responsive behavior: wide 16:9 Course-first composition, narrow Course/standings/minimap stack, usable 1-15 Roster screens, and no horizontal overflow.

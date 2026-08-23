@@ -1,11 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { Showcase } from "./showcase/Showcase";
+import { App } from "./app/App";
 
-// Phase 3 points the entry at the Showcase directly -- no router. Spec 4
-// decides real routing (setup screen, race, etc); see
-// specs/marble-race-rebuild/EXECUTION.md.
 const root = document.querySelector<HTMLDivElement>("#app");
 
 if (root === null) {
@@ -14,6 +11,6 @@ if (root === null) {
 
 createRoot(root).render(
   <StrictMode>
-    <Showcase />
+    <App />
   </StrictMode>,
 );

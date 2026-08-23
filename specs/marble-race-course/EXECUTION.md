@@ -192,7 +192,7 @@ snapshot: RaceSnapshot, viewportWorldWidth: number): CameraTargetState`,
 
 Fresh review: not required
 
-- [ ] Use `threejs-geometry`, `threejs-materials`, and `react-frontend-developer` before implementing this phase; add `src/course/render/Board.tsx` with a dark charcoal backstop and instanced visible-hole grid derived from `BoardSpec`, disposing replaced geometries through R3F-owned JSX children rather than imperative `geometry` props.
+- [x] Use `threejs-geometry`, `threejs-materials`, and `react-frontend-developer` before implementing this phase; add `src/course/render/Board.tsx` with a dark charcoal backstop and instanced visible-hole grid derived from `BoardSpec`, disposing replaced geometries through R3F-owned JSX children rather than imperative `geometry` props.
 - [ ] Add `src/course/render/CourseScene.tsx`: render every placed Module, connector, Start, Finish, marble, and kinematic transform from the materialized Course/`LiveRace`; do not rebuild Specs or feed changing transforms back through declarative `RigidBody` props on re-render.
 - [ ] Add `src/race/cameraTarget.ts` and `src/race/DecisiveCamera.tsx`: fixed face-on perspective rotation/FOV/distance sized to one largest bay, Board `x/y` pan only, damped hysteretic follow within one viewport, immediate cut beyond it, and no dynamic zoom.
 - [ ] Add `src/race/CourseMinimap.tsx`: accessible React SVG from Board bounds, Course route/checkpoints, and snapshot marble positions; show every marble and identify the decisive one by shape plus label, never color alone.

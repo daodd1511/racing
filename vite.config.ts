@@ -16,12 +16,13 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        showcase: resolve(ROOT_DIRECTORY, "index.html"),
+        index: resolve(ROOT_DIRECTORY, "index.html"),
+        showcase: resolve(ROOT_DIRECTORY, "showcase.html"),
         course: resolve(ROOT_DIRECTORY, "course.html"),
       },
     },
   },
   optimizeDeps: {
-    entries: ["index.html", "course.html"],
+    entries: ["index.html", "showcase.html", "course.html"],
   },
 });

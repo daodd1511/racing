@@ -1,0 +1,217 @@
+:root {
+  color: #edf3f5;
+  background: #12171c;
+  font-family: Figtree, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.course-preview {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background:
+    radial-gradient(circle at 8% 4%, rgb(216 255 66 / 18%), transparent 24rem),
+    linear-gradient(145deg, #182028, #10151a 56%, #1b252b);
+}
+
+.course-preview__header,
+.course-preview__controls,
+.course-preview__overview {
+  border: 1px solid #33414a;
+  border-radius: 0.75rem;
+  background: rgb(24 32 40 / 88%);
+}
+
+.course-preview__header {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.course-preview__eyebrow {
+  margin: 0 0 0.25rem;
+  color: #d8ff42;
+  font-family: "DM Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.course-preview h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.course-preview__status {
+  margin: 0;
+  color: #b9cbd2;
+  font-family: "DM Mono", monospace;
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+.course-preview__controls {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.course-preview__controls label {
+  display: grid;
+  flex: 0 1 13rem;
+  gap: 0.3rem;
+  color: #b9cbd2;
+  font-family: "DM Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.course-preview__controls input,
+.course-preview__controls select,
+.course-preview__controls button {
+  min-height: 2.5rem;
+  border: 1px solid #51616d;
+  border-radius: 0.4rem;
+  background: #11171c;
+  color: #edf3f5;
+  font: inherit;
+}
+
+.course-preview__controls input,
+.course-preview__controls select {
+  padding: 0 0.65rem;
+}
+
+.course-preview__controls button {
+  padding: 0 1rem;
+  border-color: #d8ff42;
+  background: #d8ff42;
+  color: #182028;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.course-preview__stage {
+  min-height: 32rem;
+  overflow: hidden;
+  border: 1px solid #465660;
+  border-radius: 0.75rem;
+  background: #12171c;
+}
+
+.course-preview__stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.course-preview__overview {
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+  padding: 0.8rem;
+}
+
+.course-minimap {
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.course-minimap__board {
+  fill: #202a30;
+  stroke: #697a83;
+  stroke-width: 0.8;
+}
+
+.course-minimap__route {
+  stroke: #d8ff42;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.8;
+}
+
+.course-minimap__checkpoint {
+  fill: #eef4ef;
+  stroke: #12171c;
+  stroke-width: 0.4;
+}
+
+.course-minimap__marble {
+  stroke: #10151a;
+  stroke-width: 0.5;
+}
+
+.course-minimap__marble--decisive {
+  stroke: #ffffff;
+  stroke-width: 0.75;
+}
+
+.course-minimap__decisive-label {
+  fill: #ffffff;
+  font-family: "DM Mono", monospace;
+  font-size: 3.2px;
+  paint-order: stroke;
+  stroke: #10151a;
+  stroke-width: 0.7px;
+}
+
+.course-preview__roster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-preview__roster li {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 0.35rem;
+  background: #11171c;
+  color: #d9e3e7;
+  font-size: 0.72rem;
+}
+
+.course-preview__roster span {
+  color: #d8ff42;
+  font-family: "DM Mono", monospace;
+}
+
+@media (width <= 50rem) {
+  .course-preview {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .course-preview__header,
+  .course-preview__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .course-preview__status {
+    text-align: left;
+  }
+
+  .course-preview__stage {
+    min-height: 26rem;
+  }
+}

@@ -12,6 +12,7 @@ export interface LiveRaceState {
 export interface LiveRaceProps {
   readonly course: Course;
   readonly request: RaceRequest;
+  readonly onSnapshot?: (snapshot: RaceSnapshot) => void;
   readonly onContact?: (event: RaceContactEvent) => void;
   readonly onOutcome?: (outcome: RaceOutcome) => void;
   readonly children?: (state: LiveRaceState) => ReactNode;
@@ -21,11 +22,19 @@ const EMPTY_RACE_STATE: LiveRaceState = Object.freeze({ snapshot: null, outcome:
 
 /** R3F child that owns only live Course progress. Persistence, audio, and
  * result UI remain consumers through callbacks. */
-export function LiveRace({ course, request, onContact, onOutcome, children }: LiveRaceProps) {
+export function LiveRace({
+  course,
+  request,
+  onSnapshot,
+  onContact,
+  onOutcome,
+  children,
+}: LiveRaceProps) {
   const [state, setState] = useState(EMPTY_RACE_STATE);
 
   function handleSnapshot(snapshot: RaceSnapshot): void {
     setState((previous) => Object.freeze({ ...previous, snapshot }));
+    onSnapshot?.(snapshot);
   }
 
   function handleContact(event: RaceContactEvent): void {

@@ -68,17 +68,19 @@ export function CoursePhysics({
     );
     backlogRef.current = advance.backlog;
     let latestSnapshot: RaceSnapshot | null = null;
+    let terminalOutcome: RaceOutcome | null = null;
     for (const elapsedSeconds of advance.stepTimes) {
       const step = runtime.step(elapsedSeconds);
       latestSnapshot = step.snapshot;
       step.contactEvents.forEach(callbacksRef.current.onContact);
       if (step.outcome && emittedOutcomeRef.current === null) {
         emittedOutcomeRef.current = step.outcome;
-        callbacksRef.current.onOutcome(step.outcome);
+        terminalOutcome = step.outcome;
         break;
       }
     }
     if (latestSnapshot) callbacksRef.current.onSnapshot(latestSnapshot);
+    if (terminalOutcome) callbacksRef.current.onOutcome(terminalOutcome);
   });
 
   return null;

@@ -114,7 +114,7 @@ Fresh review: not required
 - [x] Update `vite.config.ts` and routing/build coverage so `index.html`, `showcase.html`, and `course.html` are named inputs and optimized entries under the existing relative asset base.
 - [x] (amended 2026-08-23) Keep build-entry coverage in `src/` without importing the root Vite config, so the composite TypeScript project remains closed.
 - [x] Finish `src/styles/app.css` responsive behavior: wide 16:9 Course-first composition, narrow Course/standings/minimap stack, usable 1-15 Roster screens, and no horizontal overflow.
-- [ ] Delete superseded `src/ui/createSetupView.ts`, `src/ui/createSetupView.test.ts`, `src/ui/createResultDialog.ts`, and `src/ui/createResultDialog.test.ts`; remove unreferenced warm-arcade rules/assets and any root `ui-variant-*.html` files while retaining historical files under `specs/`.
+- [x] Delete superseded `src/ui/createSetupView.ts`, `src/ui/createSetupView.test.ts`, `src/ui/createResultDialog.ts`, and `src/ui/createResultDialog.test.ts`; remove unreferenced warm-arcade rules/assets and any root `ui-variant-*.html` files while retaining historical files under `specs/`.
 - [ ] Update `README.md` with the production React flow, development entry URLs, current live Course behavior, persistence/audio/watchdog semantics, and GitHub Pages verification steps.
 - [ ] Format phase-owned files and resolve workspace lint findings attributable to this phase.
 

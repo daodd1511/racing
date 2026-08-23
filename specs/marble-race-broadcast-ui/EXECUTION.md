@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — React shell and setup: in-progress
+- Current phase: 1 — done
+- Phase 1 — React shell and setup: done
 - Phase 2 — Live broadcast race: pending
 - Phase 3 — Terminal outcomes and audio: pending
 - Phase 4 — Production routing and release: pending
@@ -32,8 +32,8 @@ Fresh review: not required
 - [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`); Phase 1 files have no findings.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run <changed files from this phase diff>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run src/app/App.tsx src/app/App.test.tsx src/app/createRaceSeed.ts src/app/createRaceSeed.test.ts src/app/session.ts src/app/session.test.ts src/styles/app.css src/ui/AudioToggle.tsx src/ui/AudioToggle.test.tsx src/ui/SetupScreen.tsx src/ui/SetupScreen.test.tsx` (5 files, 16 tests passed)
 
 **Review checklist (user, at PR review):**
 - [ ] Open the setup screen at wide and narrow widths; paste 1, 5, and 15-name Rosters including duplicates, verify validation/count/copy, switch First/Last, toggle audio, and confirm a race request.

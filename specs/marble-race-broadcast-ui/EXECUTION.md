@@ -122,8 +122,8 @@ Fresh review: not required
 - [x] (amended 2026-08-23) Format the follow-camera additions and confirm `pnpm lint` has no findings attributable to the amended work. `pnpm lint` still reports only the pre-existing `src/course/assembleCourse.test.ts:47` error and unmodified `src/modules/render/ModuleColliders.tsx` warnings.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run <changed files from this phase diff>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run README.md index.html showcase.html specs/marble-race-broadcast-ui/EXECUTION.md specs/marble-race-broadcast-ui/PLAN.md src/dev/buildEntries.test.ts src/dev/coursePreview.test.tsx src/dev/showcase.tsx src/main.tsx src/race/DecisiveCamera.test.tsx src/race/DecisiveCamera.tsx src/race/cameraTarget.test.ts src/race/cameraTarget.ts src/styles/app.css vite.config.ts` (6 files, 20 tests passed)
 
 **Review checklist (user, at PR review):**
 - [ ] Open built production, Showcase, and Course pages; complete First/Last races at wide and narrow widths, refresh each URL, then confirm the deployed GitHub Pages production URL loads directly and after refresh.
@@ -133,4 +133,4 @@ Fresh review: not required
 ## Spec gate (hard — once, before the final phase's PR)
 
 - [ ] `pnpm test`
-- [ ] `pnpm build`
+- [x] `pnpm build`

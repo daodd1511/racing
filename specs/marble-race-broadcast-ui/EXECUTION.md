@@ -5,10 +5,10 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 3 — in-progress
+- Current phase: 3 — done
 - Phase 1 — React shell and setup: done
 - Phase 2 — Live broadcast race: done
-- Phase 3 — Terminal outcomes and audio: in-progress
+- Phase 3 — Terminal outcomes and audio: done
 - Phase 4 — Production routing and release: pending
 - Verification debt: none
 
@@ -76,7 +76,7 @@ Own the irreversible completed-record append and all recoverable terminal behavi
 Consumes: `App`; `AppSession`; `RaceOutcome`; `RaceSnapshot`; `RaceStore.appendCommittedRace(record: CommittedRaceRecord): PickerStateV1`; `RaceAudio`; `DEFAULT_RACE_CONFIG.resultLabel`; live callbacks from `BroadcastRace`.
 Produces: `RaceAudioContact`; updated `RaceAudio.playContact(event: RaceAudioContact): void`; `ResultPanel`; `WatchdogPanel`; completed-result and watchdog recovery flows.
 
-Fresh review: required — terminal-outcome idempotence protects durable local race-history writes
+Fresh review: required — terminal-outcome idempotence protects durable local race-history writes; completed 2026-08-23 with no P0-P2 findings.
 
 - [x] Update `src/audio/createRaceAudio.ts` and `src/audio/createRaceAudio.test.ts` to accept exported `RaceAudioContact { readonly impulse: number }`, forward live contacts, retain gesture-gated default mute/contact throttling, play one completed finish sting, and dispose deterministically.
 - [x] Remove `RecordedContactEvent` from `src/race/types.ts` and update every surviving consumer/test to the live audio contract.
@@ -90,8 +90,8 @@ Fresh review: required — terminal-outcome idempotence protects durable local r
 - [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`) and warnings in unmodified render files; Phase 3 files have no findings.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run <changed files from this phase diff>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run specs/marble-race-broadcast-ui/EXECUTION.md src/app/App.test.tsx src/app/App.tsx src/app/session.test.ts src/audio/createRaceAudio.test.ts src/audio/createRaceAudio.ts src/race/CoursePhysics.test.tsx src/race/CoursePhysics.tsx src/race/types.ts src/styles/app.css src/ui/BroadcastRace.test.tsx src/ui/BroadcastRace.tsx src/ui/ResultPanel.test.tsx src/ui/ResultPanel.tsx src/ui/WatchdogPanel.test.tsx src/ui/WatchdogPanel.tsx` (8 files, 30 tests passed)
 
 **Review checklist (user, at PR review):**
 - [ ] Complete First and Last races and verify immediate freeze, one finish sting, delayed reveal, one history record, result details, and **New race**; inject a watchdog and verify no record plus both recovery actions.

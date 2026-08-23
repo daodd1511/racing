@@ -101,7 +101,9 @@ export function reduceSession(session: AppSession, action: AppAction): AppSessio
         ? setupSession(action.roster, session.selectionMode)
         : session;
     case "set-selection-mode":
-      return session.kind === "setup" ? setupSession(session.roster, action.selectionMode) : session;
+      return session.kind === "setup"
+        ? setupSession(session.roster, action.selectionMode)
+        : session;
     case "start-race":
       return session.kind === "setup" ? racingSession(action.request, action.course) : session;
     case "complete-race":
@@ -128,7 +130,11 @@ export function reduceSession(session: AppSession, action: AppAction): AppSessio
         outcome: action.outcome,
       });
     case "show-result":
-      if (session.kind !== "result" || session.request.seed !== action.seed || session.revealVisible) {
+      if (
+        session.kind !== "result" ||
+        session.request.seed !== action.seed ||
+        session.revealVisible
+      ) {
         return session;
       }
       return Object.freeze({ ...session, revealVisible: true });

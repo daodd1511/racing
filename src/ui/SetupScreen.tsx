@@ -177,7 +177,12 @@ export function SetupScreen({
               />
             </div>
           </fieldset>
-          <p aria-live="polite" className="setup-screen__validation" id="roster-validation" role="status">
+          <p
+            aria-live="polite"
+            className="setup-screen__validation"
+            id="roster-validation"
+            role="status"
+          >
             {showValidation && !validRoster ? validationMessage : ""}
           </p>
           <button className="setup-screen__start" type="submit">

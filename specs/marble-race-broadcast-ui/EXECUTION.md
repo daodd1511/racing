@@ -29,7 +29,7 @@ Fresh review: not required
 - [x] Add `src/ui/SetupScreen.tsx`, `src/ui/SetupScreen.test.tsx`, `src/ui/AudioToggle.tsx`, and `src/ui/AudioToggle.test.tsx` for 1-15 normalized entries, duplicate-name preservation, saved First/Last selection, Clipboard copy, form confirmation, and the shell-owned mute control.
 - [x] Add `src/app/App.tsx` and `src/app/App.test.tsx`: load `PickerStateV1`, own store/audio/seed dependencies with Strict Mode-safe cleanup, persist normalized Roster and Selection Mode, compose the setup state, and enter a memoized seeded `RaceRequest`/`Course` session on confirmation.
 - [x] Replace the warm setup rules in `src/styles/app.css` with the initial dark broadcast shell and bundled DM Mono typography used by the React setup screen.
-- [ ] Format phase-owned files and resolve workspace lint findings attributable to this phase.
+- [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`); Phase 1 files have no findings.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`

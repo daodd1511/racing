@@ -55,7 +55,11 @@ const record: CommittedRaceRecord = Object.freeze({
 });
 
 function racingSession(): AppSession {
-  return reduceSession(createInitialSession(state), { kind: "start-race", request: request(), course });
+  return reduceSession(createInitialSession(state), {
+    kind: "start-race",
+    request: request(),
+    course,
+  });
 }
 
 describe("createInitialSession", () => {
@@ -77,7 +81,9 @@ describe("reduceSession", () => {
     const racing = racingSession();
 
     expect(setup).toEqual({ kind: "setup", roster: ["Casey", "Casey"], selectionMode: "first" });
-    expect(reduceSession(racing, { kind: "set-selection-mode", selectionMode: "last" })).toBe(racing);
+    expect(reduceSession(racing, { kind: "set-selection-mode", selectionMode: "last" })).toBe(
+      racing,
+    );
   });
 
   it("ignores terminal outcomes for a stale race", () => {

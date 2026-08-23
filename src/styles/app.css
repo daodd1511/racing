@@ -106,7 +106,9 @@ button {
   border-radius: 50%;
   background: #ff7662;
   content: "";
-  transition: transform 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
 }
 
 .audio-toggle input:checked + .audio-toggle__indicator::after {

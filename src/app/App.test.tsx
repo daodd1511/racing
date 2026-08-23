@@ -33,7 +33,10 @@ class MemoryRaceStore implements RaceStore {
   }
 
   appendCommittedRace(record: CommittedRaceRecord): PickerStateV1 {
-    this.state = Object.freeze({ ...this.state, history: Object.freeze([...this.state.history, record]) });
+    this.state = Object.freeze({
+      ...this.state,
+      history: Object.freeze([...this.state.history, record]),
+    });
     return this.state;
   }
 }
@@ -73,7 +76,9 @@ describe("App", () => {
     expect((screen.getByLabelText("Race Roster") as HTMLTextAreaElement).value).toBe(
       "Avery\nBlake",
     );
-    expect(screen.getByRole("radio", { name: /^Last finisher/ }).getAttribute("checked")).not.toBeNull();
+    expect(
+      screen.getByRole("radio", { name: /^Last finisher/ }).getAttribute("checked"),
+    ).not.toBeNull();
 
     await user.clear(screen.getByLabelText("Race Roster"));
     await user.type(screen.getByLabelText("Race Roster"), "Casey");
@@ -87,7 +92,12 @@ describe("App", () => {
     const user = userEvent.setup();
     const createCourse = vi.fn((seed: number) => Object.freeze({ seed }) as Course);
     render(
-      <App createAudio={createAudioMock} createCourse={createCourse} createSeed={() => 93} store={createStore()} />,
+      <App
+        createAudio={createAudioMock}
+        createCourse={createCourse}
+        createSeed={() => 93}
+        store={createStore()}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Start race" }));
@@ -113,6 +123,10 @@ describe("App", () => {
     unmount();
 
     expect(createAudio).toHaveBeenCalledTimes(2);
-    expect(audioInstances.every((audio) => (audio.dispose as ReturnType<typeof vi.fn>).mock.calls.length === 1)).toBe(true);
+    expect(
+      audioInstances.every(
+        (audio) => (audio.dispose as ReturnType<typeof vi.fn>).mock.calls.length === 1,
+      ),
+    ).toBe(true);
   });
 });

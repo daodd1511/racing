@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -30,18 +30,26 @@ const broadcastRuntime = vi.hoisted(() => ({
     finalRanking: Object.freeze([1, 0]),
     elapsedSeconds: 4.2,
   }),
+  watchdog: Object.freeze({
+    kind: "watchdog" as const,
+    seed: 93,
+    unfinishedMarbleIndices: Object.freeze([0]),
+    elapsedSeconds: 120,
+  }),
 }));
 
 vi.mock("../ui/BroadcastRace", () => ({
   BroadcastRace({
     request,
     snapshot,
+    frozen = false,
     onSnapshot,
     onContact,
     onOutcome,
   }: {
     readonly request: RaceRequest;
     readonly snapshot: RaceSnapshot | null;
+    readonly frozen?: boolean;
     readonly onSnapshot: (snapshot: RaceSnapshot) => void;
     readonly onContact: (event: RaceContactEvent) => void;
     readonly onOutcome: (outcome: RaceOutcome) => void;
@@ -58,19 +66,39 @@ vi.mock("../ui/BroadcastRace", () => ({
       onOutcome(broadcastRuntime.outcome);
     }
 
+    function emitDuplicateOutcomes(): void {
+      onOutcome(broadcastRuntime.outcome);
+      onOutcome(broadcastRuntime.outcome);
+    }
+
+    function emitWatchdog(): void {
+      onOutcome(broadcastRuntime.watchdog);
+    }
+
     return (
       <section aria-label="Mock live broadcast">
         <output>Race seed {request.seed}</output>
         <output>Race snapshot {snapshot?.elapsedSeconds ?? "pending"}</output>
-        <button onClick={emitSnapshot} type="button">
-          Emit race snapshot
-        </button>
-        <button onClick={emitContact} type="button">
-          Emit race contact
-        </button>
-        <button onClick={emitOutcome} type="button">
-          Emit race outcome
-        </button>
+        {frozen ? <output>Frozen race</output> : null}
+        {frozen ? null : (
+          <>
+            <button onClick={emitSnapshot} type="button">
+              Emit race snapshot
+            </button>
+            <button onClick={emitContact} type="button">
+              Emit race contact
+            </button>
+            <button onClick={emitOutcome} type="button">
+              Emit race outcome
+            </button>
+            <button onClick={emitDuplicateOutcomes} type="button">
+              Emit duplicate outcomes
+            </button>
+            <button onClick={emitWatchdog} type="button">
+              Emit watchdog
+            </button>
+          </>
+        )}
       </section>
     );
   },
@@ -128,6 +156,7 @@ function createStore(): MemoryRaceStore {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("App", () => {
@@ -192,11 +221,129 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
     await user.click(screen.getByRole("button", { name: "Emit race contact" }));
-    await user.click(screen.getByRole("button", { name: "Emit race outcome" }));
 
     expect(screen.getByText("Race snapshot 4.2")).toBeTruthy();
     expect(onRaceContact).toHaveBeenCalledWith(broadcastRuntime.contact);
+
+    await user.click(screen.getByRole("button", { name: "Emit race outcome" }));
+
     expect(onRaceOutcome).toHaveBeenCalledWith(broadcastRuntime.outcome);
+  });
+
+  it("commits and freezes one completed race before revealing its result", () => {
+    vi.useFakeTimers();
+    const store = createStore();
+    const appendCommittedRace = vi.spyOn(store, "appendCommittedRace");
+    const audio = createAudioMock();
+    render(
+      <StrictMode>
+        <App
+          createAudio={() => audio}
+          createCourse={(seed) => Object.freeze({ seed }) as Course}
+          createSeed={() => 93}
+          store={store}
+        />
+      </StrictMode>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Start race" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit race snapshot" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit race contact" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit duplicate outcomes" }));
+
+    expect(audio.playContact).toHaveBeenCalledWith({ impulse: 2 });
+    expect(appendCommittedRace).toHaveBeenCalledOnce();
+    expect(appendCommittedRace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        seed: 93,
+        selectedName: "Blake",
+        finishOrder: [1],
+        finalRanking: [1, 0],
+      }),
+    );
+    expect(audio.playFinish).toHaveBeenCalledOnce();
+    expect(screen.getByText("Frozen race")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Blake" })).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+
+    expect(screen.getByRole("heading", { name: "Blake" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "New race" }));
+
+    expect(screen.getByLabelText("Race Roster")).toBeTruthy();
+  });
+
+  it("keeps watchdog outcomes out of history and offers both recovery paths", async () => {
+    const user = userEvent.setup();
+    const store = createStore();
+    const appendCommittedRace = vi.spyOn(store, "appendCommittedRace");
+    const createCourse = vi.fn((seed: number) => Object.freeze({ seed }) as Course);
+    const seedValues = [93, 94];
+    render(
+      <App
+        createAudio={createAudioMock}
+        createCourse={createCourse}
+        createSeed={() => seedValues.shift() ?? 95}
+        store={store}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
+    await user.click(screen.getByRole("button", { name: "Emit watchdog" }));
+
+    expect(appendCommittedRace).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Race needs attention" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Retry race" }));
+    expect(createCourse).toHaveBeenLastCalledWith(94);
+    expect(screen.getByText("Race seed 94")).toBeTruthy();
+  });
+
+  it("returns a watchdog session to the saved setup without appending history", async () => {
+    const user = userEvent.setup();
+    const store = createStore();
+    const appendCommittedRace = vi.spyOn(store, "appendCommittedRace");
+    render(
+      <App
+        createAudio={createAudioMock}
+        createCourse={(seed) => Object.freeze({ seed }) as Course}
+        createSeed={() => 93}
+        store={store}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
+    await user.click(screen.getByRole("button", { name: "Emit watchdog" }));
+    await user.click(screen.getByRole("button", { name: "Back to setup" }));
+
+    expect(appendCommittedRace).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Race Roster")).toBeTruthy();
+  });
+
+  it("cancels a pending reveal when the app unmounts", () => {
+    vi.useFakeTimers();
+    const { unmount } = render(
+      <App
+        createAudio={createAudioMock}
+        createCourse={(seed) => Object.freeze({ seed }) as Course}
+        createSeed={() => 93}
+        store={createStore()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Start race" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit race snapshot" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit race outcome" }));
+    expect(vi.getTimerCount()).toBe(1);
+
+    unmount();
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("creates and disposes audio safely across Strict Mode remounts", () => {

@@ -1,14 +1,16 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 
 import { createRaceAudio, type RaceAudio } from "../audio/createRaceAudio";
 import { assembleCourse } from "../course/assembleCourse";
 import type { Course } from "../course/types";
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "../race/liveTypes";
-import type { SelectionMode } from "../race/types";
+import type { CommittedRaceRecord, SelectionMode } from "../race/types";
 import { createRaceStore, type RaceStore } from "../storage/raceStore";
 import { AudioToggle } from "../ui/AudioToggle";
 import { BroadcastRace } from "../ui/BroadcastRace";
+import { ResultPanel } from "../ui/ResultPanel";
 import { SetupScreen, type SetupRaceInput } from "../ui/SetupScreen";
+import { WatchdogPanel } from "../ui/WatchdogPanel";
 import "../styles/app.css";
 import { createRaceSeed, type RaceSeedSource } from "./createRaceSeed";
 import { createInitialSession, reduceSession } from "./session";
@@ -22,16 +24,51 @@ export interface AppProps {
   readonly onRaceOutcome?: (outcome: RaceOutcome) => void;
 }
 
+const RESULT_REVEAL_DELAY_MS = 800;
+
 function createBrowserStore(): RaceStore {
   return createRaceStore(window.localStorage);
 }
 
-function RaceReady({ request }: { readonly request: RaceRequest }) {
+function selectedName(request: RaceRequest, selectedMarbleIndex: number): string {
+  return request.roster[selectedMarbleIndex] ?? `Marble ${selectedMarbleIndex + 1}`;
+}
+
+function createCommittedRaceRecord({
+  request,
+  outcome,
+}: {
+  readonly request: RaceRequest;
+  readonly outcome: Extract<RaceOutcome, { readonly kind: "completed" }>;
+}): CommittedRaceRecord {
+  return Object.freeze({
+    seed: request.seed,
+    committedAtEpochMs: Date.now(),
+    roster: Object.freeze([...request.roster]),
+    selectionMode: request.selectionMode,
+    selectedMarbleIndex: outcome.selectedMarbleIndex,
+    selectedName: selectedName(request, outcome.selectedMarbleIndex),
+    finishOrder: Object.freeze([...outcome.finishOrder]),
+    finalRanking: Object.freeze([...outcome.finalRanking]),
+  });
+}
+
+function FrozenRace({
+  course,
+  request,
+  snapshot,
+  children,
+}: {
+  readonly course: Course;
+  readonly request: RaceRequest;
+  readonly snapshot: RaceSnapshot;
+  readonly children: ReactNode;
+}) {
   return (
-    <main className="app-shell__placeholder">
-      <p>Race session ready</p>
-      <strong>Seed {request.seed}</strong>
-    </main>
+    <div className="terminal-race">
+      <BroadcastRace course={course} frozen request={request} snapshot={snapshot} />
+      {children === null ? null : <div className="terminal-race__overlay">{children}</div>}
+    </div>
   );
 }
 
@@ -49,6 +86,8 @@ export function App({
   );
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<RaceAudio | null>(null);
+  const snapshotRef = useRef<RaceSnapshot | null>(null);
+  const terminalSeedRef = useRef<number | null>(null);
 
   useEffect(() => {
     const audio = createAudio();
@@ -62,6 +101,22 @@ export function App({
       }
     };
   }, [createAudio]);
+
+  useEffect(() => {
+    if (session.kind !== "result" || session.revealVisible) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      dispatch({ kind: "show-result", seed: session.request.seed });
+    }, RESULT_REVEAL_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [session]);
+
+  function resetRaceReferences(): void {
+    snapshotRef.current = null;
+    terminalSeedRef.current = null;
+  }
 
   function handleMutedChange(nextMuted: boolean): void {
     setMuted(nextMuted);
@@ -90,25 +145,78 @@ export function App({
     const course = createCourse(seed);
     store.saveRoster(request.roster);
     store.saveSettings({ selectionMode: request.selectionMode });
+    resetRaceReferences();
     dispatch({ kind: "start-race", request, course });
   }
 
   function handleSnapshot(snapshot: RaceSnapshot): void {
     if (session.kind === "racing") {
+      snapshotRef.current = snapshot;
       dispatch({ kind: "record-snapshot", seed: session.request.seed, snapshot });
     }
   }
 
   function handleContact(event: RaceContactEvent): void {
+    if (session.kind !== "racing") {
+      return;
+    }
+    audioRef.current?.playContact({ impulse: event.impulse });
     onRaceContact?.(event);
   }
 
   function handleOutcome(outcome: RaceOutcome): void {
+    const snapshot = snapshotRef.current;
+    if (
+      session.kind !== "racing" ||
+      outcome.seed !== session.request.seed ||
+      terminalSeedRef.current === outcome.seed ||
+      snapshot === null
+    ) {
+      return;
+    }
+
+    terminalSeedRef.current = outcome.seed;
     onRaceOutcome?.(outcome);
+    if (outcome.kind === "watchdog") {
+      dispatch({ kind: "fail-race", outcome, snapshot });
+      return;
+    }
+
+    const record = createCommittedRaceRecord({ request: session.request, outcome });
+    store.appendCommittedRace(record);
+    audioRef.current?.playFinish();
+    dispatch({ kind: "complete-race", outcome, snapshot, record });
   }
 
-  const content =
-    session.kind === "setup" ? (
+  function handleNewRace(): void {
+    resetRaceReferences();
+    dispatch({ kind: "return-to-setup" });
+  }
+
+  function handleRetryRace(): void {
+    if (session.kind !== "failed") {
+      return;
+    }
+
+    const seed = createSeed();
+    const request: RaceRequest = Object.freeze({
+      seed,
+      roster: Object.freeze([...session.request.roster]),
+      selectionMode: session.request.selectionMode,
+    });
+    const course = createCourse(seed);
+    resetRaceReferences();
+    dispatch({ kind: "retry-race", request, course });
+  }
+
+  function handleBackToSetup(): void {
+    resetRaceReferences();
+    dispatch({ kind: "return-to-setup" });
+  }
+
+  let content: ReactNode;
+  if (session.kind === "setup") {
+    content = (
       <SetupScreen
         onRosterChange={handleRosterChange}
         onSelectionModeChange={handleSelectionModeChange}
@@ -116,7 +224,9 @@ export function App({
         roster={session.roster}
         selectionMode={session.selectionMode}
       />
-    ) : session.kind === "racing" ? (
+    );
+  } else if (session.kind === "racing") {
+    content = (
       <BroadcastRace
         course={session.course}
         onContact={handleContact}
@@ -125,9 +235,34 @@ export function App({
         request={session.request}
         snapshot={session.snapshot}
       />
-    ) : (
-      <RaceReady request={session.request} />
     );
+  } else if (session.kind === "result") {
+    content = (
+      <FrozenRace course={session.course} request={session.request} snapshot={session.snapshot}>
+        {session.revealVisible ? (
+          <ResultPanel
+            finalRanking={session.record.finalRanking}
+            finishOrder={session.record.finishOrder}
+            onNewRace={handleNewRace}
+            request={session.request}
+            selectedMarbleIndex={session.record.selectedMarbleIndex}
+            snapshot={session.snapshot}
+          />
+        ) : null}
+      </FrozenRace>
+    );
+  } else {
+    content = (
+      <FrozenRace course={session.course} request={session.request} snapshot={session.snapshot}>
+        <WatchdogPanel
+          onBackToSetup={handleBackToSetup}
+          onRetryRace={handleRetryRace}
+          outcome={session.outcome}
+          request={session.request}
+        />
+      </FrozenRace>
+    );
+  }
 
   return (
     <div className="app-shell">

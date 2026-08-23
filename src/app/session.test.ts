@@ -122,6 +122,14 @@ describe("reduceSession", () => {
       kind: "result",
       revealVisible: true,
     });
+    expect(
+      reduceSession(result, {
+        kind: "complete-race",
+        outcome: completedOutcome,
+        snapshot,
+        record,
+      }),
+    ).toBe(result);
   });
 
   it("requires a new matching request when retrying a watchdog race", () => {

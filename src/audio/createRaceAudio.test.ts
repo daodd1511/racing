@@ -46,7 +46,7 @@ describe("createRaceAudio", () => {
     vi.stubGlobal("window", { AudioContext: Constructor });
     const audio = createRaceAudio();
 
-    audio.playContact({ frameIndex: 0, simulationTimeSeconds: 0, marbleIndices: [0], impulse: 3 });
+    audio.playContact({ impulse: 3 });
     expect(Constructor).not.toHaveBeenCalled();
 
     await audio.setMuted(false);
@@ -66,13 +66,8 @@ describe("createRaceAudio", () => {
     const audio = createRaceAudio();
     await audio.setMuted(false);
 
-    audio.playContact({ frameIndex: 0, simulationTimeSeconds: 0, marbleIndices: [0], impulse: 1 });
-    audio.playContact({
-      frameIndex: 1,
-      simulationTimeSeconds: 0.01,
-      marbleIndices: [0],
-      impulse: 5,
-    });
+    audio.playContact({ impulse: 1 });
+    audio.playContact({ impulse: 5 });
     audio.playFinish();
 
     expect(context.createOscillator).toHaveBeenCalledTimes(3);

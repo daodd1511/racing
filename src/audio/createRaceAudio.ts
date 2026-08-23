@@ -1,9 +1,11 @@
-import type { RecordedContactEvent } from "../race/types";
+export interface RaceAudioContact {
+  readonly impulse: number;
+}
 
 export interface RaceAudio {
   isMuted(): boolean;
   setMuted(muted: boolean): Promise<void>;
-  playContact(event: RecordedContactEvent): void;
+  playContact(event: RaceAudioContact): void;
   playFinish(): void;
   dispose(): void;
 }

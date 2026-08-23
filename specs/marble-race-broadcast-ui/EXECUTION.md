@@ -5,10 +5,10 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — in-progress
 - Phase 1 — React shell and setup: done
 - Phase 2 — Live broadcast race: done
-- Phase 3 — Terminal outcomes and audio: pending
+- Phase 3 — Terminal outcomes and audio: in-progress
 - Phase 4 — Production routing and release: pending
 - Verification debt: none
 
@@ -78,7 +78,7 @@ Produces: `RaceAudioContact`; updated `RaceAudio.playContact(event: RaceAudioCon
 
 Fresh review: required — terminal-outcome idempotence protects durable local race-history writes
 
-- [ ] Update `src/audio/createRaceAudio.ts` and `src/audio/createRaceAudio.test.ts` to accept exported `RaceAudioContact { readonly impulse: number }`, forward live contacts, retain gesture-gated default mute/contact throttling, play one completed finish sting, and dispose deterministically.
+- [x] Update `src/audio/createRaceAudio.ts` and `src/audio/createRaceAudio.test.ts` to accept exported `RaceAudioContact { readonly impulse: number }`, forward live contacts, retain gesture-gated default mute/contact throttling, play one completed finish sting, and dispose deterministically.
 - [ ] Remove `RecordedContactEvent` from `src/race/types.ts` and update every surviving consumer/test to the live audio contract.
 - [ ] Add `src/ui/ResultPanel.tsx` and `src/ui/ResultPanel.test.tsx` with configured Result Label, selected name/style, seed, Selection Mode, elapsed simulation time, observed final order, and **New race**.
 - [ ] Add `src/ui/WatchdogPanel.tsx` and `src/ui/WatchdogPanel.test.tsx` with seed, elapsed time, unfinished names, **Retry race** using a new seed, and **Back to setup**, with no result language or history append.

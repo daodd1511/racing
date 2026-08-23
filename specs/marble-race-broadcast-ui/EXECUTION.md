@@ -5,9 +5,9 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done
 - Phase 1 — React shell and setup: done
-- Phase 2 — Live broadcast race: in-progress
+- Phase 2 — Live broadcast race: done
 - Phase 3 — Terminal outcomes and audio: pending
 - Phase 4 — Production routing and release: pending
 - Verification debt: none
@@ -59,8 +59,8 @@ Fresh review: not required
 - [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`) and warnings in unmodified solver/render files; Phase 2 files have no findings.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck`
-- [ ] `pnpm exec vitest related --run <changed files from this phase diff>`
+- [x] `pnpm typecheck`
+- [x] `pnpm exec vitest related --run specs/marble-race-broadcast-ui/EXECUTION.md src/app/App.test.tsx src/app/App.tsx src/app/session.test.ts src/app/session.ts src/styles/app.css src/ui/BroadcastRace.test.tsx src/ui/BroadcastRace.tsx src/ui/Standings.test.tsx src/ui/Standings.tsx` (4 files, 19 tests passed)
 
 **Review checklist (user, at PR review):**
 - [ ] Run 5- and 15-marble races in First and Last modes; compare the decisive camera, minimap marker, standings order, checkpoint progress, and latest split throughout each race.

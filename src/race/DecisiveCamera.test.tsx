@@ -33,10 +33,10 @@ const BOARD: BoardSpec = Object.freeze({
   bounds: Object.freeze({ min: [-2, -2, -0.5] as const, max: [2, 2, 0.5] as const }),
 });
 
-function snapshotAt(x: number, y: number): RaceSnapshot {
+function snapshotAt(x: number, y: number, z = 0): RaceSnapshot {
   return {
     elapsedSeconds: 1,
-    marbleTransforms: [{ marbleIndex: 0, position: [x, y, 0], rotation: [0, 0, 0, 1] }],
+    marbleTransforms: [{ marbleIndex: 0, position: [x, y, z], rotation: [0, 0, 0, 1] }],
     ranking: [0],
     decisiveMarbleIndex: 0,
     passedCheckpoints: [0],
@@ -59,23 +59,48 @@ afterEach(() => {
 });
 
 describe("DecisiveCamera", () => {
-  it("follows directly above the decisive marble with a straight-down view", () => {
+  it("chases behind and above the decisive marble while looking forward and down", () => {
     const camera = new THREE.PerspectiveCamera();
     const viewDirection = new THREE.Vector3();
     cameraRuntime.camera = camera;
     const view = render(<DecisiveCamera board={BOARD} snapshot={snapshotAt(0, 0)} />);
     advanceCamera(1 / 60);
 
-    view.rerender(<DecisiveCamera board={BOARD} snapshot={snapshotAt(1, -1)} />);
+    view.rerender(<DecisiveCamera board={BOARD} snapshot={snapshotAt(1, 0)} />);
     advanceCamera(1);
 
     expect(camera.fov).toBe(40);
-    expect(camera.position.x).toBeGreaterThan(0.5);
-    expect(camera.position.y).toBeLessThan(-0.5);
-    expect(camera.position.z).toBeGreaterThan(0);
+    expect(camera.position.x).toBeGreaterThan(0.9);
+    expect(camera.position.y).toBeCloseTo(1.8, 5);
+    expect(camera.position.z).toBeCloseTo(0.5, 5);
+    expect(camera.up.toArray()).toEqual([0, 1, 0]);
     camera.getWorldDirection(viewDirection);
     expect(viewDirection.x).toBeCloseTo(0, 5);
-    expect(viewDirection.y).toBeCloseTo(0, 5);
-    expect(viewDirection.z).toBeCloseTo(-1, 5);
+    expect(viewDirection.y).toBeLessThan(-0.5);
+    expect(viewDirection.z).toBeLessThan(-0.1);
+    expect(Math.abs(viewDirection.y)).toBeGreaterThan(Math.abs(viewDirection.x) * 2);
+    expect(Math.abs(viewDirection.y)).toBeGreaterThan(Math.abs(viewDirection.z) * 2);
+  });
+
+  it("keeps its heading stable through tiny marble movement", () => {
+    const camera = new THREE.PerspectiveCamera();
+    const initialDirection = new THREE.Vector3();
+    const jitteredDirection = new THREE.Vector3();
+    cameraRuntime.camera = camera;
+    const view = render(<DecisiveCamera board={BOARD} snapshot={snapshotAt(0, 0)} />);
+    advanceCamera(1 / 60);
+    camera.getWorldDirection(initialDirection);
+
+    for (const [x, y] of [
+      [0.001, -0.001],
+      [-0.001, 0.001],
+      [0.002, -0.002],
+    ] as const) {
+      view.rerender(<DecisiveCamera board={BOARD} snapshot={snapshotAt(x, y)} />);
+      advanceCamera(1 / 60);
+    }
+
+    camera.getWorldDirection(jitteredDirection);
+    expect(jitteredDirection.angleTo(initialDirection)).toBeCloseTo(0, 8);
   });
 });

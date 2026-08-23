@@ -93,8 +93,11 @@ review harness remain independently accessible development routes.
   completes the race. In `last` mode the trailing unfinished marble is decisive
   and the final finite Finish crossing completes the race.
 - The decisive camera and minimap continue to consume the same snapshot. The
-  camera stays directly above the decisive marble in a north-up view and
-  follows it through the Course instead of holding a side-of-track overview.
+  camera uses an elevated third-person chase view above the track and behind
+  the decisive marble, uses a stable downhill Course heading instead of noisy
+  frame-to-frame velocity, and keeps both the channel surface and nearby marble
+  pack visible without becoming either a lateral side view or a straight
+  vertical view.
 - The 120-second watchdog remains a failure ceiling, not a selection fallback.
 
 ## Application architecture

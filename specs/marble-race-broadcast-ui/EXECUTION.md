@@ -107,7 +107,7 @@ Promote the completed React picker to production while preserving both developme
 Consumes: `App`; `SetupScreen`; `BroadcastRace`; `ResultPanel`; `WatchdogPanel`; `Showcase`; `CoursePreview`.
 Produces: production `index.html`/`src/main.tsx`; development `showcase.html`/`src/dev/showcase.tsx`; three-entry relative-base Vite build.
 
-Fresh review: not required
+Fresh review: required — the camera behavior required two correction attempts; initial review and re-review completed 2026-08-23, and the final P2 test gap was corrected after user direction once the review cap was reached
 
 - [x] Update `src/main.tsx` and `index.html` so the production entry mounts `App` in React Strict Mode with no Showcase import or inline legacy presentation.
 - [x] Add `showcase.html` and `src/dev/showcase.tsx` for the existing React `Showcase`; keep `course.html`/`src/dev/coursePreview.tsx` as the Course review harness.
@@ -117,6 +117,7 @@ Fresh review: not required
 - [x] (amended 2026-08-23) Update `src/styles/app.css` so the live and frozen Course fill the racing viewport, while an overlaid side rail keeps the minimap and internally scrolling 1–15-row standings visible without shrinking the Course.
 - [x] (amended 2026-08-23) Update `src/race/DecisiveCamera.tsx`, `src/race/cameraTarget.ts`, and their tests so the camera smoothly follows the same decisive marble used by the standings/minimap rather than holding a side-of-track view.
 - [x] (amended 2026-08-23) Correct `src/race/DecisiveCamera.tsx` and `src/race/DecisiveCamera.test.tsx` to keep a north-up camera directly above the decisive marble, smooth its planar follow, and verify the view axis points straight down instead of trailing beside the Course. Confirmed in the live production entry with a 15-marble race.
+- [x] (amended 2026-08-23) Correct `src/race/DecisiveCamera.tsx` and `src/race/DecisiveCamera.test.tsx` to use an elevated third-person chase view above the track and behind the decisive marble, keep a stable downhill Course heading that cannot amplify physics jitter, and verify a meaningful trail plus a dominant downward and smaller nonzero depth component. A live 15-marble race confirmed stable framing through leader changes.
 - [x] Delete superseded `src/ui/createSetupView.ts`, `src/ui/createSetupView.test.ts`, `src/ui/createResultDialog.ts`, and `src/ui/createResultDialog.test.ts`; remove unreferenced warm-arcade rules/assets and any root `ui-variant-*.html` files while retaining historical files under `specs/`.
 - [x] Update `README.md` with the production React flow, development entry URLs, current live Course behavior, persistence/audio/watchdog semantics, and GitHub Pages verification steps.
 - [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`) and warnings in unmodified `src/modules/render/ModuleColliders.tsx`; Phase 4 files have no findings.
@@ -126,6 +127,7 @@ Fresh review: not required
 - [x] `pnpm typecheck`
 - [x] `pnpm exec vitest related --run README.md index.html showcase.html specs/marble-race-broadcast-ui/EXECUTION.md specs/marble-race-broadcast-ui/PLAN.md src/dev/buildEntries.test.ts src/dev/coursePreview.test.tsx src/dev/showcase.tsx src/main.tsx src/race/DecisiveCamera.test.tsx src/race/DecisiveCamera.tsx src/race/cameraTarget.test.ts src/race/cameraTarget.ts src/styles/app.css vite.config.ts` (6 files, 20 tests passed)
 - [x] (amended 2026-08-23) Re-run the Phase 4 typecheck and dependency-aware tests after the overhead-camera correction (`pnpm typecheck`; 6 files and 20 tests passed).
+- [x] (amended 2026-08-23) Re-run the Phase 4 typecheck and dependency-aware tests after stabilizing the third-person camera (`pnpm typecheck`; 6 files and 21 tests passed).
 
 **Review checklist (user, at PR review):**
 - [ ] Open built production, Showcase, and Course pages; complete First/Last races at wide and narrow widths, refresh each URL, then confirm the deployed GitHub Pages production URL loads directly and after refresh.
@@ -137,3 +139,4 @@ Fresh review: not required
 - [ ] `pnpm test`
 - [x] `pnpm build`
 - [x] (amended 2026-08-23) Re-run `pnpm build` after the overhead-camera correction.
+- [x] (amended 2026-08-23) Re-run `pnpm build` after stabilizing the third-person camera.

@@ -218,6 +218,7 @@ function buildSpec(params: StaircaseParams): Spec {
     tangent: channel.exit.tangent,
     up: channel.exit.up,
   };
+  const route = [...channel.route, exit.position];
 
   return {
     colliders,
@@ -228,6 +229,7 @@ function buildSpec(params: StaircaseParams): Spec {
       cells: [],
       entry: channel.entry,
       exit,
+      route,
       bounds: { min, max },
     },
   };

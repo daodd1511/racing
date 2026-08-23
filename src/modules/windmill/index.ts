@@ -248,7 +248,13 @@ function buildSpec(params: WindmillParams): Spec {
   return {
     colliders,
     visuals,
-    footprint: { cells: [], entry: channel.entry, exit: channel.exit, bounds: { min, max } },
+    footprint: {
+      cells: [],
+      entry: channel.entry,
+      exit: channel.exit,
+      route: channel.route,
+      bounds: { min, max },
+    },
   };
 }
 

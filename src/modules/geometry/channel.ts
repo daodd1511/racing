@@ -1,6 +1,11 @@
-import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
+import {
+  Matrix4 as ThreeMatrix4,
+  Quaternion as ThreeQuaternion,
+  Vector3 as ThreeVector3,
+} from "three";
 
 import type { Quaternion, Vector3 } from "../../race/types";
+import { SCALE } from "../../race/scale";
 import type { Anchor, ColliderMaterial, ColliderSpec, Footprint, VisualSpec } from "../types";
 
 // The shared floor-plus-rails geometry every straight-run Module in the
@@ -23,6 +28,13 @@ export interface ChannelSegment {
   readonly start: Vector3;
   readonly end: Vector3;
   readonly width: number;
+  /** Optional preferred local-up direction. When provided, the channel
+   * frame keeps width perpendicular to both this hint and travel instead of
+   * accepting the arbitrary roll of a shortest-arc +Z rotation. */
+  readonly up?: Vector3;
+  /** Optional full rail height for infrastructure that needs a speed-derived
+   * containment wall. Modules retain the shared default when omitted. */
+  readonly railHeight?: number;
 }
 
 export interface ChannelParts {
@@ -30,6 +42,7 @@ export interface ChannelParts {
   readonly visuals: readonly VisualSpec[];
   readonly entry: Anchor;
   readonly exit: Anchor;
+  readonly route: readonly Vector3[];
   readonly bounds: Footprint["bounds"];
 }
 
@@ -38,7 +51,7 @@ export interface ChannelParts {
 // profile unless a future Module has a documented reason to differ.
 export const FLOOR_THICKNESS = 0.01;
 export const RAIL_THICKNESS = 0.006;
-export const RAIL_HEIGHT = 0.03;
+export const RAIL_HEIGHT = SCALE.marbleRadius * 6;
 
 // Glossy injection-moulded plastic, per PLAN.md -> "Art direction" -- the
 // same colors the chute shipped with, now the channel's own defaults rather
@@ -123,9 +136,13 @@ export function buildChannel(
 
   let entry: Anchor | undefined;
   let exit: Anchor | undefined;
+  const route: Vector3[] = [];
 
   segments.forEach((segment, index) => {
-    const { start, end, width } = segment;
+    const { start, end, width, railHeight = RAIL_HEIGHT } = segment;
+    if (!Number.isFinite(railHeight) || railHeight <= 0) {
+      throw new Error("buildChannel: railHeight must be positive and finite");
+    }
     const startVector = new ThreeVector3(...start);
     const endVector = new ThreeVector3(...end);
     const delta = endVector.clone().sub(startVector);
@@ -134,11 +151,23 @@ export function buildChannel(
       throw new Error("buildChannel: zero-length segment");
     }
 
-    const pitch = new ThreeQuaternion().setFromUnitVectors(
-      new ThreeVector3(0, 0, 1),
-      delta.clone().normalize(),
-    );
-    const tangent = new ThreeVector3(0, 0, 1).applyQuaternion(pitch).normalize();
+    const tangent = delta.clone().normalize();
+    const pitch = (() => {
+      if (!segment.up) {
+        return new ThreeQuaternion().setFromUnitVectors(new ThreeVector3(0, 0, 1), tangent);
+      }
+      const upHint = new ThreeVector3(...segment.up).normalize();
+      const lateral = upHint.clone().cross(tangent);
+      if (lateral.lengthSq() < 1e-12) {
+        lateral.set(0, 0, 1);
+      } else {
+        lateral.normalize();
+      }
+      const correctedUp = tangent.clone().cross(lateral).normalize();
+      return new ThreeQuaternion().setFromRotationMatrix(
+        new ThreeMatrix4().makeBasis(lateral, correctedUp, tangent),
+      );
+    })();
     const up = new ThreeVector3(0, 1, 0).applyQuaternion(pitch).normalize();
 
     const floorCenter = startVector.clone().add(endVector).multiplyScalar(0.5);
@@ -174,14 +203,14 @@ export function buildChannel(
       const railCenter = floorCenter
         .clone()
         .add(new ThreeVector3(side * lateral, 0, 0).applyQuaternion(pitch))
-        .add(up.clone().multiplyScalar(RAIL_HEIGHT / 2));
+        .add(up.clone().multiplyScalar(railHeight / 2));
       const railId = segmentId(
         idPrefix,
         side < 0 ? "rail-left" : "rail-right",
         index,
         segments.length,
       );
-      const railHalfExtents: Vector3 = [RAIL_THICKNESS / 2, RAIL_HEIGHT / 2, segmentLength / 2];
+      const railHalfExtents: Vector3 = [RAIL_THICKNESS / 2, railHeight / 2, segmentLength / 2];
       const railShape = { kind: "cuboid" as const, halfExtents: railHalfExtents };
 
       colliders.push({
@@ -189,7 +218,7 @@ export function buildChannel(
         shape: railShape,
         position: toVector(railCenter),
         rotation: toQuaternion(pitch),
-        material,
+        material: { ...material, friction: 0 },
       });
       visuals.push({
         id: railId,
@@ -207,10 +236,17 @@ export function buildChannel(
     if (index === segments.length - 1) {
       exit = { position: toVector(endVector), tangent: toVector(tangent), up: toVector(up) };
     }
+
+    const routeStart = toVector(startVector);
+    const previous = route.at(-1);
+    if (previous?.some((coordinate, axis) => coordinate !== routeStart[axis]) ?? true) {
+      route.push(routeStart);
+    }
+    route.push(toVector(endVector));
   });
 
   // Always assigned: the loop above runs at least once (the length-0 guard
   // above already rejected an empty `segments`) and sets `entry` on its
   // first iteration and `exit` on its last.
-  return { colliders, visuals, entry: entry!, exit: exit!, bounds: { min, max } };
+  return { colliders, visuals, entry: entry!, exit: exit!, route, bounds: { min, max } };
 }

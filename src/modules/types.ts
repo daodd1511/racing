@@ -40,6 +40,10 @@ export interface Footprint {
   readonly cells: readonly Cell[];
   readonly entry: Anchor;
   readonly exit: Anchor;
+  /** Ordered local-space centreline from `entry` to `exit`. Progress,
+   * connectivity checks, and the minimap all consume this same path rather
+   * than reconstructing one from rendered geometry. */
+  readonly route: readonly Vector3[];
   readonly bounds: { readonly min: Vector3; readonly max: Vector3 };
 }
 
@@ -81,6 +85,9 @@ export interface ColliderSpec {
   /** A position-based kinematic body. Omitted or false keeps the collider
    * fixed in both the live R3F world and the headless Validator. */
   readonly kinematic?: boolean;
+  /** Finite overlap detector consumed by Course worlds. Module colliders
+   * omit it and remain solid. */
+  readonly sensor?: boolean;
   /** Optional pure motion data for a kinematic collider. The shared Module
    * `step` reads it from the Spec rather than retaining runtime state. */
   readonly motion?: KinematicRotationMotion;

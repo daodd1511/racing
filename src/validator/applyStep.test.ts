@@ -37,6 +37,10 @@ const spec: Spec = {
     cells: [],
     entry: { position: [0, 0, 0], tangent: [0, 0, 1], up: [0, 1, 0] },
     exit: { position: [0, 0, 1], tangent: [0, 0, 1], up: [0, 1, 0] },
+    route: [
+      [0, 0, 0],
+      [0, 0, 1],
+    ],
     bounds: { min: [-1, -1, -1], max: [1, 1, 1] },
   },
 };
@@ -64,12 +68,13 @@ describe("applyStep", () => {
     expectTupleClose([translation.x, translation.y, translation.z], transform.position);
     expectTupleClose([rotation.x, rotation.y, rotation.z, rotation.w], transform.rotation);
 
-    const translations: number[][] = [];
-    builtWorld.world.forEachRigidBody((body) => {
-      const fixedTranslation = body.translation();
-      translations.push([fixedTranslation.x, fixedTranslation.y, fixedTranslation.z]);
-    });
-    expect(translations).toContainEqual([0.75, 0, 0]);
+    const fixed = builtWorld.colliders.get("fixed");
+    expect(fixed).toBeDefined();
+    const fixedTranslation = fixed?.translation();
+    expectTupleClose(
+      fixedTranslation ? [fixedTranslation.x, fixedTranslation.y, fixedTranslation.z] : [],
+      [0.75, 0, 0],
+    );
 
     builtWorld.world.free();
   });

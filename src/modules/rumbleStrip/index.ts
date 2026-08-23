@@ -2,7 +2,7 @@ import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import { SCALE } from "../../race/scale";
 import type { Quaternion, Vector3 } from "../../race/types";
-import { buildChannel, FLOOR_THICKNESS, RAIL_THICKNESS } from "../geometry/channel";
+import { buildChannel, FLOOR_THICKNESS } from "../geometry/channel";
 import type {
   ColliderSpec,
   ModuleDefinition,
@@ -205,7 +205,7 @@ function buildSpec(params: RumbleStripParams): Spec {
   );
   const colliders: ColliderSpec[] = [...channel.colliders];
   const visuals: VisualSpec[] = [...channel.visuals];
-  const { entry, exit, bounds } = channel;
+  const { entry, exit, route, bounds } = channel;
 
   // Recomputed rather than exposed by `buildChannel` -- see pinField's
   // identical comment on why: bars need the same per-segment frame the
@@ -218,14 +218,11 @@ function buildSpec(params: RumbleStripParams): Spec {
   );
   const floorCenter = startVector.clone().add(endVector).multiplyScalar(0.5);
   const barMaterial = { restitution, friction: BAR_FRICTION };
-  // Full width, edge to edge against the rails (per OBSTACLE-IDEAS'
-  // "spanning the full bed width"), not stopping a marble radius short:
-  // a gap there put a marble spawned near a rail on the bar's own corner
-  // instead of its flat middle, and a corner contact snagged a multi-marble
-  // sweep even where the same Module cleared every seed at one marble --
-  // see rumbleStrip.test.ts's comment on the seed sweep this fixed.
+  // Leave a three-radius bypass beside each rail. A narrower gap lets a
+  // packed marble bridge the bar end and rail, creating a stable concave
+  // pocket even though isolated validation clears the same bar.
   const barHalfExtents: Vector3 = [
-    SCALE.channelWidth / 2 - RAIL_THICKNESS,
+    SCALE.channelWidth / 2 - SCALE.marbleRadius * 3,
     barHeight / 2,
     BAR_THICKNESS / 2,
   ];
@@ -286,6 +283,7 @@ function buildSpec(params: RumbleStripParams): Spec {
       cells: [],
       entry,
       exit,
+      route,
       bounds: { min, max },
     },
   };

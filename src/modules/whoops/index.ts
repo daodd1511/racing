@@ -29,7 +29,7 @@ export interface WhoopsParams {
 const DEFAULT_PARAMS: WhoopsParams = Object.freeze({
   // The old design's 0.3 m / 20 m dimensions scaled to this project's
   // 22:1 toy scale: a 14 mm wave across four 30 cm humps.
-  amplitude: 0.014,
+  amplitude: 0.006,
   wavelength: 0.3,
   length: 1.2,
   grade: 0.55,
@@ -102,7 +102,7 @@ const MAX_SAGITTA_FRACTION_OF_MARBLE_RADIUS = 0.25;
 // do not create collision plates at a visual segment count without a physics
 // reason for each one.
 const COLLIDER_SEGMENTS_REQUEST = 1;
-const FLOOR_MATERIAL = { restitution: 0.1, friction: 0.06 };
+const FLOOR_MATERIAL = { restitution: 0.1, friction: 0 };
 const FLOOR_VISUAL_MATERIAL = { color: "#5b8cff", metalness: 0.08, roughness: 0.24 };
 
 function cuboidCorners(collider: ColliderSpec): ThreeVector3[] {
@@ -225,6 +225,7 @@ function buildSpec(params: WhoopsParams): Spec {
       cells: [],
       entry: railChannel.entry,
       exit: railChannel.exit,
+      route: centreline,
       bounds: boundsFor(colliders),
     },
   };

@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 
-import { createSeededRandom, shuffleStartSlots } from "./random";
+import { createSeededRandom, deriveRaceSeed, shuffleStartSlots } from "./random";
+
+describe("deriveRaceSeed", () => {
+  it("reproduces each tagged seed and separates the tags", () => {
+    expect(deriveRaceSeed(42, "course")).toBe(deriveRaceSeed(42, "course"));
+    expect(deriveRaceSeed(42, "start")).toBe(deriveRaceSeed(42, "start"));
+    expect(deriveRaceSeed(42, "course")).not.toBe(deriveRaceSeed(42, "start"));
+  });
+
+  it("keeps Start draws isolated from Course draws", () => {
+    const seed = 0xdecafbad;
+    const course = createSeededRandom(deriveRaceSeed(seed, "course"));
+    const expectedStart = createSeededRandom(deriveRaceSeed(seed, "start"));
+    const actualStart = createSeededRandom(deriveRaceSeed(seed, "start"));
+
+    for (let draw = 0; draw < 100; draw += 1) {
+      course();
+    }
+
+    expect([actualStart(), actualStart(), actualStart()]).toEqual([
+      expectedStart(),
+      expectedStart(),
+      expectedStart(),
+    ]);
+  });
+});
 
 describe("createSeededRandom", () => {
   it("reproduces a stream for the same seed", () => {

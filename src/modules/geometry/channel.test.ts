@@ -47,6 +47,10 @@ describe("buildChannel", () => {
 
     expect(parts.colliders.map((c) => c.id).sort()).toEqual(["floor", "rail-left", "rail-right"]);
     expect(parts.visuals.map((v) => v.id).sort()).toEqual(["floor", "rail-left", "rail-right"]);
+    expect(parts.route).toEqual([
+      [0, 0, 0],
+      [0, -drop, length],
+    ]);
 
     const floor = parts.colliders.find((c) => c.id === "floor")!;
     expect(floor.shape.kind).toBe("cuboid");
@@ -115,6 +119,7 @@ describe("buildChannel", () => {
 
     expect(gap).toBeLessThan(SCALE.marbleRadius);
     expect(gapStart1).toBeLessThan(SCALE.marbleRadius);
+    expect(parts.route).toEqual([[0, 0, 0], joint, [0, -0.3, 1.2]]);
   });
 
   it("entry/exit tangents and ups are unit vectors", () => {
@@ -128,6 +133,24 @@ describe("buildChannel", () => {
     expect(magnitude(parts.entry.up)).toBeCloseTo(1, 10);
     expect(magnitude(parts.exit.tangent)).toBeCloseTo(1, 10);
     expect(magnitude(parts.exit.up)).toBeCloseTo(1, 10);
+  });
+
+  it("keeps each segment centreline point when physical joints overlap", () => {
+    const parts = buildChannel(
+      [
+        { start: [0, 0, 0], end: [0, -0.1, 0.65], width: 0.5 },
+        { start: [0, -0.1, 0.55], end: [0.2, -0.2, 1.2], width: 0.5 },
+      ],
+      MATERIAL,
+      "overlap",
+    );
+
+    expect(parts.route).toEqual([
+      [0, 0, 0],
+      [0, -0.1, 0.65],
+      [0, -0.1, 0.55],
+      [0.2, -0.2, 1.2],
+    ]);
   });
 
   it("rejects a zero-length segment", () => {

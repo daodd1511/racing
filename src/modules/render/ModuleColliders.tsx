@@ -1,4 +1,5 @@
 import { useFrame } from "@react-three/fiber";
+import RAPIER from "@dimforge/rapier3d-compat";
 import {
   BallCollider,
   CuboidCollider,
@@ -20,6 +21,7 @@ import {
   type ModuleAnchor,
 } from "../kinematics";
 import type { ColliderSpec, KinematicTransform, Shape, Spec, VisualSpec } from "../types";
+import { SCALE } from "../../race/scale";
 import { applyStep } from "../../validator/applyStep";
 
 const ORIGIN: [number, number, number] = [0, 0, 0];
@@ -50,6 +52,7 @@ function ColliderPrimitive({
           quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
+          contactSkin={SCALE.marbleRadius / 2}
         />
       );
     case "cylinder":
@@ -75,7 +78,13 @@ function ColliderPrimitive({
     case "trimesh":
       return (
         <TrimeshCollider
-          args={[shape.vertices, shape.indices]}
+          args={
+            [
+              shape.vertices,
+              shape.indices,
+              RAPIER.TriMeshFlags.ORIENTED | RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+            ] as unknown as [ArrayLike<number>, ArrayLike<number>]
+          }
           position={position}
           quaternion={quaternion}
           restitution={material.restitution}
@@ -225,6 +234,37 @@ function applyVisualTransforms(
       mesh.quaternion.set(...transform.rotation);
     }
   }
+}
+
+export interface SpecVisualsProps {
+  readonly spec: Spec;
+  readonly transforms?: readonly KinematicTransform[];
+}
+
+/** Render one materialized Spec without creating any physics bodies. Course
+ * scenes own visual kinematics from the same transforms the raw live world
+ * receives; meshes never feed changing positions back into RigidBody props. */
+export function SpecVisuals({ spec, transforms = [] }: SpecVisualsProps) {
+  const kinematicVisuals = useRef(new Map<string, THREE.Mesh>());
+  const kinematicIds = new Set(
+    spec.colliders.filter((collider) => collider.kinematic).map((collider) => collider.id),
+  );
+
+  useEffect(() => {
+    applyVisualTransforms(transforms, kinematicVisuals.current);
+  }, [transforms]);
+
+  return (
+    <>
+      {spec.visuals.map((visual) =>
+        kinematicIds.has(visual.id) ? (
+          <KinematicVisualMesh key={visual.id} visual={visual} meshes={kinematicVisuals} />
+        ) : (
+          <VisualMesh key={visual.id} visual={visual} />
+        ),
+      )}
+    </>
+  );
 }
 
 export function ModuleColliders({ spec, step, clockRef, anchor }: ModuleCollidersProps) {

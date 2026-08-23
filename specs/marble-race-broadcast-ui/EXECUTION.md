@@ -5,9 +5,9 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — in-progress
 - Phase 1 — React shell and setup: done
-- Phase 2 — Live broadcast race: pending
+- Phase 2 — Live broadcast race: in-progress
 - Phase 3 — Terminal outcomes and audio: pending
 - Phase 4 — Production routing and release: pending
 - Verification debt: none
@@ -51,7 +51,7 @@ Produces: `BroadcastRace`; `Standings`; `formatRaceTime(seconds: number): string
 
 Fresh review: not required
 
-- [ ] Add `src/ui/Standings.tsx` and `src/ui/Standings.test.tsx`: render all 1-15 rows from snapshot ranking, stable marble identity/name, non-color decisive marker, checkpoint progress, latest non-null split, pending values before the first snapshot, and terminal `finalRanking` without fabricated times.
+- [x] Add `src/ui/Standings.tsx` and `src/ui/Standings.test.tsx`: render all 1-15 rows from snapshot ranking, stable marble identity/name, non-color decisive marker, checkpoint progress, latest non-null split, pending values before the first snapshot, and terminal `finalRanking` without fabricated times.
 - [ ] Add `src/ui/BroadcastRace.tsx` and `src/ui/BroadcastRace.test.tsx`: compose one R3F Canvas containing `LiveRace`, `CourseScene`, and `DecisiveCamera`, plus the same-snapshot `CourseMinimap` and `Standings`; keep active `Course`/`RaceRequest` identity stable across DOM updates and mock the solver boundary in DOM tests.
 - [ ] Extend `src/app/App.tsx` and `src/app/App.test.tsx` to render the racing session, retain its latest immutable snapshot, forward contact/outcome callbacks without deriving physics progress, and keep the shell audio toggle visible.
 - [ ] Extend `src/styles/app.css` with the dominant Course viewport, header telemetry, minimap, compact 15-row standings, decisive marker, and simulation-time/split formatting presentation.

@@ -1,6 +1,13 @@
 @import "@fontsource/dm-mono/400.css";
 @import "@fontsource/dm-mono/500.css";
 
+html,
+body,
+#app {
+  min-width: 0;
+  min-height: 100%;
+}
+
 :root {
   color: #edf2f7;
   background: #0b1015;
@@ -12,8 +19,8 @@
 }
 
 body {
-  min-width: 320px;
   margin: 0;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 74% -18%, rgb(216 255 66 / 17%), transparent 40%),
     linear-gradient(140deg, #0b1015 0%, #10191f 54%, #0b1015 100%);
@@ -30,6 +37,8 @@ button {
 
 .app-shell {
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .app-shell__header {
@@ -129,6 +138,7 @@ button {
 }
 
 .setup-screen__card {
+  min-width: 0;
   width: min(680px, 100%);
   padding: clamp(1.4rem, 4vw, 3rem);
   border: 1px solid #40515a;
@@ -145,6 +155,7 @@ button {
 .setup-screen h1 {
   max-width: 13ch;
   margin: 0;
+  overflow-wrap: anywhere;
   font-size: clamp(2.2rem, 7vw, 4.8rem);
   font-weight: 500;
   letter-spacing: -0.09em;
@@ -326,6 +337,7 @@ button {
     "telemetry telemetry"
     "course chrome";
   grid-template-columns: minmax(0, 1fr) clamp(18rem, 26vw, 24rem);
+  align-items: start;
   gap: clamp(0.75rem, 1.6vw, 1.5rem);
   width: min(1600px, 100%);
   margin: 0 auto;
@@ -380,7 +392,9 @@ button {
   position: relative;
   display: grid;
   grid-area: course;
-  min-height: min(72svh, 54rem);
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid #40515a;
   border-radius: 0.42rem;
@@ -413,7 +427,7 @@ button {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.75rem;
   min-height: 0;
-  max-height: min(72svh, 54rem);
+  max-height: none;
 }
 
 .course-minimap {
@@ -621,6 +635,7 @@ button {
   font-weight: 500;
   letter-spacing: -0.08em;
   line-height: 0.94;
+  overflow-wrap: anywhere;
 }
 
 .result-panel__marble {
@@ -818,6 +833,17 @@ button {
   .broadcast-race__telemetry strong {
     font-size: 0.65rem;
   }
+
+  .broadcast-race__telemetry {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .broadcast-race__telemetry p:last-child {
+    grid-column: 1 / -1;
+    border-top: 1px solid #33434c;
+    border-left: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -830,7 +856,7 @@ button {
   }
 
   .broadcast-race__course {
-    min-height: min(62svh, 42rem);
+    min-height: 0;
   }
 
   .broadcast-race__chrome {

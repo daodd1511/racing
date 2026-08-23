@@ -92,7 +92,9 @@ review harness remain independently accessible development routes.
 - In `first` mode the leader is decisive and the first finite Finish crossing
   completes the race. In `last` mode the trailing unfinished marble is decisive
   and the final finite Finish crossing completes the race.
-- The decisive camera and minimap continue to consume the same snapshot.
+- The decisive camera and minimap continue to consume the same snapshot. The
+  camera follows the decisive marble through the Course instead of holding a
+  side-of-track overview.
 - The 120-second watchdog remains a failure ceiling, not a selection fallback.
 
 ## Application architecture
@@ -190,9 +192,10 @@ The desktop composition uses three visual layers:
 
 1. A header with Selection Mode, elapsed simulation time, seed, and audio
    control.
-2. A dominant Course viewport with the existing decisive camera.
-3. Broadcast chrome containing the standings panel and existing whole-Board
-   minimap.
+2. A full racing viewport with the decisive follow camera.
+3. An overlaid side rail containing the standings panel and existing whole-Board
+   minimap. The side rail scrolls its 1–15-row standings internally; it never
+   reduces the Course to a secondary preview.
 
 The Course Canvas composes `CourseScene`, `LiveRace`, and `DecisiveCamera` over
 the same memoized `Course` and `RaceRequest`. The page owns the latest snapshot
@@ -259,10 +262,10 @@ and service calls.
 - UI transitions may animate opacity/transform; the frozen Course and result
   content remain usable when `prefers-reduced-motion` disables those effects.
 
-At a wide 16:9 viewport, standings sit beside the Course and the minimap remains
-an inset/secondary panel. Below the layout breakpoint, place the Course first
-and stack standings/minimap beneath it. Avoid horizontal scrolling at the
-supported 1-15 Roster range.
+At a wide 16:9 viewport, the Course fills the racing viewport and the standings
+sit in an overlaid side rail, with the minimap as secondary rail content. Below
+the layout breakpoint, place the Course first and stack standings/minimap
+beneath it. Avoid horizontal scrolling at the supported 1-15 Roster range.
 
 ## Entry points and cleanup
 
@@ -352,8 +355,8 @@ tests remain responsible for physics; DOM tests must not run the solver.
 
 ## Out of scope
 
-- Module, Board, Course, camera, minimap, or physics tuning beyond integration
-  defects exposed by this spec.
+- Module, Board, Course, minimap, or physics tuning beyond integration defects
+  exposed by this spec.
 - A history browser, replay UI, seed editor in production, or resume-after-
   refresh behavior.
 - Multiple Boards, Course editing/sharing, duration controls, accounts,

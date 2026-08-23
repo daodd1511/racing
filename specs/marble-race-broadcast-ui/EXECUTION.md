@@ -114,9 +114,12 @@ Fresh review: not required
 - [x] Update `vite.config.ts` and routing/build coverage so `index.html`, `showcase.html`, and `course.html` are named inputs and optimized entries under the existing relative asset base.
 - [x] (amended 2026-08-23) Keep build-entry coverage in `src/` without importing the root Vite config, so the composite TypeScript project remains closed.
 - [x] Finish `src/styles/app.css` responsive behavior: wide 16:9 Course-first composition, narrow Course/standings/minimap stack, usable 1-15 Roster screens, and no horizontal overflow.
+- [x] (amended 2026-08-23) Update `src/styles/app.css` so the live and frozen Course fill the racing viewport, while an overlaid side rail keeps the minimap and internally scrolling 1–15-row standings visible without shrinking the Course.
+- [x] (amended 2026-08-23) Update `src/race/DecisiveCamera.tsx`, `src/race/cameraTarget.ts`, and their tests so the camera smoothly follows the same decisive marble used by the standings/minimap rather than holding a side-of-track view.
 - [x] Delete superseded `src/ui/createSetupView.ts`, `src/ui/createSetupView.test.ts`, `src/ui/createResultDialog.ts`, and `src/ui/createResultDialog.test.ts`; remove unreferenced warm-arcade rules/assets and any root `ui-variant-*.html` files while retaining historical files under `specs/`.
 - [x] Update `README.md` with the production React flow, development entry URLs, current live Course behavior, persistence/audio/watchdog semantics, and GitHub Pages verification steps.
 - [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`) and warnings in unmodified `src/modules/render/ModuleColliders.tsx`; Phase 4 files have no findings.
+- [x] (amended 2026-08-23) Format the follow-camera additions and confirm `pnpm lint` has no findings attributable to the amended work. `pnpm lint` still reports only the pre-existing `src/course/assembleCourse.test.ts:47` error and unmodified `src/modules/render/ModuleColliders.tsx` warnings.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`

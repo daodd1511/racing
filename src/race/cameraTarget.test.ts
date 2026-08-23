@@ -6,9 +6,7 @@ import { cameraTargetForSnapshot, type CameraTargetState } from "./cameraTarget"
 function snapshotAt(x: number, y: number): RaceSnapshot {
   return {
     elapsedSeconds: 1,
-    marbleTransforms: [
-      { marbleIndex: 0, position: [x, y, 4], rotation: [0, 0, 0, 1] },
-    ],
+    marbleTransforms: [{ marbleIndex: 0, position: [x, y, 4], rotation: [0, 0, 0, 1] }],
     ranking: [0],
     decisiveMarbleIndex: 0,
     passedCheckpoints: [0],

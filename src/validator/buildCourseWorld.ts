@@ -160,7 +160,10 @@ export function buildCourseWorld(
         .setRestitution(SCALE.defaultRestitution)
         .setFriction(SCALE.defaultFriction)
         .setDensity(2.4)
-        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        .setActiveEvents(
+          RAPIER.ActiveEvents.COLLISION_EVENTS | RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS,
+        )
+        .setContactForceEventThreshold(0),
       body,
     );
     marbleBodies.set(assignment.marbleIndex, body);

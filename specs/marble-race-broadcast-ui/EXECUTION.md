@@ -110,7 +110,7 @@ Produces: production `index.html`/`src/main.tsx`; development `showcase.html`/`s
 Fresh review: not required
 
 - [x] Update `src/main.tsx` and `index.html` so the production entry mounts `App` in React Strict Mode with no Showcase import or inline legacy presentation.
-- [ ] Add `showcase.html` and `src/dev/showcase.tsx` for the existing React `Showcase`; keep `course.html`/`src/dev/coursePreview.tsx` as the Course review harness.
+- [x] Add `showcase.html` and `src/dev/showcase.tsx` for the existing React `Showcase`; keep `course.html`/`src/dev/coursePreview.tsx` as the Course review harness.
 - [ ] Update `vite.config.ts` and routing/build coverage so `index.html`, `showcase.html`, and `course.html` are named inputs and optimized entries under the existing relative asset base.
 - [ ] Finish `src/styles/app.css` responsive behavior: wide 16:9 Course-first composition, narrow Course/standings/minimap stack, usable 1-15 Roster screens, and no horizontal overflow.
 - [ ] Delete superseded `src/ui/createSetupView.ts`, `src/ui/createSetupView.test.ts`, `src/ui/createResultDialog.ts`, and `src/ui/createResultDialog.test.ts`; remove unreferenced warm-arcade rules/assets and any root `ui-variant-*.html` files while retaining historical files under `specs/`.

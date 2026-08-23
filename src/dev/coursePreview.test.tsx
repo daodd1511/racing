@@ -49,10 +49,13 @@ describe("CoursePreview", () => {
     ).toBe("Watchdog at 120.00 seconds; 2 unfinished");
   });
 
-  it("leaves the Showcase entry isolated from the development harness", () => {
-    const showcaseEntry = readFileSync(resolve(process.cwd(), "src/main.tsx"), "utf8");
+  it("keeps the Course review harness isolated from production and Showcase entries", () => {
+    const productionEntry = readFileSync(resolve(process.cwd(), "src/main.tsx"), "utf8");
+    const showcaseEntry = readFileSync(resolve(process.cwd(), "src/dev/showcase.tsx"), "utf8");
 
-    expect(showcaseEntry).toContain('from "./showcase/Showcase"');
+    expect(productionEntry).toContain('from "./app/App"');
+    expect(productionEntry).not.toContain("CoursePreview");
+    expect(showcaseEntry).toContain('from "../showcase/Showcase"');
     expect(showcaseEntry).not.toContain("CoursePreview");
   });
 });

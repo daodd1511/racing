@@ -24,7 +24,11 @@ describe("ResultPanel", () => {
           ranking: [1, 0, 2],
           decisiveMarbleIndex: 1,
           passedCheckpoints: [3, 3, 2],
-          splitTimes: [[1.2, 2.6], [1.1, 2.2], [1.4, null]],
+          splitTimes: [
+            [1.2, 2.6],
+            [1.1, 2.2],
+            [1.4, null],
+          ],
         }}
       />,
     );

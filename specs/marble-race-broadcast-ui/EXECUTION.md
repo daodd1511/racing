@@ -87,7 +87,7 @@ Fresh review: required — terminal-outcome idempotence protects durable local r
 - [x] (amended 2026-08-23) Update the `CoursePhysics` effect dependencies in `src/race/CoursePhysics.tsx` so its lifecycle reflects the stable `RaceRequest` identity without a lint warning.
 - [x] Extend `src/app/App.tsx`, `src/app/session.ts`, and their tests to retain the frozen terminal Course/snapshot, append exactly one completed record before the reveal timer, play exactly one finish sting, reveal after 800 ms, cancel timers on navigation/unmount, reject duplicate/stale outcomes, and never persist an active or watchdog session.
 - [x] Extend `src/styles/app.css` with frozen-finish, result, and watchdog overlays plus a `prefers-reduced-motion` fallback that preserves all content/actions.
-- [ ] Format phase-owned files and resolve workspace lint findings attributable to this phase.
+- [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`) and warnings in unmodified render files; Phase 3 files have no findings.
 
 **Phase gate (hard):**
 - [ ] `pnpm typecheck`

@@ -46,7 +46,10 @@ vi.mock("@react-three/fiber", () => ({
 
 vi.mock("./fixedStepBacklog", () => ({
   INITIAL_FIXED_STEP_BACKLOG: Object.freeze({ accumulatorSeconds: 0 }),
-  advanceFixedStepBacklog: vi.fn(() => ({ backlog: Object.freeze({ accumulatorSeconds: 0 }), stepTimes: [4] })),
+  advanceFixedStepBacklog: vi.fn(() => ({
+    backlog: Object.freeze({ accumulatorSeconds: 0 }),
+    stepTimes: [4],
+  })),
 }));
 
 vi.mock("./CourseRaceRuntime", () => ({

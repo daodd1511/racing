@@ -155,4 +155,18 @@ describe("BroadcastRace", () => {
     expect(screen.getByText("00:04.20")).toBeTruthy();
     expect(screen.getByText("Minimap 4.2")).toBeTruthy();
   });
+
+  it("renders a frozen terminal snapshot without mounting the live solver", () => {
+    render(
+      <BroadcastRace
+        course={course}
+        frozen
+        request={{ seed: 11, roster: ["Avery", "Blake"], selectionMode: "first" }}
+        snapshot={runtime.snapshot}
+      />,
+    );
+
+    expect(screen.getByText("Course scene 4.2")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Emit snapshot" })).toBeNull();
+  });
 });

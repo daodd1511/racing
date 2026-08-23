@@ -16,6 +16,7 @@ export interface BroadcastRaceProps {
   readonly course: Course;
   readonly request: RaceRequest;
   readonly snapshot?: RaceSnapshot | null;
+  readonly frozen?: boolean;
   readonly onSnapshot?: (snapshot: RaceSnapshot) => void;
   readonly onContact?: (event: RaceContactEvent) => void;
   readonly onOutcome?: (outcome: RaceOutcome) => void;
@@ -25,6 +26,7 @@ export function BroadcastRace({
   course,
   request,
   snapshot: externalSnapshot,
+  frozen = false,
   onSnapshot,
   onContact,
   onOutcome,
@@ -32,6 +34,27 @@ export function BroadcastRace({
   const [latestSnapshot, setLatestSnapshot] = useState<RaceSnapshot | null>(null);
   const [marbleStyles] = useState(() => createMarbleStyles(request.roster.length));
   const snapshot = externalSnapshot ?? latestSnapshot;
+  const courseContent = frozen ? (
+    <>
+      <CourseScene course={course} marbleStyles={marbleStyles} snapshot={snapshot} />
+      <DecisiveCamera board={course.board} snapshot={snapshot} />
+    </>
+  ) : (
+    <LiveRace
+      course={course}
+      onContact={handleContact}
+      onOutcome={handleOutcome}
+      onSnapshot={handleSnapshot}
+      request={request}
+    >
+      {({ snapshot: liveSnapshot }) => (
+        <>
+          <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
+          <DecisiveCamera board={course.board} snapshot={liveSnapshot} />
+        </>
+      )}
+    </LiveRace>
+  );
 
   function handleSnapshot(nextSnapshot: RaceSnapshot): void {
     setLatestSnapshot(nextSnapshot);
@@ -67,20 +90,7 @@ export function BroadcastRace({
           <color attach="background" args={["#12171c"]} />
           <ambientLight intensity={0.8} />
           <directionalLight castShadow intensity={1.8} position={[4, 8, 6]} />
-          <LiveRace
-            course={course}
-            onContact={handleContact}
-            onOutcome={handleOutcome}
-            onSnapshot={handleSnapshot}
-            request={request}
-          >
-            {({ snapshot: liveSnapshot }) => (
-              <>
-                <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
-                <DecisiveCamera board={course.board} snapshot={liveSnapshot} />
-              </>
-            )}
-          </LiveRace>
+          {courseContent}
         </Canvas>
       </section>
       <aside aria-label="Broadcast information" className="broadcast-race__chrome">

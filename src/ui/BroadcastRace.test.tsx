@@ -42,7 +42,10 @@ vi.mock("../race/LiveRace", () => ({
     onOutcome,
     onSnapshot,
   }: {
-    readonly children?: (state: { readonly snapshot: RaceSnapshot; readonly outcome: null }) => ReactNode;
+    readonly children?: (state: {
+      readonly snapshot: RaceSnapshot;
+      readonly outcome: null;
+    }) => ReactNode;
     readonly onContact?: (event: RaceContactEvent) => void;
     readonly onOutcome?: (outcome: RaceOutcome) => void;
     readonly onSnapshot?: (snapshot: RaceSnapshot) => void;
@@ -138,5 +141,18 @@ describe("BroadcastRace", () => {
 
     expect(onContact).toHaveBeenCalledWith(runtime.contact);
     expect(onOutcome).toHaveBeenCalledWith(runtime.outcome);
+  });
+
+  it("uses the immutable app-owned snapshot for broadcast telemetry and chrome", () => {
+    render(
+      <BroadcastRace
+        course={course}
+        request={{ seed: 11, roster: ["Avery", "Blake"], selectionMode: "first" }}
+        snapshot={runtime.snapshot}
+      />,
+    );
+
+    expect(screen.getByText("00:04.20")).toBeTruthy();
+    expect(screen.getByText("Minimap 4.2")).toBeTruthy();
   });
 });

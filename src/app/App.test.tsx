@@ -7,9 +7,74 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RaceAudio } from "../audio/createRaceAudio";
 import type { Course } from "../course/types";
+import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "../race/liveTypes";
 import type { CommittedRaceRecord, PickerSettingsV1, PickerStateV1 } from "../race/types";
 import type { RaceStore } from "../storage/raceStore";
 import { App } from "./App";
+
+const broadcastRuntime = vi.hoisted(() => ({
+  snapshot: Object.freeze({
+    elapsedSeconds: 4.2,
+    marbleTransforms: Object.freeze([]),
+    ranking: Object.freeze([1, 0]),
+    decisiveMarbleIndex: 1,
+    passedCheckpoints: Object.freeze([0, 1]),
+    splitTimes: Object.freeze([Object.freeze([1.1]), Object.freeze([1.2])]),
+  }),
+  contact: Object.freeze({ elapsedSeconds: 4.2, marbleIndices: Object.freeze([0]), impulse: 2 }),
+  outcome: Object.freeze({
+    kind: "completed" as const,
+    seed: 93,
+    selectedMarbleIndex: 1,
+    finishOrder: Object.freeze([1]),
+    finalRanking: Object.freeze([1, 0]),
+    elapsedSeconds: 4.2,
+  }),
+}));
+
+vi.mock("../ui/BroadcastRace", () => ({
+  BroadcastRace({
+    request,
+    snapshot,
+    onSnapshot,
+    onContact,
+    onOutcome,
+  }: {
+    readonly request: RaceRequest;
+    readonly snapshot: RaceSnapshot | null;
+    readonly onSnapshot: (snapshot: RaceSnapshot) => void;
+    readonly onContact: (event: RaceContactEvent) => void;
+    readonly onOutcome: (outcome: RaceOutcome) => void;
+  }) {
+    function emitSnapshot(): void {
+      onSnapshot(broadcastRuntime.snapshot);
+    }
+
+    function emitContact(): void {
+      onContact(broadcastRuntime.contact);
+    }
+
+    function emitOutcome(): void {
+      onOutcome(broadcastRuntime.outcome);
+    }
+
+    return (
+      <section aria-label="Mock live broadcast">
+        <output>Race seed {request.seed}</output>
+        <output>Race snapshot {snapshot?.elapsedSeconds ?? "pending"}</output>
+        <button onClick={emitSnapshot} type="button">
+          Emit race snapshot
+        </button>
+        <button onClick={emitContact} type="button">
+          Emit race contact
+        </button>
+        <button onClick={emitOutcome} type="button">
+          Emit race outcome
+        </button>
+      </section>
+    );
+  },
+}));
 
 class MemoryRaceStore implements RaceStore {
   private state: PickerStateV1;
@@ -103,8 +168,35 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Start race" }));
 
     expect(createCourse).toHaveBeenCalledWith(93);
-    expect(screen.getByText("Race session ready")).toBeTruthy();
-    expect(screen.getByText("Seed 93")).toBeTruthy();
+    expect(screen.getByText("Race seed 93")).toBeTruthy();
+  });
+
+  it("retains live snapshots and forwards runtime events at the app boundary", async () => {
+    const user = userEvent.setup();
+    const onRaceContact = vi.fn();
+    const onRaceOutcome = vi.fn();
+    render(
+      <App
+        createAudio={createAudioMock}
+        createCourse={(seed) => Object.freeze({ seed }) as Course}
+        createSeed={() => 93}
+        onRaceContact={onRaceContact}
+        onRaceOutcome={onRaceOutcome}
+        store={createStore()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start race" }));
+    expect(screen.getByRole("switch", { name: "Race audio" })).toBeTruthy();
+    expect(screen.getByText("Race snapshot pending")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
+    await user.click(screen.getByRole("button", { name: "Emit race contact" }));
+    await user.click(screen.getByRole("button", { name: "Emit race outcome" }));
+
+    expect(screen.getByText("Race snapshot 4.2")).toBeTruthy();
+    expect(onRaceContact).toHaveBeenCalledWith(broadcastRuntime.contact);
+    expect(onRaceOutcome).toHaveBeenCalledWith(broadcastRuntime.outcome);
   });
 
   it("creates and disposes audio safely across Strict Mode remounts", () => {

@@ -8,24 +8,33 @@ import { DecisiveCamera } from "../race/DecisiveCamera";
 import { LiveRace } from "../race/LiveRace";
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "../race/liveTypes";
 import { createMarbleStyles } from "../render/marbleStyles";
-import { Standings } from "./Standings";
+import { formatRaceTime, Standings } from "./Standings";
 
 const INITIAL_CAMERA = Object.freeze({ fov: 42, position: [0, 0, 6] as const });
 
 export interface BroadcastRaceProps {
   readonly course: Course;
   readonly request: RaceRequest;
+  readonly snapshot?: RaceSnapshot | null;
   readonly onSnapshot?: (snapshot: RaceSnapshot) => void;
   readonly onContact?: (event: RaceContactEvent) => void;
   readonly onOutcome?: (outcome: RaceOutcome) => void;
 }
 
-export function BroadcastRace({ course, request, onSnapshot, onContact, onOutcome }: BroadcastRaceProps) {
-  const [snapshot, setSnapshot] = useState<RaceSnapshot | null>(null);
-  const marbleStyles = createMarbleStyles(request.roster.length);
+export function BroadcastRace({
+  course,
+  request,
+  snapshot: externalSnapshot,
+  onSnapshot,
+  onContact,
+  onOutcome,
+}: BroadcastRaceProps) {
+  const [latestSnapshot, setLatestSnapshot] = useState<RaceSnapshot | null>(null);
+  const [marbleStyles] = useState(() => createMarbleStyles(request.roster.length));
+  const snapshot = externalSnapshot ?? latestSnapshot;
 
   function handleSnapshot(nextSnapshot: RaceSnapshot): void {
-    setSnapshot(nextSnapshot);
+    setLatestSnapshot(nextSnapshot);
     onSnapshot?.(nextSnapshot);
   }
 
@@ -39,6 +48,20 @@ export function BroadcastRace({ course, request, onSnapshot, onContact, onOutcom
 
   return (
     <main className="broadcast-race">
+      <header aria-label="Race telemetry" className="broadcast-race__telemetry">
+        <p>
+          <span>Mode</span>
+          <strong>{request.selectionMode === "first" ? "First finisher" : "Last finisher"}</strong>
+        </p>
+        <p>
+          <span>Simulation time</span>
+          <strong>{formatRaceTime(snapshot?.elapsedSeconds ?? 0)}</strong>
+        </p>
+        <p>
+          <span>Seed</span>
+          <strong>{request.seed}</strong>
+        </p>
+      </header>
       <section aria-label="Live Course" className="broadcast-race__course">
         <Canvas camera={INITIAL_CAMERA} shadows>
           <color attach="background" args={["#12171c"]} />
@@ -53,11 +76,7 @@ export function BroadcastRace({ course, request, onSnapshot, onContact, onOutcom
           >
             {({ snapshot: liveSnapshot }) => (
               <>
-                <CourseScene
-                  course={course}
-                  marbleStyles={marbleStyles}
-                  snapshot={liveSnapshot}
-                />
+                <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
                 <DecisiveCamera board={course.board} snapshot={liveSnapshot} />
               </>
             )}
@@ -72,7 +91,12 @@ export function BroadcastRace({ course, request, onSnapshot, onContact, onOutcom
           roster={request.roster}
           snapshot={snapshot}
         />
-        <Standings course={course} marbleStyles={marbleStyles} roster={request.roster} snapshot={snapshot} />
+        <Standings
+          course={course}
+          marbleStyles={marbleStyles}
+          roster={request.roster}
+          snapshot={snapshot}
+        />
       </aside>
     </main>
   );

@@ -59,8 +59,9 @@ afterEach(() => {
 });
 
 describe("DecisiveCamera", () => {
-  it("follows the decisive marble and looks ahead along its live Course direction", () => {
+  it("follows directly above the decisive marble with a straight-down view", () => {
     const camera = new THREE.PerspectiveCamera();
+    const viewDirection = new THREE.Vector3();
     cameraRuntime.camera = camera;
     const view = render(<DecisiveCamera board={BOARD} snapshot={snapshotAt(0, 0)} />);
     advanceCamera(1 / 60);
@@ -72,5 +73,9 @@ describe("DecisiveCamera", () => {
     expect(camera.position.x).toBeGreaterThan(0.5);
     expect(camera.position.y).toBeLessThan(-0.5);
     expect(camera.position.z).toBeGreaterThan(0);
+    camera.getWorldDirection(viewDirection);
+    expect(viewDirection.x).toBeCloseTo(0, 5);
+    expect(viewDirection.y).toBeCloseTo(0, 5);
+    expect(viewDirection.z).toBeCloseTo(-1, 5);
   });
 });

@@ -116,6 +116,7 @@ Fresh review: not required
 - [x] Finish `src/styles/app.css` responsive behavior: wide 16:9 Course-first composition, narrow Course/standings/minimap stack, usable 1-15 Roster screens, and no horizontal overflow.
 - [x] (amended 2026-08-23) Update `src/styles/app.css` so the live and frozen Course fill the racing viewport, while an overlaid side rail keeps the minimap and internally scrolling 1–15-row standings visible without shrinking the Course.
 - [x] (amended 2026-08-23) Update `src/race/DecisiveCamera.tsx`, `src/race/cameraTarget.ts`, and their tests so the camera smoothly follows the same decisive marble used by the standings/minimap rather than holding a side-of-track view.
+- [x] (amended 2026-08-23) Correct `src/race/DecisiveCamera.tsx` and `src/race/DecisiveCamera.test.tsx` to keep a north-up camera directly above the decisive marble, smooth its planar follow, and verify the view axis points straight down instead of trailing beside the Course. Confirmed in the live production entry with a 15-marble race.
 - [x] Delete superseded `src/ui/createSetupView.ts`, `src/ui/createSetupView.test.ts`, `src/ui/createResultDialog.ts`, and `src/ui/createResultDialog.test.ts`; remove unreferenced warm-arcade rules/assets and any root `ui-variant-*.html` files while retaining historical files under `specs/`.
 - [x] Update `README.md` with the production React flow, development entry URLs, current live Course behavior, persistence/audio/watchdog semantics, and GitHub Pages verification steps.
 - [x] Format phase-owned files and resolve workspace lint findings attributable to this phase. `pnpm lint` reports only the pre-existing `src/course/assembleCourse.test.ts:47` redundant-spread error (commit `9d6a25c`) and warnings in unmodified `src/modules/render/ModuleColliders.tsx`; Phase 4 files have no findings.
@@ -124,6 +125,7 @@ Fresh review: not required
 **Phase gate (hard):**
 - [x] `pnpm typecheck`
 - [x] `pnpm exec vitest related --run README.md index.html showcase.html specs/marble-race-broadcast-ui/EXECUTION.md specs/marble-race-broadcast-ui/PLAN.md src/dev/buildEntries.test.ts src/dev/coursePreview.test.tsx src/dev/showcase.tsx src/main.tsx src/race/DecisiveCamera.test.tsx src/race/DecisiveCamera.tsx src/race/cameraTarget.test.ts src/race/cameraTarget.ts src/styles/app.css vite.config.ts` (6 files, 20 tests passed)
+- [x] (amended 2026-08-23) Re-run the Phase 4 typecheck and dependency-aware tests after the overhead-camera correction (`pnpm typecheck`; 6 files and 20 tests passed).
 
 **Review checklist (user, at PR review):**
 - [ ] Open built production, Showcase, and Course pages; complete First/Last races at wide and narrow widths, refresh each URL, then confirm the deployed GitHub Pages production URL loads directly and after refresh.
@@ -134,3 +136,4 @@ Fresh review: not required
 
 - [ ] `pnpm test`
 - [x] `pnpm build`
+- [x] (amended 2026-08-23) Re-run `pnpm build` after the overhead-camera correction.

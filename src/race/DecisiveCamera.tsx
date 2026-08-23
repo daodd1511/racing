@@ -9,8 +9,6 @@ import { decisiveMarbleTarget } from "./cameraTarget";
 const CAMERA_FOV = 40;
 const FRAMING_MARGIN = 1.25;
 const FOLLOW_DISTANCE_RATIO = 0.76;
-const LOOK_AHEAD_CELLS = 4;
-const TRAIL_CELLS = 1.6;
 const CAMERA_DAMPING = 7;
 
 export interface DecisiveCameraProps {
@@ -35,15 +33,14 @@ function frameDamping(deltaSeconds: number): number {
   return 1 - Math.exp(-CAMERA_DAMPING * deltaSeconds);
 }
 
-/** Follows the snapshot's decisive marble with a short look-ahead along its Course path. */
+/** Keeps a north-up camera directly above the snapshot's decisive marble. */
 export function DecisiveCamera({ board, snapshot }: DecisiveCameraProps) {
   const { camera } = useThree();
   const targetRef = useRef(centerForBoard(board));
   const lookAtRef = useRef(centerForBoard(board));
   const desiredPositionRef = useRef(centerForBoard(board));
   const desiredLookAtRef = useRef(centerForBoard(board));
-  const previousMarbleRef = useRef<THREE.Vector3 | null>(null);
-  const forwardRef = useRef(new THREE.Vector3(0, -1, 0));
+  const followingRef = useRef(false);
   const snapshotRef = useRef<RaceSnapshot | null>(null);
   const boardRef = useRef(board);
   const initializedRef = useRef(false);
@@ -54,8 +51,7 @@ export function DecisiveCamera({ board, snapshot }: DecisiveCameraProps) {
       boardRef.current = board;
       targetRef.current.copy(centerForBoard(board));
       lookAtRef.current.copy(targetRef.current);
-      previousMarbleRef.current = null;
-      forwardRef.current.set(0, -1, 0);
+      followingRef.current = false;
       snapshotRef.current = null;
       initializedRef.current = false;
     }
@@ -64,35 +60,18 @@ export function DecisiveCamera({ board, snapshot }: DecisiveCameraProps) {
       snapshotRef.current = snapshot;
       const marble = snapshot === null ? null : decisiveMarbleTarget(snapshot);
       if (marble === null) {
-        previousMarbleRef.current = null;
+        targetRef.current.copy(centerForBoard(board));
+        followingRef.current = false;
       } else {
-        const previous = previousMarbleRef.current;
-        if (previous !== null) {
-          forwardRef.current.set(
-            marble.position[0] - previous.x,
-            marble.position[1] - previous.y,
-            0,
-          );
-          if (forwardRef.current.lengthSq() > Number.EPSILON) {
-            forwardRef.current.normalize();
-          }
-          previous.set(...marble.position);
-        } else {
-          previousMarbleRef.current = new THREE.Vector3(...marble.position);
-        }
         targetRef.current.set(...marble.position);
+        followingRef.current = true;
       }
     }
 
-    const following = previousMarbleRef.current !== null;
-    const distance = cameraDistance(board) * (following ? FOLLOW_DISTANCE_RATIO : 1);
-    const desiredPosition = desiredPositionRef.current
-      .copy(targetRef.current)
-      .addScaledVector(forwardRef.current, following ? -board.cellPitch * TRAIL_CELLS : 0);
+    const distance = cameraDistance(board) * (followingRef.current ? FOLLOW_DISTANCE_RATIO : 1);
+    const desiredPosition = desiredPositionRef.current.copy(targetRef.current);
     desiredPosition.z += distance;
-    const desiredLookAt = desiredLookAtRef.current
-      .copy(targetRef.current)
-      .addScaledVector(forwardRef.current, following ? board.cellPitch * LOOK_AHEAD_CELLS : 0);
+    const desiredLookAt = desiredLookAtRef.current.copy(targetRef.current);
 
     if (!initializedRef.current) {
       camera.position.copy(desiredPosition);

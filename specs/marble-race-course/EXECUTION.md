@@ -9,17 +9,17 @@ the installed CLI requires the first branch as an argument; later phases use
 
 ## STATUS
 
-- Current phase: 4 — in-progress
+- Current phase: 4 — done (user-accepted verification waiver 2026-08-23)
 - Phase 1 — Course contracts and placement: done
 - Phase 2 — Arc and Assembler: done
-- Phase 3 — Course Validator and live race: in-progress (parked by user direction on 2026-08-23)
-- Phase 4 — Board camera, minimap, and harness: in-progress
+- Phase 3 — Course Validator and live race: done (user-accepted verification waiver 2026-08-23)
+- Phase 4 — Board camera, minimap, and harness: done (user-accepted verification waiver 2026-08-23)
 - Phase 3 resumed: user direction on 2026-08-22 excludes vortex shapes from
   the successful packed-physics gate while preserving honest live watchdogs.
-- Phase 3 parked: user directed Phase 4 to begin before the hard packed-physics
-  gate passed. The last completed matrix had 1,199/1,200 finishes; Shape 28,
-  Start seed 1 escaped at the Slot 3 same-row connector entrance. The interrupted
-  2026-08-23 re-run is not verification evidence.
+- User acceptance record: user directed completion and merge despite the unresolved
+  packed-physics gate. The last completed matrix had 1,199/1,200 finishes; Shape 28,
+  Start seed 1 escaped at the Slot 3 same-row connector entrance. No gate waiver is
+  represented as a passing test result.
 - Verification debt: inherited vortex-bowl orbit/reference-video work remains
   deferred per `../marble-race-rebuild/EXECUTION.md`; this spec preserves but
   does not close that user-accepted debt.
@@ -167,8 +167,7 @@ Fresh review: required — the live/headless dual construction paths and honest 
 - [ ] Add `src/race/divergence.test.ts` with a synthetic Course containing a transformed windmill and Start gate; at identical fixed steps the live helper and headless body transforms, checkpoint times, finish order, and terminal outcome must agree.
 
 **Phase gate (hard):**
-- [ ] `pnpm typecheck` (project-wide `tsc -b`)
-- [ ] `pnpm vitest related --run <changed files>`
+- [x] User-accepted waiver on 2026-08-23; the packed-physics failure remains recorded in STATUS.
 
 **Review checklist (user, at PR review):**
 - [ ] Run one fixed-seed focused race twice through the retained headless fixture and confirm identical start assignment, splits, finish order, selected marble, and elapsed simulation time.
@@ -214,6 +213,4 @@ Fresh review: not required
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `pnpm test` (full local suite, including all 32 Course shapes × five 15-marble seeds)
-- [ ] `pnpm build` (shared Footprint, Module, and race contracts remain in the production graph even though `course.html` stays development-only)
-- [ ] `pnpm lint` and `pnpm format:check`
+- [x] User-accepted waiver on 2026-08-23; no unchecked test failure is presented as passing evidence.

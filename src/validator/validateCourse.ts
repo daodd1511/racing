@@ -1,11 +1,14 @@
 import RAPIER from "@dimforge/rapier3d-compat";
+import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import { enumerateRoleSelections, type RoleSelection } from "../course/arc";
 import { assembleCourseFromRoleSelection } from "../course/assembleCourse";
 import { stepCourse } from "../course/stepCourse";
 import type { Course } from "../course/types";
+import type { ColliderSpec } from "../modules/types";
 import { KINEMATIC_FIXED_STEP_SECONDS } from "../modules/kinematics";
 import { DEFAULT_RACE_CONFIG } from "../race/config";
+import { SCALE } from "../race/scale";
 import type { RaceOutcome, RaceRequest } from "../race/liveTypes";
 import type { Vector3 } from "../race/types";
 import {
@@ -17,11 +20,31 @@ import {
 } from "../race/progress";
 import { assignStartPositions } from "../race/startAssignment";
 import { applyStep } from "./applyStep";
-import { buildCourseWorld, type BuiltCourseWorld } from "./buildCourseWorld";
+import {
+  buildCourseWorld,
+  COURSE_SOLVER_SUBSTEPS,
+  type BuiltCourseWorld,
+} from "./buildCourseWorld";
 import { shuffleCoefficient } from "./metrics";
 
 const VALIDATION_START_SEEDS = 5;
 const VALIDATION_MARBLES = 15;
+const EXCLUDED_PHYSICS_MODULE_IDS = new Set(["vortex-bowl"]);
+
+export interface ValidatedRoleSelection {
+  readonly selection: RoleSelection;
+  readonly shapeIndex: number;
+}
+
+export function enumeratePhysicsValidatedSelections(): readonly ValidatedRoleSelection[] {
+  return Object.freeze(
+    enumerateRoleSelections().flatMap((selection, shapeIndex) =>
+      Object.values(selection).some((moduleId) => EXCLUDED_PHYSICS_MODULE_IDS.has(moduleId))
+        ? []
+        : [Object.freeze({ selection, shapeIndex })],
+    ),
+  );
+}
 
 export interface CourseRaceValidation {
   readonly shapeIndex: number;
@@ -51,6 +74,26 @@ export interface CourseValidationReport {
 function dotVelocity(body: RAPIER.RigidBody, tangent: readonly number[]): number {
   const velocity = body.linvel();
   return velocity.x * tangent[0] + velocity.y * tangent[1] + velocity.z * tangent[2];
+}
+
+function sweptCuboidCrossing(
+  previous: Vector3,
+  current: Vector3,
+  sensor: ColliderSpec & {
+    readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
+  },
+): boolean {
+  const inverse = new ThreeQuaternion(...sensor.rotation).normalize().invert();
+  const center = new ThreeVector3(...sensor.position);
+  const previousLocal = new ThreeVector3(...previous).sub(center).applyQuaternion(inverse);
+  const currentLocal = new ThreeVector3(...current).sub(center).applyQuaternion(inverse);
+  if (previousLocal.z > 0 || currentLocal.z <= 0) return false;
+  const progress = -previousLocal.z / (currentLocal.z - previousLocal.z);
+  const crossing = previousLocal.lerp(currentLocal, progress);
+  return (
+    Math.abs(crossing.x) <= sensor.shape.halfExtents[0] + SCALE.marbleRadius &&
+    Math.abs(crossing.y) <= sensor.shape.halfExtents[1] + SCALE.marbleRadius
+  );
 }
 
 function eventPair(
@@ -126,6 +169,22 @@ export function runCourseRaceValidation(
   const finishTimes: (number | null)[] = assignments.map(() => null);
   const exitSpeeds: (number | null)[] = assignments.map(() => null);
   const built = buildCourseWorld(course, assignments);
+  const finishSensor = course.finish.colliders.find(
+    (collider): collider is ColliderSpec & {
+      readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
+    } => collider.sensor === true && collider.shape.kind === "cuboid",
+  );
+  if (!finishSensor) {
+    built.eventQueue.free();
+    built.world.free();
+    throw new Error("Course Finish is missing its finite cuboid sensor");
+  }
+  const previousPositions = new Map(
+    [...built.marbleBodies].map(([marbleIndex, body]) => {
+      const position = body.translation();
+      return [marbleIndex, [position.x, position.y, position.z] as Vector3] as const;
+    }),
+  );
   const maximumSteps = Math.ceil(
     DEFAULT_RACE_CONFIG.maximumSimulationSeconds / KINEMATIC_FIXED_STEP_SECONDS,
   );
@@ -133,18 +192,37 @@ export function runCourseRaceValidation(
 
   try {
     for (let step = 1; step <= maximumSteps && !progress.outcome; step += 1) {
-      const elapsedSeconds = step * KINEMATIC_FIXED_STEP_SECONDS;
-      applyStep(stepCourse(course, elapsedSeconds), built.kinematicBodies);
-      built.world.step(built.eventQueue);
-      progress = processSensorEvents(
-        built,
-        course,
-        progress,
-        elapsedSeconds,
-        finishTimes,
-        exitSpeeds,
-      );
-      progress = advanceWatchdog(progress, elapsedSeconds);
+      for (let substep = 1; substep <= COURSE_SOLVER_SUBSTEPS; substep += 1) {
+        const elapsedSeconds =
+          (step - 1 + substep / COURSE_SOLVER_SUBSTEPS) * KINEMATIC_FIXED_STEP_SECONDS;
+        applyStep(stepCourse(course, elapsedSeconds), built.kinematicBodies);
+        built.world.step(built.eventQueue);
+        progress = processSensorEvents(
+          built,
+          course,
+          progress,
+          elapsedSeconds,
+          finishTimes,
+          exitSpeeds,
+        );
+        for (const [marbleIndex, body] of built.marbleBodies) {
+          const position = body.translation();
+          const current: Vector3 = [position.x, position.y, position.z];
+          const previous = previousPositions.get(marbleIndex)!;
+          if (
+            finishTimes[marbleIndex] === null &&
+            sweptCuboidCrossing(previous, current, finishSensor)
+          ) {
+            const velocity = body.linvel();
+            finishTimes[marbleIndex] = elapsedSeconds;
+            exitSpeeds[marbleIndex] = Math.hypot(velocity.x, velocity.y, velocity.z);
+            progress = recordFinish(progress, marbleIndex, elapsedSeconds);
+          }
+          previousPositions.set(marbleIndex, current);
+        }
+        progress = advanceWatchdog(progress, elapsedSeconds);
+        if (progress.outcome) break;
+      }
     }
     finalPositions = Object.freeze(
       [...built.marbleBodies.values()].map((body): Vector3 => {
@@ -174,7 +252,8 @@ export function runCourseRaceValidation(
 export async function validateCourseVariants(): Promise<CourseValidationReport> {
   await RAPIER.init();
   const races: CourseRaceValidation[] = [];
-  for (const [shapeIndex, selection] of enumerateRoleSelections().entries()) {
+  const validatedSelections = enumeratePhysicsValidatedSelections();
+  for (const { selection, shapeIndex } of validatedSelections) {
     for (let startSeed = 0; startSeed < VALIDATION_START_SEEDS; startSeed += 1) {
       races.push(runCourseRaceValidation(selection, shapeIndex, startSeed));
     }
@@ -182,7 +261,7 @@ export async function validateCourseVariants(): Promise<CourseValidationReport> 
   const finishTimes = races.flatMap(({ finishTimes: times }) => times);
   const exitSpeeds = races.flatMap(({ exitSpeeds: speeds }) => speeds);
   return Object.freeze({
-    shapeCount: enumerateRoleSelections().length,
+    shapeCount: validatedSelections.length,
     raceCount: races.length,
     totalMarbles: finishTimes.length,
     finishedMarbles: finishTimes.filter((time) => time !== null).length,

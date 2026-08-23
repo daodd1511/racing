@@ -2,7 +2,7 @@ import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import { defaultParamValues, type ParamValues } from "../modules/params";
 import { ALL_MODULES } from "../modules/registry";
-import type { Anchor, Cell, Role, Spec } from "../modules/types";
+import type { Anchor, Cell, ColliderSpec, Role, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Quaternion, Vector3 } from "../race/types";
 import { ARC, selectRoleModules, type RoleSelection } from "./arc";
@@ -165,7 +165,24 @@ function estimateIncomingSpeed(spec: Spec): number {
 
 function connectorWithCells(spec: Spec, id: string): Spec {
   try {
-    const cells = rasterizeCuboidCells(spec.colliders, spec.footprint, BOARD);
+    const occupancyColliders: readonly ColliderSpec[] = spec.colliders.every(
+      ({ shape }) => shape.kind === "cuboid",
+    )
+      ? spec.colliders
+      : spec.visuals.flatMap((visual): readonly ColliderSpec[] =>
+          visual.shape.kind === "cuboid"
+            ? [
+                {
+                  id: `${visual.id}-occupancy-proxy`,
+                  shape: visual.shape,
+                  position: visual.position,
+                  rotation: visual.rotation,
+                  material: { restitution: 0, friction: 0 },
+                },
+              ]
+            : [],
+        );
+    const cells = rasterizeCuboidCells(occupancyColliders, spec.footprint, BOARD);
     return { ...spec, footprint: { ...spec.footprint, cells } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -183,6 +200,7 @@ function buildConnectors(slots: readonly PlacedSlot[]): readonly CourseConnector
       start: from.spec.footprint.exit,
       end: to.spec.footprint.entry,
       incomingSpeed: estimateIncomingSpeed(from.spec),
+      speedGovernor: from.slot.row !== to.slot.row,
     });
     return { ...connector, spec: connectorWithCells(connector.spec, connector.id) };
   });

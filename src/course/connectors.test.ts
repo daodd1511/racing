@@ -21,7 +21,8 @@ describe("buildCourseConnector", () => {
     });
 
     expect(connector.spec.footprint.route).toHaveLength(4);
-    expect(connector.spec.colliders).toHaveLength(9);
+    expect(connector.spec.colliders).toHaveLength(11);
+    expect(connector.spec.colliders.filter(({ id }) => id.includes("-entrance-rail-"))).toHaveLength(2);
     expect(connector.spec.footprint.entry.position).toEqual([0, 0, 0]);
     expect(connector.spec.footprint.exit.position).toEqual([0.4, -0.05, 0]);
   });
@@ -35,20 +36,26 @@ describe("buildCourseConnector", () => {
       start: anchor([1, 0, 0], 1),
       end: anchor([1, -1, 0], -1),
       incomingSpeed,
+      speedGovernor: true,
     });
     const route = connector.spec.footprint.route;
     const expectedRailHeight = Math.max(
       RAIL_HEIGHT,
       (incomingSpeed * incomingSpeed) / (2 * Math.hypot(...SCALE.gravity)) + SCALE.marbleRadius * 2,
     );
-    const rail = connector.spec.colliders.find(({ id }) => id.includes("rail-left"));
+    const rail = connector.spec.visuals.find(({ id }) => id.includes("rail-left"));
 
-    expect(route).toHaveLength(4);
+    expect(route).toHaveLength(33);
     expect(route[1][0]).toBeGreaterThan(route[0][0]);
-    expect(route[2][0]).toBeGreaterThan(route[3][0]);
+    expect(Math.max(...route.map(([x]) => x))).toBeGreaterThan(
+      Math.max(route[0][0], route.at(-1)![0]),
+    );
     expect(route.every((point, index) => index === 0 || point[1] < route[index - 1][1])).toBe(true);
-    expect(connector.spec.colliders).toHaveLength(10);
-    expect(connector.spec.colliders.some(({ id }) => id.endsWith("outer-wall"))).toBe(true);
+    expect(connector.spec.colliders).toHaveLength(3);
+    expect(connector.spec.colliders.filter(({ id }) => id.includes("-governor-"))).toHaveLength(2);
+    expect(connector.spec.colliders.filter(({ id }) => id.endsWith("-tunnel"))).toHaveLength(1);
+    const governor = connector.spec.colliders.find(({ id }) => id.includes("-governor-axle-"));
+    expect(governor?.motion).toMatchObject({ kind: "rotation", angularVelocity: -0.5 });
     expect(rail?.shape.kind).toBe("cuboid");
     expect(rail?.shape.kind === "cuboid" ? rail.shape.halfExtents[1] * 2 : 0).toBeCloseTo(
       expectedRailHeight,

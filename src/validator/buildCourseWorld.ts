@@ -14,12 +14,14 @@ import { buildWorld } from "./buildWorld";
 
 const CHECKPOINT_SENSOR_PREFIX = "course-checkpoint";
 const MARBLE_PREFIX = "marble";
-const SENSOR_HALF_HEIGHT = SCALE.marbleRadius * 3;
-const SENSOR_HALF_DEPTH = SCALE.marbleRadius / 2;
+const SENSOR_HALF_HEIGHT = SCALE.marbleRadius * 5;
+const SENSOR_HALF_DEPTH = SCALE.marbleRadius * 4;
 const MATERIAL = Object.freeze({
   restitution: SCALE.defaultRestitution,
   friction: SCALE.defaultFriction,
 });
+export const COURSE_SOLVER_SUBSTEPS = 1;
+const COURSE_SOLVER_ITERATIONS = 8;
 
 function tuple(vector: ThreeVector3): Vector3 {
   return [vector.x, vector.y, vector.z];
@@ -125,7 +127,9 @@ export function buildCourseWorld(
     throw new Error("Course world requires ordered unique marble assignments");
   }
   const built = buildWorld(courseSpecs(course));
-  built.world.timestep = 1 / 60;
+  built.world.timestep = 1 / 60 / COURSE_SOLVER_SUBSTEPS;
+  built.world.integrationParameters.numSolverIterations = COURSE_SOLVER_ITERATIONS;
+  built.world.integrationParameters.maxCcdSubsteps = 4;
   const colliderIdsByHandle = new Map<number, string>();
   for (const [id, collider] of built.colliders) {
     colliderIdsByHandle.set(collider.handle, id);

@@ -1,4 +1,5 @@
 import { useFrame } from "@react-three/fiber";
+import RAPIER from "@dimforge/rapier3d-compat";
 import {
   BallCollider,
   CuboidCollider,
@@ -20,6 +21,7 @@ import {
   type ModuleAnchor,
 } from "../kinematics";
 import type { ColliderSpec, KinematicTransform, Shape, Spec, VisualSpec } from "../types";
+import { SCALE } from "../../race/scale";
 import { applyStep } from "../../validator/applyStep";
 
 const ORIGIN: [number, number, number] = [0, 0, 0];
@@ -50,6 +52,7 @@ function ColliderPrimitive({
           quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
+          contactSkin={SCALE.marbleRadius / 2}
         />
       );
     case "cylinder":
@@ -75,7 +78,11 @@ function ColliderPrimitive({
     case "trimesh":
       return (
         <TrimeshCollider
-          args={[shape.vertices, shape.indices]}
+          args={[
+            shape.vertices,
+            shape.indices,
+            RAPIER.TriMeshFlags.ORIENTED | RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+          ] as unknown as [ArrayLike<number>, ArrayLike<number>]}
           position={position}
           quaternion={quaternion}
           restitution={material.restitution}

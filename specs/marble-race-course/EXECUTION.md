@@ -9,15 +9,19 @@ the installed CLI requires the first branch as an argument; later phases use
 
 ## STATUS
 
-- Current phase: 3 — in-progress
+- Current phase: 4 — in-progress
 - Phase 1 — Course contracts and placement: done
 - Phase 2 — Arc and Assembler: done
-- Phase 3 — Course Validator and live race: in-progress
-- Phase 4 — Board camera, minimap, and harness: pending
-- Phase 3 parked: the retained validator exposes packed vortex stalls/ejections;
-  unsuccessful containment and parameter experiments were removed before parking.
+- Phase 3 — Course Validator and live race: in-progress (parked by user direction on 2026-08-23)
+- Phase 4 — Board camera, minimap, and harness: in-progress
+- Phase 3 resumed: user direction on 2026-08-22 excludes vortex shapes from
+  the successful packed-physics gate while preserving honest live watchdogs.
+- Phase 3 parked: user directed Phase 4 to begin before the hard packed-physics
+  gate passed. The last completed matrix had 1,199/1,200 finishes; Shape 28,
+  Start seed 1 escaped at the Slot 3 same-row connector entrance. The interrupted
+  2026-08-23 re-run is not verification evidence.
 - Verification debt: inherited vortex-bowl orbit/reference-video work remains
-  deferred per `../marble-race-rebuild/EXECUTION.md`; this spec exercises but
+  deferred per `../marble-race-rebuild/EXECUTION.md`; this spec preserves but
   does not close that user-accepted debt.
 
 ## Phase 1 — Course contracts and placement
@@ -143,15 +147,21 @@ Fresh review: required — the live/headless dual construction paths and honest 
 - [x] Add `src/race/fixedStepBacklog.ts`: accumulate wall delta into fixed 1/60 work, return a bounded number of steps per rendered frame, retain rather than drop backlog, and expose simulation time independently of wall time.
 - [x] Add `src/validator/buildCourseWorld.ts` so a Course builds from its materialized Specs, namespaced kinematic bodies, 5×3 marble assignments, and finite Finish sensor while leaving Module validation in `buildWorld.ts`; sensor/collision events use the same ids consumed by live progress.
 - [x] (amended 2026-08-22) Transform authored `START_POSITIONS` through the Start Spec's yaw-only local axes rather than its sloped entry Anchor frame; each fixed position already includes local floor height, so the sloped frame would apply the grade twice.
-- [ ] Add `src/validator/validateCourse.ts`: enumerate all 32 Role selections, run five tagged Start seeds × 15 marbles through fixed-step `stepCourse`, stop each run when all marbles finish or 120 simulation seconds elapse, and return finite duration/Dwell/exit-speed/Shuffle metrics plus stalls/watchdogs.
+- [ ] Add `src/validator/validateCourse.ts`: enumerate the 16 non-vortex Role selections, run five tagged Start seeds × 15 marbles through fixed-step `stepCourse`, stop each run when all marbles finish or 120 simulation seconds elapses, and return finite duration/Dwell/exit-speed/Shuffle metrics plus stalls/watchdogs.
 - [ ] (amended 2026-08-22) Replace fixed-reach row-end hairpins with three contained runs sized from the actual Board-row drop—a long descending approach, vertical fall, and long descending exit ramp—and include that reach in fixed Board edge clearance; the original short controls turn the multi-meter row drop into near-vertical entry/exit corners that eject packed marbles.
 - [ ] (amended 2026-08-22) Add an explicit segment up-frame to shared channel geometry and use it for Course connectors so diagonal bend segments keep channel width in Board depth; shortest-arc `+Z` rotation rolls width into Board `x/y` and cannot retain marbles through the row turn.
 - [ ] (amended 2026-08-22) Add a speed-height outer containment wall at each row-end bend apex, spanning Board depth and the row drop; depth-side rails cannot redirect outward Board-`x` inertia as the hairpin floor curves downward.
 - [ ] (amended 2026-08-22) Probe the vortex bowl's schema bounds for packed Course drainage, retain its original defaults when the maximum-tilt/maximum-drain/maximum-pitch probe ejects the full pack, and leave the separately deferred orbit-count/reference-video debt open.
 - [ ] (amended 2026-08-22) Use low-restitution, moderate-friction material only on row-end hairpins so their required catch wall dissipates the multi-row drop before the next Module; keep short same-row connectors on shared defaults and do not add duration padding.
+- [ ] (amended 2026-08-23) Tune the row-end governor angular velocity in `src/course/connectors.ts` and `src/course/connectors.test.ts`; it must dissipate packed-marble energy through a visible mechanism without changing routes, floors, or watchdog semantics.
+- [ ] (amended 2026-08-23) Overlap only the first pair of same-row connector rails with their preceding Module in `src/course/connectors.ts` and `src/course/connectors.test.ts`; preserve the exact Anchor and floor seam while closing the packed lateral escape at a rotated Module-to-connector join.
+- [ ] (amended 2026-08-23) Restore the shared Whoops rail height in `src/modules/whoops/index.ts` and tune its default descent within the existing schema; packed contacts must remain contained without a roof or oversized wall.
+- [ ] (amended 2026-08-23) Reduce the Steep Zigzag default leg count in `src/modules/steepZigzag/index.ts`; repeated acceleration before Whoops and row-end hairpins must not eject or stall the packed Course while each retained leg keeps its validated grade.
+- [ ] (amended 2026-08-23) Add high, flat outer catch caps to `src/modules/steepZigzag/index.ts` and `src/modules/steepZigzag/steepZigzag.test.ts`; they must intercept a packed outward launch above the speed-derived guard wall while leaving the central channel open.
 - [ ] (amended 2026-08-22) Replace same-row anchor chords with sampled cubic links whose endpoint derivatives match both Anchor tangents; a positive tangent dot alone lets the chord miss the vortex bowl's deliberately inward-angled narrow entry ramp.
 - [ ] (amended 2026-08-22) Make `src/validator/buildWorld.ts` attach every Spec's static colliders to one shared fixed body, matching `ModuleColliders`; one body per collider makes overlapping vortex plates resolve as independent contacts and invalidates live/headless parity.
-- [ ] Add `src/validator/courseValidation.test.ts`: every one of the 160 packed races finishes all 15 marbles before the watchdog with zero stalls and finite metrics; record measured duration percentiles in the assertion comment without imposing a target range.
+- [ ] (amended 2026-08-22, user direction) Exclude the 16 vortex-bowl selections from the successful packed-physics gate; structural assembly still covers all 32 and live vortex races retain the honest watchdog outcome.
+- [ ] Add `src/validator/courseValidation.test.ts`: every one of the 80 non-vortex packed races finishes all 15 marbles before the watchdog with zero stalls and finite metrics; record measured duration percentiles in the assertion comment without imposing a target range.
 - [ ] Add `src/race/LiveRace.tsx` and `src/race/CoursePhysics.tsx`: mount the same Course Specs and finite Finish sensor under R3F/Rapier, drive `stepCourse` before every solver substep from the retained fixed-step backlog, emit immutable snapshots/contact events, freeze exactly at the terminal outcome, and leave persistence/audio/results to Spec 4.
 - [x] Add `src/race/startAssignment.test.ts`, `src/race/progress.test.ts`, and `src/race/fixedStepBacklog.test.ts` covering tagged-stream isolation, duplicate/backward sensor crossings, immutable split times, both Selection Modes, watchdog failure at 120 simulation seconds, no dropped backlog, and render-frame partition independence.
 - [ ] Add `src/race/divergence.test.ts` with a synthetic Course containing a transformed windmill and Start gate; at identical fixed steps the live helper and headless body transforms, checkpoint times, finish order, and terminal outcome must agree.

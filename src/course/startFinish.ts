@@ -21,7 +21,8 @@ const START_GATE_ID = "start-gate";
 const FINISH_LENGTH = 0.6;
 const FINISH_DROP = 0.06;
 const SENSOR_Z = 0.2;
-const SENSOR_HEIGHT = SCALE.marbleRadius * 5;
+const SENSOR_HEIGHT = SCALE.marbleRadius * 10;
+const SENSOR_HALF_DEPTH = SCALE.marbleRadius * 4;
 const WALL_THICKNESS = SCALE.marbleRadius / 2;
 const MATERIAL = Object.freeze({
   restitution: SCALE.defaultRestitution,
@@ -140,7 +141,7 @@ export function buildFinishSpec(): Spec {
     sensor: true,
     shape: {
       kind: "cuboid",
-      halfExtents: [SCALE.channelWidth / 2, SENSOR_HEIGHT / 2, WALL_THICKNESS / 2],
+      halfExtents: [SCALE.channelWidth / 2, SENSOR_HEIGHT / 2, SENSOR_HALF_DEPTH],
     },
     position: [0, sensorY + SENSOR_HEIGHT / 2, SENSOR_Z],
     rotation: [0, 0, 0, 1],

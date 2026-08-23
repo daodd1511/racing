@@ -4,7 +4,7 @@ import type { Role, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
 import { ARC, enumerateRoleSelections, type RoleSelection } from "./arc";
-import { CONNECTOR_EDGE_CLEARANCE } from "./connectors";
+import { CONNECTOR_EDGE_CLEARANCE, HAIRPIN_REACH_PER_DROP } from "./connectors";
 import { buildFinishSpec, buildStartSpec } from "./startFinish";
 import type { BoardSpec } from "./types";
 
@@ -135,7 +135,11 @@ const maximumIncomingEnergyHeight = Math.max(
 // A speed-derived rail can project its full height beyond the hairpin
 // centreline when the sloped channel rotates its local up axis.
 const edgeMargin = roundUpToCell(
-  CONNECTOR_EDGE_CLEARANCE + maximumIncomingEnergyHeight + bayHeight / 2 + SCALE.marbleRadius * 2,
+  CONNECTOR_EDGE_CLEARANCE +
+    HAIRPIN_REACH_PER_DROP * bayHeight * 2 +
+    maximumIncomingEnergyHeight +
+    bayHeight / 2 +
+    SCALE.marbleRadius * 2,
 );
 const boardWidth = SLOT_COLUMNS * bayWidth + edgeMargin * 2;
 const boardHeight = SLOT_ROWS * bayHeight + edgeMargin * 2;

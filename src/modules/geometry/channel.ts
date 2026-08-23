@@ -5,6 +5,7 @@ import {
 } from "three";
 
 import type { Quaternion, Vector3 } from "../../race/types";
+import { SCALE } from "../../race/scale";
 import type { Anchor, ColliderMaterial, ColliderSpec, Footprint, VisualSpec } from "../types";
 
 // The shared floor-plus-rails geometry every straight-run Module in the
@@ -50,7 +51,7 @@ export interface ChannelParts {
 // profile unless a future Module has a documented reason to differ.
 export const FLOOR_THICKNESS = 0.01;
 export const RAIL_THICKNESS = 0.006;
-export const RAIL_HEIGHT = 0.03;
+export const RAIL_HEIGHT = SCALE.marbleRadius * 6;
 
 // Glossy injection-moulded plastic, per PLAN.md -> "Art direction" -- the
 // same colors the chute shipped with, now the channel's own defaults rather
@@ -217,7 +218,7 @@ export function buildChannel(
         shape: railShape,
         position: toVector(railCenter),
         rotation: toQuaternion(pitch),
-        material,
+        material: { ...material, friction: 0 },
       });
       visuals.push({
         id: railId,

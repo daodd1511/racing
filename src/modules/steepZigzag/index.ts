@@ -2,7 +2,12 @@ import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import { SCALE } from "../../race/scale";
 import type { Quaternion, Vector3 } from "../../race/types";
-import { buildChannel, RAIL_HEIGHT, RAIL_THICKNESS } from "../geometry/channel";
+import {
+  buildChannel,
+  FLOOR_THICKNESS,
+  RAIL_HEIGHT,
+  RAIL_THICKNESS,
+} from "../geometry/channel";
 import type { ChannelSegment } from "../geometry/channel";
 import type {
   ColliderSpec,
@@ -37,7 +42,7 @@ export interface SteepZigzagParams {
 const DEFAULT_PARAMS: SteepZigzagParams = Object.freeze({
   legLength: 0.3,
   grade: 0.62,
-  legCount: 5,
+  legCount: 2,
   turnAngle: 0.2,
   // Matches SCALE.channelWidth, not narrower: the Validator's own multi-
   // marble spawn spread (`spawnMarbles` in validateModule.ts) is fixed to
@@ -109,6 +114,10 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
 
 const GRAVITY_MAGNITUDE = Math.hypot(SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]);
 const GUARD_MATERIAL = { color: "#d8ff42", metalness: 0.05, roughness: 0.2 };
+const CATCH_CAP_INNER_REACH = SCALE.marbleRadius * 12;
+const CATCH_CAP_OUTER_OVERHANG = SCALE.marbleRadius * 4;
+const CATCH_CAP_CLEARANCE = SCALE.marbleRadius * 2;
+const CATCH_CAP_MATERIAL = { restitution: 0, friction: 0 };
 
 function toVector(v: ThreeVector3): Vector3 {
   return [v.x, v.y, v.z];
@@ -300,6 +309,50 @@ function buildSpec(params: SteepZigzagParams): Spec {
         rotation: toQuaternion(frame.pitch),
       });
       accumulate(cuboidCorners(guardHalfExtents, guardCenter, frame.pitch));
+
+      // A marble launched just above a speed-derived guard has already
+      // escaped the rail's normal contact range. This flat outer-side awning
+      // catches that trajectory from below and returns it to the channel.
+      // It covers only the outer portion of each side, leaving more than
+      // four marble radii open at the centre for ordinary travel and a clear
+      // view of the switchback. Its outer edge projects beyond the rail, so
+      // a marble that has just cleared the rail cannot bypass the cap at its
+      // outer edge.
+      const outerOverhang = CATCH_CAP_OUTER_OVERHANG;
+      const catchCapWidth = CATCH_CAP_INNER_REACH + outerOverhang;
+      const catchCapHalfExtents: Vector3 = [
+        catchCapWidth / 2,
+        FLOOR_THICKNESS / 2,
+        frame.segmentLength / 2,
+      ];
+      const catchCapShape = { kind: "cuboid" as const, halfExtents: catchCapHalfExtents };
+      const capLateral =
+        width / 2 + RAIL_THICKNESS / 2 + outerOverhang - catchCapWidth / 2;
+      const catchCapCenter = frame.floorCenter
+        .clone()
+        .add(new ThreeVector3(side * capLateral, 0, 0).applyQuaternion(frame.pitch))
+        .add(
+          frame.up
+            .clone()
+            .multiplyScalar(requiredHeight + CATCH_CAP_CLEARANCE + FLOOR_THICKNESS / 2),
+        );
+      const catchCapId = `leg-catch-${side < 0 ? "left" : "right"}-${index}`;
+
+      colliders.push({
+        id: catchCapId,
+        shape: catchCapShape,
+        position: toVector(catchCapCenter),
+        rotation: toQuaternion(frame.pitch),
+        material: CATCH_CAP_MATERIAL,
+      });
+      visuals.push({
+        id: catchCapId,
+        shape: catchCapShape,
+        material: GUARD_MATERIAL,
+        position: toVector(catchCapCenter),
+        rotation: toQuaternion(frame.pitch),
+      });
+      accumulate(cuboidCorners(catchCapHalfExtents, catchCapCenter, frame.pitch));
     }
   });
 

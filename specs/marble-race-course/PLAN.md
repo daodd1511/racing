@@ -22,8 +22,10 @@ result dialog, standings chrome, and finish reveal. Spec 3 exposes typed live
 snapshots, events, and outcomes for it to consume.
 
 The vortex bowl's deferred orbit guardrail and reference-video tuning remain
-the debt recorded in `../marble-race-rebuild/EXECUTION.md`. Course validation
-must exercise Courses containing the bowl, but this spec does not silently
+the debt recorded in `../marble-race-rebuild/EXECUTION.md`. At user direction
+on 2026-08-22, packed physics validation excludes the 16 Course shapes that
+contain the bowl. Structural validation still covers all 32 shapes, and live
+vortex races retain the honest watchdog outcome. This exception does not
 redefine or close that separate acceptance debt.
 
 ## Decisions
@@ -252,10 +254,12 @@ Structural validation enumerates all 32 Role selections and asserts:
 - unique collider/visual ids;
 - transformed kinematic motion remains live/headless equivalent.
 
-Physics validation runs every shape with five deterministic start-assignment
-seeds and 15 marbles: 160 packed races. Every marble must cross Finish before
-the watchdog, with zero stalls and finite Dwell Time, exit-speed, Shuffle, and
-duration metrics. The report records duration percentiles without a target.
+Physics validation runs every non-vortex shape with five deterministic
+start-assignment seeds and 15 marbles: 80 packed races. Every marble must cross
+Finish before the watchdog, with zero stalls and finite Dwell Time, exit-speed,
+Shuffle, and duration metrics. The report records duration percentiles without
+a target. The 16 vortex shapes remain available to live races and report a
+watchdog honestly when they do not complete.
 
 ### Live race exports state, not app behavior
 
@@ -339,7 +343,7 @@ Agent-owned checks:
 - Same seed produces a deep-equal Course and start assignment regardless of
   unrelated substream draws.
 - Every one of the 32 Course shapes passes structural validation.
-- All 160 packed validation races finish all 15 marbles before 120 simulation
+- All 80 non-vortex packed validation races finish all 15 marbles before 120 simulation
   seconds with zero stalls and finite metrics.
 - Validator and live helpers produce identical placed and kinematic transforms
   at the same fixed step.
@@ -388,6 +392,9 @@ User review in `course.html`:
 10. Measured duration, over padding the Course toward the stale ~60-second
     estimate.
 11. Fixed-step backlog retention, over dropped simulation time.
+12. Explicitly exclude vortex shapes from the successful packed-physics gate,
+    over blocking Course delivery on separately accepted vortex debt; retain
+    all 32 shapes structurally and preserve honest live watchdog outcomes.
 12. Shared route/checkpoints, over inferring progress from Board position.
 13. Fixed-scale decisive camera and SVG minimap, over dynamic zoom or a second
     Three.js render.

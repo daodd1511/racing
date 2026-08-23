@@ -23,7 +23,7 @@ Produces: `AppSession`; `AppAction`; `createInitialSession(state: PickerStateV1)
 
 Fresh review: not required
 
-- [ ] Add `@testing-library/react`, `@testing-library/user-event`, and bundled DM Mono packages in `package.json`/`pnpm-lock.yaml`; keep browser runtime free of font-CDN requests.
+- [x] Add `@testing-library/react`, `@testing-library/user-event`, and bundled DM Mono packages in `package.json`/`pnpm-lock.yaml`; keep browser runtime free of font-CDN requests.
 - [ ] Add `src/app/createRaceSeed.ts` and `src/app/createRaceSeed.test.ts` with exported `type RaceSeedSource = () => number` and `createRaceSeed(): number`, using `crypto.getRandomValues` to return an unsigned 32-bit seed and allowing deterministic injection in consumers.
 - [ ] Add `src/app/session.ts` and `src/app/session.test.ts` with the PLAN.md `AppSession` union, explicit setup/racing/result/failed actions, immutable transitions, stale terminal-outcome rejection, and new-seed retry behavior.
 - [ ] Add `src/ui/SetupScreen.tsx`, `src/ui/SetupScreen.test.tsx`, `src/ui/AudioToggle.tsx`, and `src/ui/AudioToggle.test.tsx` for 1-15 normalized entries, duplicate-name preservation, saved First/Last selection, Clipboard copy, form confirmation, and the shell-owned mute control.

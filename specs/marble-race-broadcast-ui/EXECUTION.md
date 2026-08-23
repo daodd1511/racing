@@ -84,6 +84,7 @@ Fresh review: required — terminal-outcome idempotence protects durable local r
 - [x] Add `src/ui/WatchdogPanel.tsx` and `src/ui/WatchdogPanel.test.tsx` with seed, elapsed time, unfinished names, **Retry race** using a new seed, and **Back to setup**, with no result language or history append.
 - [x] (amended 2026-08-23) Update `src/race/CoursePhysics.tsx` and add `src/race/CoursePhysics.test.tsx` so the terminal snapshot reaches consumers before its terminal outcome.
 - [x] (amended 2026-08-23) Extend `src/ui/BroadcastRace.tsx` and `src/ui/BroadcastRace.test.tsx` with a frozen terminal Course view that renders the retained snapshot without mounting `LiveRace`.
+- [x] (amended 2026-08-23) Update the `CoursePhysics` effect dependencies in `src/race/CoursePhysics.tsx` so its lifecycle reflects the stable `RaceRequest` identity without a lint warning.
 - [x] Extend `src/app/App.tsx`, `src/app/session.ts`, and their tests to retain the frozen terminal Course/snapshot, append exactly one completed record before the reveal timer, play exactly one finish sting, reveal after 800 ms, cancel timers on navigation/unmount, reject duplicate/stale outcomes, and never persist an active or watchdog session.
 - [ ] Extend `src/styles/app.css` with frozen-finish, result, and watchdog overlays plus a `prefers-reduced-motion` fallback that preserves all content/actions.
 - [ ] Format phase-owned files and resolve workspace lint findings attributable to this phase.

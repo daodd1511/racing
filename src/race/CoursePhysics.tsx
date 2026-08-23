@@ -38,7 +38,6 @@ export function CoursePhysics({
   const emittedOutcomeRef = useRef<RaceOutcome | null>(null);
   const callbacksRef = useRef<CallbackRefs>({ onSnapshot, onContact, onOutcome });
   callbacksRef.current = { onSnapshot, onContact, onOutcome };
-  const requestKey = `${request.seed}:${request.selectionMode}:${request.roster.join("\u0000")}`;
 
   useEffect(() => {
     let active = true;
@@ -55,7 +54,7 @@ export function CoursePhysics({
       runtimeRef.current?.dispose();
       runtimeRef.current = null;
     };
-  }, [course, requestKey]);
+  }, [course, request]);
 
   useFrame((_, deltaSeconds) => {
     const runtime = runtimeRef.current;

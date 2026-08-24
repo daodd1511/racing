@@ -62,8 +62,8 @@ review harness remain independently accessible development routes.
 - An interrupted race is not persisted or resumed. Reloading returns to setup
   with the saved Roster and Selection Mode.
 - One displayed seed is the complete replay identity: together with Roster
-  size and Selection Mode it reproduces Course selection, start assignments,
-  and physics. Roster names never influence random derivation.
+  size and Selection Mode it reproduces Course selection, randomized packed
+  Start assignments, and physics. Roster names never influence random derivation.
 
 ## Existing contracts to preserve
 
@@ -110,7 +110,7 @@ review harness remain independently accessible development routes.
 - Race connectors render as continuous swept floors with low continuous rails
   instead of exposing the physical collider tiling. Default obstacle Modules
   use denser fields and stronger interactions, with validation guardrails for
-  zero stalls and measurable scatter, shuffle, sort, or queue behavior.
+  zero stalls and measurable scatter, shuffle, or sort behavior.
 - Production Course generation applies one gentle race grade independently of
   Showcase tuning. Seeded obstacle sections mount onto that continuous Course. The production
   layout uses eight standard-width columns, adding enough smooth separation for
@@ -118,30 +118,42 @@ review harness remain independently accessible development routes.
 - Row-turn connectors lengthen to an approximately 10% average grade and
   distribute their vertical drop by horizontal curve distance, preventing a
   steep section at the turn apex. Straight connectors use one continuous
-  swept floor collider instead of overlapping cuboid segments. The collider
-  preserves the exact entry and exit vertices, aligns its surface with the
-  adjacent Module floor tops, and uses tangent-matched overlap beyond each
-  anchor so no collision lip crosses the racing surface.
-- The production Course contains ten obstacle sections: three Diamond fields,
-  three Whoops sections, two Staircases, and two Windmills. These four obstacle
-  types are the complete active catalog; Chute remains as structural Course.
+  swept open-channel collider instead of overlapping floor and rail cuboids.
+  Its floor and walls preserve the exact entry and exit vertices, align with
+  adjacent Module surfaces, and use tangent-matched overlap beyond each anchor
+  so no collision lip or hidden rail end face crosses the racing surface.
+  Row turns use the same roofless open-channel contact mesh at 96 samples, so
+  marbles cannot ricochet between a floor and hidden ceiling or receive abrupt
+  normal changes from coarse outer-wall facets. Chute keeps its rendered
+  cuboid thickness but collides only on the floor top and each rail's inward
+  face, removing the closed boxes' end faces at connector-fed Chute anchors
+  without changing the collider contract used by other Modules.
+  Live and headless Rapier construction use zero contact skin for every static
+  shape, preventing an effective height step between cuboids and trimeshes.
+- The production Course contains ten obstacle sections: four Diamond fields,
+  three Whoops sections, and three Staircases. These three obstacle types are
+  the complete active obstacle catalog; Chute remains as structural Course.
   A dedicated seed substream shuffles that inventory into the ten obstacle
   Slots for each race, making the layout varied but reproducible from its seed.
   The shuffle never places the same obstacle type in consecutive obstacle Slots.
   Every obstacle pair has a plain Chute section between it, and every row begins
   with a Chute so no obstacle blocks the chase camera immediately after a turn.
-  The Diamond field uses ten tightly staggered rows
-  and larger posts, alternating four-post rows toward opposite rails so no
-  straight empty lane crosses the field. Every edge retains more than one
-  marble diameter of clearance, preventing rail pinch points. Its physics uses round posts matching each
-  visible diamond's outer radius, eliminating stable multi-marble flat-face
-  locks while retaining the Diamond visual. Course Whoops use a one-marble-diameter crest-to-trough wave
-  across a 1.8 m section. The Course Staircase uses eight 0.16 m treads with
-  two-marble-radius rises. The Course Windmill uses the original four blades
-  rotating at 1.8 rad/s. Showcase defaults remain independent.
+  The Diamond field uses ten tightly staggered rows and larger interior posts.
+  Alternating half-circular bumpers join the left and right barriers on each
+  row's open side, closing both straight rail bypasses while retaining more
+  than one marble diameter between each bumper and its nearest diamond. Its
+  physics uses round colliders for both diamonds and rail bumpers, eliminating
+  stable multi-marble flat-face locks while retaining the Diamond visual.
+  Course Whoops use six longer waves across a 2.4 m section, with 0.016 m
+  amplitude and 0.40 m wavelength. The Course Staircase uses ten 0.20 m
+  treads with 0.048 m rises. Showcase defaults remain independent.
 - A 3-2-1-GO start gate delays the live solver, and live rendering advances at
   a modest fraction of wall time while preserving the exact fixed simulation
   step, deterministic outcome, and 120-second simulation watchdog.
+- The countdown shows the staged marbles in centered rows of at most five,
+  randomly assigns marble identities only across the occupied positions from
+  the tagged Start seed stream, and frames the Start grid and gate before
+  transitioning into the decisive-marble chase camera.
 - The production shell uses a playful arcade-broadcast visual system with a
   mode-aware tracking HUD. The dark monitoring-dashboard treatment is not part
   of the retained capability baseline.
@@ -309,6 +321,9 @@ and service calls.
 - Use `#d8ff42` as an accent, never as the sole decisive/result signal.
 - Preserve the existing colorblind-safe marble identities and pair color with
   labels/markers.
+- Render every marble with its stable two-color striped skin in the Course,
+  minimap, standings, result, and setup decoration instead of a solid-color
+  surface.
 - Keep the Course visually dominant. Chrome may overlay unused edges but must
   not shrink the 3D viewport into a secondary preview.
 - Keep the wide setup screen within one viewport below the fixed application

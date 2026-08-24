@@ -167,7 +167,9 @@ export function runCourseRaceValidation(
   const exitSpeeds: (number | null)[] = assignments.map(() => null);
   const built = buildCourseWorld(course, assignments);
   const finishSensor = course.finish.colliders.find(
-    (collider): collider is ColliderSpec & {
+    (
+      collider,
+    ): collider is ColliderSpec & {
       readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
     } => collider.sensor === true && collider.shape.kind === "cuboid",
   );

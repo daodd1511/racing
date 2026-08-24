@@ -17,7 +17,7 @@ const SLOT_COLUMNS = 8;
 const SLOT_ROWS = 3;
 const CONNECTOR_MARGIN_CELLS = 2;
 const SAME_ROW_CONNECTOR_DROP = SCALE.cellPitch / 2;
-const ROLES: readonly Role[] = ["accel", "scatter", "shuffle", "sort", "queue"];
+const ROLES: readonly Role[] = ["accel", "scatter", "shuffle", "sort"];
 
 interface ProjectedSize {
   readonly travel: number;

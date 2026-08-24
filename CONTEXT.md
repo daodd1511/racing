@@ -57,7 +57,7 @@ _Avoid_: bounds, extents, shape
 
 **Role**:
 What a Module does to the field of marbles: `accel`, `scatter`, `shuffle`,
-`sort`, or `queue`. The Arc is written in Roles, not in Modules.
+or `sort`. The Arc is written in Roles, not in Modules.
 _Avoid_: type, kind, category, tier
 
 **Arc**:
@@ -75,11 +75,6 @@ _Avoid_: step, stage, spot
 Reordering the field — marbles leave a Module in a different order than they
 entered. The property that makes a race feel unrigged.
 _Avoid_: mixing, randomising
-
-**Queue**:
-Bunching the field up so marbles leave one at a time. The source of suspense,
-distinct from Shuffle: a Queue may preserve order entirely.
-_Avoid_: choke, bottleneck (those name specific Modules, not the behaviour)
 
 **Dwell Time**:
 How long a marble spends inside one Module. Its worst case is what decides

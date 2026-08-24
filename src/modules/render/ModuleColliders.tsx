@@ -21,7 +21,6 @@ import {
   type ModuleAnchor,
 } from "../kinematics";
 import type { ColliderSpec, KinematicTransform, Shape, Spec, VisualSpec } from "../types";
-import { SCALE } from "../../race/scale";
 import { applyStep } from "../../validator/applyStep";
 
 const ORIGIN: [number, number, number] = [0, 0, 0];
@@ -52,7 +51,6 @@ function ColliderPrimitive({
           quaternion={quaternion}
           restitution={material.restitution}
           friction={material.friction}
-          contactSkin={SCALE.marbleRadius / 2}
         />
       );
     case "cylinder":

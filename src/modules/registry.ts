@@ -3,7 +3,6 @@ import type { ParamValues } from "./params";
 import { pinField } from "./pinField";
 import { staircase } from "./staircase";
 import type { KinematicTransform, ModuleDefinition, ModuleMeta, Role, Spec } from "./types";
-import { windmill } from "./windmill";
 import { whoops } from "./whoops";
 
 // The Module registry CONTEXT.md -> "Assembler" already names: every Module
@@ -45,7 +44,6 @@ export const ALL_MODULES: readonly RegisteredModule[] = [
   toRegisteredModule(pinField),
   toRegisteredModule(staircase),
   toRegisteredModule(whoops),
-  toRegisteredModule(windmill),
 ];
 
 export function modulesByRole(role: Role): readonly RegisteredModule[] {

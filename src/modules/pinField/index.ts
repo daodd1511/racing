@@ -8,6 +8,7 @@ import type {
   ModuleDefinition,
   NumberParamField,
   ParamSchema,
+  Shape,
   Spec,
   VisualSpec,
 } from "../types";
@@ -153,6 +154,8 @@ const LEAD_OUT = MARBLE_DIAMETER * 3;
 // the same margin `FLOOR_GRADE`'s comment above explains.
 const POST_MATERIAL = { restitution: 0.5, friction: 0.05 };
 const POST_VISUAL_MATERIAL = { color: "#f5a623", metalness: 0.05, roughness: 0.4 };
+const RAIL_BUMPER_RADIUS = MARBLE_DIAMETER * 1.5;
+const RAIL_BUMPER_SEGMENTS = 16;
 
 function toVector(v: ThreeVector3): Vector3 {
   return [v.x, v.y, v.z];
@@ -184,6 +187,55 @@ function cuboidCorners(
     }
   }
   return corners;
+}
+
+/** Builds the visible half of a vertical cylinder. Its flat face sits on the
+ * rail's inner plane and `inwardDirection` points the curved face into the
+ * channel. Physics uses a full cylinder centered on that plane; the rail
+ * makes its hidden outer half unreachable while preserving a smooth contact
+ * surface on the racing side. */
+function semicylinderShape(
+  radius: number,
+  halfHeight: number,
+  inwardDirection: -1 | 1,
+): Shape {
+  const vertices: number[] = [0, -halfHeight, 0, 0, halfHeight, 0];
+  const indices: number[] = [];
+  const pushTriangle = (a: number, b: number, c: number) => {
+    if (inwardDirection > 0) {
+      indices.push(a, b, c);
+    } else {
+      indices.push(a, c, b);
+    }
+  };
+
+  for (let segment = 0; segment <= RAIL_BUMPER_SEGMENTS; segment += 1) {
+    const angle = -Math.PI / 2 + (segment / RAIL_BUMPER_SEGMENTS) * Math.PI;
+    const x = inwardDirection * Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    vertices.push(x, -halfHeight, z, x, halfHeight, z);
+  }
+
+  for (let segment = 0; segment < RAIL_BUMPER_SEGMENTS; segment += 1) {
+    const bottom = 2 + segment * 2;
+    const top = bottom + 1;
+    const nextBottom = bottom + 2;
+    const nextTop = bottom + 3;
+
+    pushTriangle(bottom, top, nextBottom);
+    pushTriangle(nextBottom, top, nextTop);
+    pushTriangle(0, bottom, nextBottom);
+    pushTriangle(1, nextTop, top);
+  }
+
+  const firstBottom = 2;
+  const firstTop = 3;
+  const lastBottom = 2 + RAIL_BUMPER_SEGMENTS * 2;
+  const lastTop = lastBottom + 1;
+  pushTriangle(firstBottom, lastBottom, firstTop);
+  pushTriangle(lastBottom, lastTop, firstTop);
+
+  return { kind: "trimesh", vertices, indices };
 }
 
 /** Alternates four-post rows toward opposite rails. Every row leaves safe
@@ -262,8 +314,9 @@ function buildSpec(params: PinFieldParams): Spec {
 
   for (let row = 0; row < rowCount; row += 1) {
     const rowZ = LEAD_IN + row * rowPitch;
+    const rowIsOffset = row % 2 === 1;
     const offsets = postLateralOffsets(
-      row % 2 === 1,
+      rowIsOffset,
       postSpacing,
       postWidth,
       SCALE.channelWidth,
@@ -302,6 +355,48 @@ function buildSpec(params: PinFieldParams): Spec {
       // undercounts true extent once the channel is graded at all.
       accumulate(cuboidCorners(postHalfExtents, position, postRotation));
     });
+
+    // Each shifted row leaves its widest corridor on the opposite rail.
+    // Alternating a bumper into that corridor closes both continuous edge
+    // lanes without replacing the central diamond pattern.
+    const bumperSide: -1 | 1 = rowIsOffset ? -1 : 1;
+    const bumperLocalPoint = new ThreeVector3(
+      bumperSide * (SCALE.channelWidth / 2),
+      FLOOR_THICKNESS / 2 + postHeight / 2,
+      rowZ - totalRun / 2,
+    );
+    const bumperPosition = floorCenter
+      .clone()
+      .add(bumperLocalPoint.clone().applyQuaternion(pitch));
+    const bumperId = `rail-bumper-${row}`;
+    const bumperInwardDirection: -1 | 1 = bumperSide < 0 ? 1 : -1;
+    const bumperColliderShape = {
+      kind: "cylinder" as const,
+      halfHeight: postHeight / 2,
+      radius: RAIL_BUMPER_RADIUS,
+    };
+
+    colliders.push({
+      id: bumperId,
+      shape: bumperColliderShape,
+      position: toVector(bumperPosition),
+      rotation: toQuaternion(pitch),
+      material: POST_MATERIAL,
+    });
+    visuals.push({
+      id: bumperId,
+      shape: semicylinderShape(RAIL_BUMPER_RADIUS, postHeight / 2, bumperInwardDirection),
+      material: POST_VISUAL_MATERIAL,
+      position: toVector(bumperPosition),
+      rotation: toQuaternion(pitch),
+    });
+    accumulate(
+      cuboidCorners(
+        [RAIL_BUMPER_RADIUS, postHeight / 2, RAIL_BUMPER_RADIUS],
+        bumperPosition,
+        pitch,
+      ),
+    );
   }
 
   return {

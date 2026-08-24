@@ -1,4 +1,4 @@
-import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
+import { Vector3 as ThreeVector3 } from "three";
 
 import {
   FLOOR_THICKNESS,
@@ -7,7 +7,7 @@ import {
   buildChannel,
   type ChannelSegment,
 } from "../modules/geometry/channel";
-import type { Anchor, ColliderSpec, Spec, VisualSpec } from "../modules/types";
+import type { Anchor, ColliderSpec, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
 import type { CourseConnector } from "./types";
@@ -20,7 +20,7 @@ const MINIMUM_HAIRPIN_REACH = SCALE.channelWidth / 2 + SCALE.marbleRadius * 4;
 // vertical drop, which caps the average turn grade at roughly 10%.
 export const HAIRPIN_REACH_PER_DROP = 5;
 const LINK_SAMPLES = 16;
-const HAIRPIN_SAMPLES = 32;
+const HAIRPIN_SAMPLES = 96;
 export const CONNECTOR_EDGE_CLEARANCE =
   MINIMUM_HAIRPIN_REACH + SCALE.channelWidth / 2 + RAIL_THICKNESS;
 const CONNECTOR_MATERIAL = Object.freeze({
@@ -28,13 +28,7 @@ const CONNECTOR_MATERIAL = Object.freeze({
   friction: SCALE.defaultFriction,
 });
 const HAIRPIN_MATERIAL = Object.freeze({ restitution: 0, friction: 0.3 });
-const WALL_MATERIAL = Object.freeze({ color: "#d8ff42", metalness: 0.05, roughness: 0.2 });
 const GOVERNOR_CLEARANCE = SCALE.marbleRadius * 6;
-const GOVERNOR_MATERIAL = Object.freeze({ restitution: 0, friction: 0.02 });
-const GOVERNOR_VISUAL = Object.freeze({ color: "#343b46", metalness: 0.1, roughness: 0.55 });
-const GOVERNOR_PADDLE_RADIUS = SCALE.marbleRadius * 2.5;
-const GOVERNOR_PADDLE_THICKNESS = SCALE.marbleRadius / 3;
-const GOVERNOR_ANGULAR_VELOCITY = -0.5;
 
 export interface ConnectorRequest {
   readonly id: string;
@@ -167,23 +161,20 @@ function physicalSegments(
   });
 }
 
-interface ShaftPart {
+interface ChannelCollider {
   readonly collider: ColliderSpec;
-  readonly visual: VisualSpec;
   readonly bounds: { readonly min: Vector3; readonly max: Vector3 };
 }
 
-interface TunnelCollider {
-  readonly collider: ColliderSpec;
-  readonly bounds: ShaftPart["bounds"];
-}
-
-function smoothFloorCollider(
+function smoothOpenChannelCollider(
   route: readonly Vector3[],
   start: Anchor,
   end: Anchor,
+  railHeight: number,
   id: string,
-): TunnelCollider {
+  material: ColliderSpec["material"] = CONNECTOR_MATERIAL,
+  endOverlap: number = JOINT_OVERLAP,
+): ChannelCollider {
   const floorRoute: readonly Vector3[] = [
     vector(
       new ThreeVector3(...route[0]).sub(
@@ -193,7 +184,7 @@ function smoothFloorCollider(
     ...route.map((point): Vector3 => [...point]),
     vector(
       new ThreeVector3(...route.at(-1)!).add(
-        direction(end).multiplyScalar(JOINT_OVERLAP),
+        direction(end).multiplyScalar(endOverlap),
       ),
     ),
   ];
@@ -215,99 +206,27 @@ function smoothFloorCollider(
               .sub(tangent.clone().multiplyScalar(worldUp.dot(tangent)))
               .normalize();
     const lateral = up.clone().cross(tangent).normalize();
-    const center = new ThreeVector3(...point).add(up.multiplyScalar(FLOOR_THICKNESS / 2));
-    const left = center.clone().sub(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
-    const right = center.clone().add(lateral.multiplyScalar(SCALE.channelWidth / 2));
-    vertices.push(left.x, left.y, left.z, right.x, right.y, right.z);
-  });
-  for (let index = 0; index < floorRoute.length - 1; index += 1) {
-    const current = index * 2;
-    const next = current + 2;
-    indices.push(current, next, current + 1, current + 1, next, next + 1);
-  }
-  const coordinates = (axis: 0 | 1 | 2) =>
-    vertices.filter((_, index) => index % 3 === axis);
-  return {
-    collider: {
-      id,
-      shape: { kind: "trimesh", vertices, indices },
-      position: [0, 0, 0],
-      rotation: [0, 0, 0, 1],
-      material: CONNECTOR_MATERIAL,
-    },
-    bounds: {
-      min: [Math.min(...coordinates(0)), Math.min(...coordinates(1)), Math.min(...coordinates(2))],
-      max: [Math.max(...coordinates(0)), Math.max(...coordinates(1)), Math.max(...coordinates(2))],
-    },
-  };
-}
-
-function hairpinTunnel(
-  route: readonly Vector3[],
-  start: Anchor,
-  end: Anchor,
-  id: string,
-): TunnelCollider {
-  const tunnelRoute: readonly Vector3[] = [
-    vector(
-      new ThreeVector3(...route[0]).sub(
-        direction(start).multiplyScalar(JOINT_OVERLAP),
-      ),
-    ),
-    ...route.map((point): Vector3 => [...point]),
-    vector(
-      new ThreeVector3(...route.at(-1)!).add(
-        direction(end).multiplyScalar(SCALE.marbleRadius * 4),
-      ),
-    ),
-  ];
-  const vertices: number[] = [];
-  const indices: number[] = [];
-
-  tunnelRoute.forEach((point, index) => {
-    const tangent =
-      index === 0
-        ? new ThreeVector3(...tunnelRoute[1]).sub(new ThreeVector3(...point)).normalize()
-        : index === tunnelRoute.length - 1
-          ? new ThreeVector3(...point)
-              .sub(new ThreeVector3(...tunnelRoute[index - 1]))
-              .normalize()
-          : new ThreeVector3(...tunnelRoute[index + 1])
-              .sub(new ThreeVector3(...tunnelRoute[index - 1]))
-              .normalize();
-    const worldUp = new ThreeVector3(0, 1, 0);
-    const up =
-      index <= 1
-        ? new ThreeVector3(...start.up).normalize()
-        : index >= tunnelRoute.length - 2
-          ? new ThreeVector3(...end.up).normalize()
-          : worldUp
-              .clone()
-              .sub(tangent.clone().multiplyScalar(worldUp.dot(tangent)))
-              .normalize();
-    const lateral = up.clone().cross(tangent).normalize();
-    const center = new ThreeVector3(...point).add(up.clone().multiplyScalar(FLOOR_THICKNESS / 2));
+    const center = new ThreeVector3(...point).add(
+      up.clone().multiplyScalar(FLOOR_THICKNESS / 2),
+    );
     const floorLeft = center.clone().sub(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
-    const floorRight = center.clone().add(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
-    const roofOffset = up.clone().multiplyScalar(GOVERNOR_CLEARANCE);
-    const ring = [
-      floorLeft,
-      floorRight,
-      floorLeft.clone().add(roofOffset),
-      floorRight.clone().add(roofOffset),
-    ];
-    ring.forEach((vertex) => vertices.push(vertex.x, vertex.y, vertex.z));
+    const floorRight = center.clone().add(lateral.multiplyScalar(SCALE.channelWidth / 2));
+    const wallOffset = up.clone().multiplyScalar(railHeight);
+    const wallLeftTop = floorLeft.clone().add(wallOffset);
+    const wallRightTop = floorRight.clone().add(wallOffset);
+    [floorLeft, floorRight, wallLeftTop, wallRightTop].forEach((vertex) =>
+      vertices.push(vertex.x, vertex.y, vertex.z),
+    );
   });
 
   const addQuad = (a: number, b: number, nextA: number, nextB: number) => {
     indices.push(nextA, b, a, nextA, nextB, b);
   };
-  for (let index = 0; index < tunnelRoute.length - 1; index += 1) {
+  for (let index = 0; index < floorRoute.length - 1; index += 1) {
     const current = index * 4;
-    const next = (index + 1) * 4;
+    const next = current + 4;
     addQuad(current, current + 1, next, next + 1);
     addQuad(current + 1, current + 3, next + 1, next + 3);
-    addQuad(current + 3, current + 2, next + 3, next + 2);
     addQuad(current + 2, current, next + 2, next);
   }
   const coordinates = (axis: 0 | 1 | 2) =>
@@ -318,174 +237,13 @@ function hairpinTunnel(
       shape: { kind: "trimesh", vertices, indices },
       position: [0, 0, 0],
       rotation: [0, 0, 0, 1],
-      material: HAIRPIN_MATERIAL,
+      material,
     },
     bounds: {
       min: [Math.min(...coordinates(0)), Math.min(...coordinates(1)), Math.min(...coordinates(2))],
       max: [Math.max(...coordinates(0)), Math.max(...coordinates(1)), Math.max(...coordinates(2))],
     },
   };
-}
-
-function cuboidBounds(
-  halfExtents: Vector3,
-  position: Vector3,
-  rotation: ColliderSpec["rotation"],
-): ShaftPart["bounds"] {
-  const orientation = new ThreeQuaternion(...rotation);
-  const center = new ThreeVector3(...position);
-  const corners = ([-1, 1] as const).flatMap((xSign) =>
-    ([-1, 1] as const).flatMap((ySign) =>
-      ([-1, 1] as const).map((zSign) =>
-        new ThreeVector3(xSign * halfExtents[0], ySign * halfExtents[1], zSign * halfExtents[2])
-          .applyQuaternion(orientation)
-          .add(center),
-      ),
-    ),
-  );
-  const values = (axis: 0 | 1 | 2) => corners.map((corner) => corner.getComponent(axis));
-  return {
-    min: [Math.min(...values(0)), Math.min(...values(1)), Math.min(...values(2))],
-    max: [Math.max(...values(0)), Math.max(...values(1)), Math.max(...values(2))],
-  };
-}
-
-function shaftPart(
-  id: string,
-  halfExtents: Vector3,
-  position: Vector3,
-  rotation: ColliderSpec["rotation"] = [0, 0, 0, 1],
-  material: ColliderSpec["material"] = HAIRPIN_MATERIAL,
-  visualMaterial: VisualSpec["material"] = WALL_MATERIAL,
-): ShaftPart {
-  const shape = { kind: "cuboid" as const, halfExtents };
-  return {
-    collider: { id, shape, position, rotation, material },
-    visual: { id, shape, position, rotation, material: visualMaterial },
-    bounds: cuboidBounds(halfExtents, position, rotation),
-  };
-}
-
-function ceilingPart(collider: ColliderSpec, id: string): ShaftPart | null {
-  if (collider.shape.kind !== "cuboid") return null;
-  const rotation = new ThreeQuaternion(...collider.rotation);
-  const up = new ThreeVector3(0, 1, 0).applyQuaternion(rotation).normalize();
-  const position = new ThreeVector3(...collider.position).add(
-    up.multiplyScalar(GOVERNOR_CLEARANCE + FLOOR_THICKNESS / 2),
-  );
-  return shaftPart(
-    id,
-    [collider.shape.halfExtents[0], FLOOR_THICKNESS / 2, collider.shape.halfExtents[2]],
-    vector(position),
-    collider.rotation,
-    GOVERNOR_MATERIAL,
-    GOVERNOR_VISUAL,
-  );
-}
-
-function channelRoof(colliders: readonly ColliderSpec[], idPrefix: string): readonly ShaftPart[] {
-  return colliders.flatMap((collider, index) => {
-    if (!collider.id.includes("-floor-")) return [];
-    const ceiling = ceilingPart(collider, `${idPrefix}-roof-${index}`);
-    return ceiling ? [ceiling] : [];
-  });
-}
-
-function speedGovernor(
-  colliders: readonly ColliderSpec[],
-  idPrefix: string,
-  isHairpin: boolean,
-  includeCeilings: boolean,
-): readonly ShaftPart[] {
-  const floors = colliders.filter(
-    (
-      collider,
-    ): collider is ColliderSpec & {
-      readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
-    } => collider.id.includes("-floor-") && collider.shape.kind === "cuboid",
-  );
-  const axleIndices = new Set(
-    isHairpin
-      ? [Math.floor(floors.length / 3), Math.floor((floors.length * 2) / 3)]
-      : [floors.length - 1],
-  );
-  return floors.flatMap((collider, index) => {
-    const rotation = new ThreeQuaternion(...collider.rotation);
-    const up = new ThreeVector3(0, 1, 0).applyQuaternion(rotation).normalize();
-    const floorCenter = new ThreeVector3(...collider.position);
-    const paddleHalfExtents: Vector3 = [
-      isHairpin
-        ? collider.shape.halfExtents[0] + SCALE.marbleRadius
-        : Math.max(
-            SCALE.marbleRadius,
-            collider.shape.halfExtents[0] - SCALE.marbleRadius * 3,
-          ),
-      GOVERNOR_PADDLE_RADIUS,
-      GOVERNOR_PADDLE_THICKNESS / 2,
-    ];
-    const paddlePosition = floorCenter
-      .clone()
-      .add(up.multiplyScalar(FLOOR_THICKNESS / 2 + SCALE.marbleRadius * 3));
-    const ceiling = includeCeilings
-      ? ceilingPart(collider, `${idPrefix}-governor-ceiling-${index}`)
-      : null;
-    if (!axleIndices.has(index)) return ceiling ? [ceiling] : [];
-    const paddle = (() => {
-      const part = shaftPart(
-        `${idPrefix}-governor-axle-${index}`,
-        paddleHalfExtents,
-        vector(paddlePosition),
-        collider.rotation,
-        GOVERNOR_MATERIAL,
-        GOVERNOR_VISUAL,
-      );
-      const axis = new ThreeVector3(1, 0, 0).applyQuaternion(rotation).normalize();
-      return {
-        ...part,
-        collider: {
-          ...part.collider,
-          kinematic: true,
-          motion: {
-            kind: "rotation" as const,
-            axis: vector(axis),
-            pivot: vector(paddlePosition),
-            angularVelocity: GOVERNOR_ANGULAR_VELOCITY,
-          },
-        },
-      };
-    })();
-    return ceiling ? [ceiling, paddle] : [paddle];
-  });
-}
-
-function entranceRailOverlaps(
-  colliders: readonly ColliderSpec[],
-  idPrefix: string,
-): readonly ShaftPart[] {
-  return colliders.flatMap((collider) => {
-    if (
-      collider.shape.kind !== "cuboid" ||
-      !/(?:-rail-left|-rail-right)-0$/.test(collider.id)
-    ) {
-      return [];
-    }
-    const rotation = new ThreeQuaternion(...collider.rotation);
-    const tangent = new ThreeVector3(0, 0, 1).applyQuaternion(rotation).normalize();
-    const halfLength = JOINT_OVERLAP;
-    const railStart = new ThreeVector3(...collider.position).sub(
-      tangent.clone().multiplyScalar(collider.shape.halfExtents[2]),
-    );
-    const position = railStart.sub(tangent.multiplyScalar(halfLength / 2));
-    return [
-      shaftPart(
-        `${idPrefix}-entrance-${collider.id.endsWith("-rail-left-0") ? "rail-left" : "rail-right"}`,
-        [collider.shape.halfExtents[0], collider.shape.halfExtents[1], halfLength],
-        vector(position),
-        collider.rotation,
-        collider.material,
-      ),
-    ];
-  });
 }
 
 export function buildCourseConnector(request: ConnectorRequest): CourseConnector {
@@ -502,25 +260,19 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
     isHairpin ? HAIRPIN_MATERIAL : CONNECTOR_MATERIAL,
     request.id,
   );
-  // The rotating cross-channel paddles read as arbitrary black barriers and
-  // stop the race pack. Containment comes from the speed-derived rail height;
-  // the Course should not add invisible pacing machinery to the racing line.
-  const governor: readonly ShaftPart[] = [];
-  const entranceGuard = isHairpin ? [] : entranceRailOverlaps(channel.colliders, request.id);
-  const roof = isHairpin ? channelRoof(channel.colliders, request.id) : [];
-  const tunnel = isHairpin
-    ? hairpinTunnel(route, request.start, request.end, `${request.id}-tunnel`)
-    : null;
-  const smoothFloor = isHairpin
-    ? null
-    : smoothFloorCollider(route, request.start, request.end, `${request.id}-continuous-floor`);
-  const extraBounds = [
-    ...governor.map(({ bounds }) => bounds),
-    ...entranceGuard.map(({ bounds }) => bounds),
-    ...roof.map(({ bounds }) => bounds),
-    ...(tunnel ? [tunnel.bounds] : []),
-    ...(smoothFloor ? [smoothFloor.bounds] : []),
-  ];
+  // Use one open swept contact mesh for both links and row turns. The old
+  // closed hairpin tunnel gave fast marbles a roof to ricochet between while
+  // its coarse outer wall changed collision normal at every facet.
+  const smoothChannel = smoothOpenChannelCollider(
+    route,
+    request.start,
+    request.end,
+    railHeight,
+    `${request.id}-continuous-channel`,
+    isHairpin ? HAIRPIN_MATERIAL : CONNECTOR_MATERIAL,
+    isHairpin ? SCALE.marbleRadius * 4 : JOINT_OVERLAP,
+  );
+  const extraBounds = [smoothChannel.bounds];
   const bounds = extraBounds.reduce(
     (current, partBounds) => ({
       min: current.min.map((value, axis) =>
@@ -533,22 +285,8 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
     channel.bounds,
   );
   const spec: Spec = {
-    colliders: [
-      ...(tunnel
-        ? [tunnel.collider]
-        : [
-            smoothFloor!.collider,
-            ...channel.colliders.filter((collider) => !collider.id.includes("-floor-")),
-          ]),
-      ...entranceGuard.map(({ collider }) => collider),
-      ...governor.map(({ collider }) => collider),
-    ],
-    visuals: [
-      ...channel.visuals,
-      ...entranceGuard.map(({ visual }) => visual),
-      ...governor.map(({ visual }) => visual),
-      ...roof.map(({ visual }) => visual),
-    ],
+    colliders: [smoothChannel.collider],
+    visuals: channel.visuals,
     footprint: {
       cells: [],
       entry: { ...channel.entry, position: request.start.position },

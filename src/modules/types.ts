@@ -15,7 +15,7 @@ import type { Quaternion, Vector3 } from "../race/types";
 
 /** What a Module does to the field of marbles. The Arc (Spec 3) is written
  * in Roles, not in Modules -- see CONTEXT.md -> "Role". */
-export type Role = "accel" | "scatter" | "shuffle" | "sort" | "queue";
+export type Role = "accel" | "scatter" | "shuffle" | "sort";
 
 /** One position on the Board's hole grid -- see CONTEXT.md -> "Cell". Plain
  * integer grid coordinates; the Board/Assembler (Spec 3) interprets them. */
@@ -78,7 +78,7 @@ export interface KinematicRotationMotion {
 
 export interface ColliderSpec {
   /** Stable within one Spec; `KinematicTransform.id` targets this to move a
-   * specific collider (e.g. a windmill blade) without touching the rest. */
+   * specific collider without touching the rest. */
   readonly id: string;
   /** A position-based kinematic body. Omitted or false keeps the collider
    * fixed in both the live R3F world and the headless Validator. */

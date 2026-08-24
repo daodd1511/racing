@@ -33,7 +33,6 @@ function colliderDesc(spec: ColliderSpec, relativeToSharedBody: boolean): RAPIER
   const desc = colliderDescForShape(spec.shape)
     .setRestitution(spec.material.restitution)
     .setFriction(spec.material.friction)
-    .setContactSkin(spec.shape.kind === "trimesh" ? SCALE.marbleRadius / 2 : 0)
     .setSensor(spec.sensor ?? false);
   if (relativeToSharedBody) {
     desc.setTranslation(spec.position[0], spec.position[1], spec.position[2]).setRotation({

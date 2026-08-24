@@ -6,7 +6,14 @@ import {
 
 import type { Quaternion, Vector3 } from "../../race/types";
 import { SCALE } from "../../race/scale";
-import type { Anchor, ColliderMaterial, ColliderSpec, Footprint, VisualSpec } from "../types";
+import type {
+  Anchor,
+  ColliderMaterial,
+  ColliderSpec,
+  Footprint,
+  Shape,
+  VisualSpec,
+} from "../types";
 
 // The shared floor-plus-rails geometry every straight-run Module in the
 // catalogue sits in -- extracted from the chute (Phase 1's only prior
@@ -46,6 +53,13 @@ export interface ChannelParts {
   readonly bounds: Footprint["bounds"];
 }
 
+export interface ChannelOptions {
+  /** Replace closed floor/rail boxes with only the surfaces marbles should
+   * touch. Use this at a connector-fed Module boundary to remove hidden end
+   * faces without changing the rendered channel. */
+  readonly openContactSurfaces?: boolean;
+}
+
 // Module-level defaults, reused from the chute's own values (its original
 // per-file constants) so every channel-floor Module shares one floor/rail
 // profile unless a future Module has a documented reason to differ.
@@ -65,6 +79,59 @@ function toVector(v: ThreeVector3): Vector3 {
 
 function toQuaternion(q: ThreeQuaternion): Quaternion {
   return [q.x, q.y, q.z, q.w];
+}
+
+/** Static channel contact surfaces deliberately omit the closed cuboid's end
+ * faces. Those faces sit exactly on Module anchors, where a marble entering
+ * from a connector can hit an invisible top-front or side-front edge and
+ * receive a large impulse even though the visible surfaces are continuous. */
+function floorContactShape(halfExtents: Vector3): Shape {
+  const [halfWidth, halfThickness, halfLength] = halfExtents;
+  return {
+    kind: "trimesh",
+    vertices: [
+      -halfWidth,
+      halfThickness,
+      -halfLength,
+      -halfWidth,
+      halfThickness,
+      halfLength,
+      halfWidth,
+      halfThickness,
+      -halfLength,
+      halfWidth,
+      halfThickness,
+      halfLength,
+    ],
+    indices: [0, 1, 2, 2, 1, 3],
+  };
+}
+
+function railContactShape(
+  side: -1 | 1,
+  width: number,
+  railHeight: number,
+  halfLength: number,
+): Shape {
+  const x = side * width / 2;
+  return {
+    kind: "trimesh",
+    vertices: [
+      x,
+      0,
+      -halfLength,
+      x,
+      railHeight,
+      -halfLength,
+      x,
+      0,
+      halfLength,
+      x,
+      railHeight,
+      halfLength,
+    ],
+    indices: side < 0 ? [0, 1, 2, 2, 1, 3] : [0, 2, 1, 2, 3, 1],
+  };
 }
 
 /** `idPrefix` plus `part`, suffixed by the segment index only when there is
@@ -102,8 +169,9 @@ function cuboidCorners(
   return corners;
 }
 
-/** Builds a floor cuboid plus two rail cuboids per segment, chaining segment
- * to segment. Each segment's rotation comes from `setFromUnitVectors` over
+/** Builds a rendered floor cuboid plus two rendered rail cuboids per segment,
+ * with top-only floor and inward-only rail contact surfaces. Each segment's
+ * rotation comes from `setFromUnitVectors` over
  * its own `start -> end`, never a hand-picked axis-angle sign -- see the
  * comment at `chute/index.ts`'s original construction (now delegated here)
  * for the bug that convention exists to prevent: a guessed sign is
@@ -113,6 +181,7 @@ export function buildChannel(
   segments: readonly ChannelSegment[],
   material: ColliderMaterial,
   idPrefix: string,
+  options: ChannelOptions = {},
 ): ChannelParts {
   if (segments.length === 0) {
     throw new Error("buildChannel needs at least one segment");
@@ -184,7 +253,7 @@ export function buildChannel(
 
     colliders.push({
       id: floorId,
-      shape: floorShape,
+      shape: options.openContactSurfaces ? floorContactShape(floorHalfExtents) : floorShape,
       position: toVector(floorCenter),
       rotation: toQuaternion(pitch),
       material,
@@ -215,8 +284,10 @@ export function buildChannel(
 
       colliders.push({
         id: railId,
-        shape: railShape,
-        position: toVector(railCenter),
+        shape: options.openContactSurfaces
+          ? railContactShape(side, width, railHeight, segmentLength / 2)
+          : railShape,
+        position: toVector(options.openContactSurfaces ? floorCenter : railCenter),
         rotation: toQuaternion(pitch),
         material: { ...material, friction: 0 },
       });

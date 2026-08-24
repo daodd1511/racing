@@ -13,7 +13,6 @@ const COURSE_MODULE_IDS = new Set([
   "pin-field",
   "whoops",
   "staircase",
-  "windmill",
 ]);
 
 export const COURSE_MODULES: readonly RegisteredModule[] = ALL_MODULES.filter(({ id }) =>
@@ -34,23 +33,16 @@ export function courseParamValues(module: RegisteredModule): ParamValues {
       ...defaults,
       amplitude: SCALE.marbleRadius,
       grade: COURSE_GRADE,
-      length: 1.8,
+      length: 2.4,
+      wavelength: 0.4,
     });
   }
   if (module.id === "staircase") {
     return Object.freeze({
       ...defaults,
-      stepCount: 8,
-      tread: 0.16,
-      riseHeight: SCALE.marbleRadius * 2,
-    });
-  }
-  if (module.id === "windmill") {
-    return Object.freeze({
-      ...defaults,
-      bladeCount: 4,
-      angularVelocity: 1.8,
-      courseGrade: COURSE_GRADE,
+      stepCount: 10,
+      tread: 0.2,
+      riseHeight: SCALE.marbleRadius * 3,
     });
   }
   return Object.freeze({ ...defaults, courseGrade: COURSE_GRADE });

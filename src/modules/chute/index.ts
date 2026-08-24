@@ -72,6 +72,7 @@ function buildSpec(params: ChuteParams): Spec {
     [{ start: [0, 0, 0], end: [0, -drop, length], width }],
     material,
     "",
+    { openContactSurfaces: true },
   );
 
   return {

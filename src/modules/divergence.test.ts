@@ -1,11 +1,9 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { enumerateRoleSelections } from "../course/arc";
-import { assembleCourseFromRoleSelection } from "../course/assembleCourse";
+import { assembleCourse } from "../course/assembleCourse";
 import { stepStartGate } from "../course/startFinish";
 import { stepCourse, stepRotatingSpec } from "../course/stepCourse";
-import { ALL_MODULES } from "./registry";
 import {
   INITIAL_KINEMATIC_CLOCK,
   KINEMATIC_FIXED_STEP_SECONDS,
@@ -121,28 +119,16 @@ describe("kinematic renderer and Validator agreement", () => {
     });
   });
 
-  it("applies placed Module, Start, and connector transforms identically at fixed Course steps", () => {
-    const selection = enumerateRoleSelections().find(({ queue }) => queue === "windmill");
-    if (!selection) {
-      throw new Error("expected a Role selection containing windmill");
-    }
-    const course = assembleCourseFromRoleSelection(29, selection);
-    const placedWindmill = course.modules.find(({ moduleId }) => moduleId === "windmill");
-    const windmill = ALL_MODULES.find(({ id }) => id === "windmill");
-    if (!placedWindmill || !windmill) {
-      throw new Error("expected placed and registered windmill");
-    }
-
+  it("applies Start and connector transforms identically at fixed Course steps", () => {
+    const course = assembleCourse(29);
     const builtWorld = buildWorld([
       course.start,
-      placedWindmill.spec,
       ...course.connectors.map(({ spec }) => spec),
     ]);
     for (const stepCount of [0, 1, 6, 30]) {
       const tSeconds = stepCount * KINEMATIC_FIXED_STEP_SECONDS;
       const liveTransforms = [
         ...kinematicTransformsAt(stepStartGate, course.start, tSeconds),
-        ...kinematicTransformsAt(windmill.step, placedWindmill.spec, tSeconds),
         ...course.connectors.flatMap(({ spec }) => stepRotatingSpec(spec, tSeconds)),
       ];
       const headlessTransforms = stepCourse(course, tSeconds);

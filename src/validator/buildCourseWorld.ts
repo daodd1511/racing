@@ -8,7 +8,7 @@ import {
 import type { Course } from "../course/types";
 import type { Anchor, ColliderSpec, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
-import type { StartAssignment } from "../race/startAssignment";
+import { startPositionInCourse, type StartAssignment } from "../race/startAssignment";
 import type { Quaternion, Vector3 } from "../race/types";
 import { buildWorld } from "./buildWorld";
 
@@ -88,22 +88,6 @@ function courseSpecs(course: Course): readonly Spec[] {
   ];
 }
 
-function assignmentPosition(course: Course, assignment: StartAssignment): Vector3 {
-  const horizontalTangent = new ThreeVector3(
-    course.entry.tangent[0],
-    0,
-    course.entry.tangent[2],
-  ).normalize();
-  const up = new ThreeVector3(0, 1, 0);
-  const right = up.clone().cross(horizontalTangent).normalize();
-  const local = assignment.position;
-  const position = new ThreeVector3(...course.entry.position)
-    .add(right.multiplyScalar(local[0]))
-    .add(up.multiplyScalar(local[1]))
-    .add(horizontalTangent.multiplyScalar(local[2]));
-  return tuple(position);
-}
-
 export interface BuiltCourseWorld {
   readonly world: RAPIER.World;
   readonly eventQueue: RAPIER.EventQueue;
@@ -147,7 +131,7 @@ export function buildCourseWorld(
   const marbleBodies = new Map<number, RAPIER.RigidBody>();
   const marbleIndicesByColliderHandle = new Map<number, number>();
   for (const assignment of assignments) {
-    const position = assignmentPosition(course, assignment);
+    const position = startPositionInCourse(course, assignment);
     const body = built.world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(position[0], position[1], position[2])

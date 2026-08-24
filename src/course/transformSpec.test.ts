@@ -1,11 +1,7 @@
-import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 import { describe, expect, it } from "vitest";
 
 import { chute } from "../modules/chute";
-import { defaultParamValues } from "../modules/params";
-import { ALL_MODULES } from "../modules/registry";
 import type { Quaternion, Vector3 } from "../race/types";
-import type { CoursePlacement } from "./types";
 import { transformSpec } from "./transformSpec";
 
 const YAW_RIGHT: Quaternion = [0, Math.SQRT1_2, 0, Math.SQRT1_2];
@@ -13,13 +9,6 @@ const YAW_LEFT: Quaternion = [0, -Math.SQRT1_2, 0, Math.SQRT1_2];
 
 function expectVectorClose(actual: Vector3, expected: Vector3): void {
   actual.forEach((value, axis) => expect(value).toBeCloseTo(expected[axis], 10));
-}
-
-function transformPoint(point: Vector3, placement: CoursePlacement): Vector3 {
-  const transformed = new ThreeVector3(...point)
-    .applyQuaternion(new ThreeQuaternion(...placement.rotation))
-    .add(new ThreeVector3(...placement.position));
-  return [transformed.x, transformed.y, transformed.z];
 }
 
 describe("transformSpec", () => {
@@ -38,37 +27,6 @@ describe("transformSpec", () => {
     expect(right.footprint.route[0]).toEqual(right.footprint.entry.position);
     expectVectorClose(right.footprint.route.at(-1)!, right.footprint.exit.position);
     expect(source).toEqual(snapshot);
-  });
-
-  it("transforms windmill motion axis, pivot, bounds, and normalized rotations together", () => {
-    const module = ALL_MODULES.find(({ id }) => id === "windmill");
-    if (!module) {
-      throw new Error("windmill Module is not registered");
-    }
-    const source = module.buildSpec(defaultParamValues(module.meta.params));
-    const placement: CoursePlacement = { position: [2, -1, 4], rotation: YAW_RIGHT };
-    const transformed = transformSpec(source, placement, "slot-8");
-    const sourceBlade = source.colliders.find(({ motion }) => motion?.kind === "rotation");
-    const transformedBlade = transformed.colliders.find(
-      ({ motion }) => motion?.kind === "rotation",
-    );
-    if (!sourceBlade?.motion || !transformedBlade?.motion) {
-      throw new Error("windmill blade motion is missing");
-    }
-
-    expectVectorClose(
-      transformedBlade.motion.pivot,
-      transformPoint(sourceBlade.motion.pivot, placement),
-    );
-    expectVectorClose(transformedBlade.motion.axis, [0, 0, -1]);
-    expect(Math.hypot(...transformedBlade.motion.axis)).toBeCloseTo(1, 10);
-    expect(Math.hypot(...transformedBlade.rotation)).toBeCloseTo(1, 10);
-    expect(transformed.footprint.bounds.min[0]).toBeLessThanOrEqual(
-      Math.min(...transformed.footprint.route.map((point) => point[0])),
-    );
-    expect(transformed.footprint.bounds.max[0]).toBeGreaterThanOrEqual(
-      Math.max(...transformed.footprint.route.map((point) => point[0])),
-    );
   });
 
   it("rejects an empty namespace and zero placement quaternion", () => {

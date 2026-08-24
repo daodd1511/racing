@@ -35,7 +35,7 @@ const ARC_SLOTS = [
   {
     slotIndex: 4,
     kind: "module",
-    role: "queue",
+    role: "sort",
     fixedModuleId: "staircase",
     column: 4,
     row: 0,
@@ -80,8 +80,8 @@ const ARC_SLOTS = [
   {
     slotIndex: 9,
     kind: "module",
-    role: "queue",
-    fixedModuleId: "windmill",
+    role: "scatter",
+    fixedModuleId: "pin-field",
     column: 6,
     row: 1,
     direction: "left",
@@ -116,7 +116,7 @@ const ARC_SLOTS = [
   {
     slotIndex: 13,
     kind: "module",
-    role: "queue",
+    role: "shuffle",
     fixedModuleId: "whoops",
     column: 2,
     row: 1,
@@ -152,8 +152,8 @@ const ARC_SLOTS = [
   {
     slotIndex: 17,
     kind: "module",
-    role: "queue",
-    fixedModuleId: "windmill",
+    role: "sort",
+    fixedModuleId: "staircase",
     column: 1,
     row: 2,
     direction: "right",
@@ -214,13 +214,13 @@ export const COURSE_OBSTACLE_INVENTORY: readonly string[] = Object.freeze([
   "pin-field",
   "pin-field",
   "pin-field",
+  "pin-field",
   "whoops",
   "whoops",
   "whoops",
   "staircase",
   "staircase",
-  "windmill",
-  "windmill",
+  "staircase",
 ]);
 
 function shuffleObstaclesWithoutRepeats(random: () => number): string[] {
@@ -278,7 +278,7 @@ export function randomizedArc(seed: number): readonly ArcSlot[] {
   );
 }
 
-const ROLE_ORDER: readonly Role[] = ["accel", "scatter", "shuffle", "sort", "queue"];
+const ROLE_ORDER: readonly Role[] = ["accel", "scatter", "shuffle", "sort"];
 
 export type RoleSelection = Readonly<Record<Role, string>>;
 

@@ -41,6 +41,11 @@ export function formatRaceTime(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${remainder.toFixed(2).padStart(5, "0")}`;
 }
 
+export function courseProgress(checkpoint: number | null, checkpointCount: number): number {
+  if (checkpoint === null || checkpointCount <= 0) return 0;
+  return Math.min(1, Math.max(0, checkpoint / checkpointCount));
+}
+
 export function createStandingsRows({
   roster,
   snapshot,
@@ -83,35 +88,45 @@ export function Standings({
         <p>Live order</p>
         <h2 id="standings-title">Standings</h2>
       </header>
-      <ol className="standings__list">
-        {rows.map((row) => {
-          const checkpoint =
-            row.checkpoint === null ? "Pending" : `CP ${row.checkpoint} / ${checkpointCount}`;
-          const split =
-            row.latestSplitSeconds === null ? "—" : formatRaceTime(row.latestSplitSeconds);
-          return (
-            <li
-              className={`standings__row${row.decisive ? " standings__row--decisive" : ""}`}
-              key={row.marbleIndex}
-            >
-              <span aria-label={`Position ${row.position}`} className="standings__position">
-                {String(row.position).padStart(2, "0")}
-              </span>
-              <span
-                aria-hidden="true"
-                className="standings__marble"
-                style={{ background: row.color }}
-              />
-              <span className="standings__name">{row.name}</span>
-              {row.decisive ? <span className="standings__decisive">{decisiveLabel}</span> : null}
-              <span className="standings__checkpoint">{checkpoint}</span>
-              <span aria-label={`Latest split ${split}`} className="standings__split">
-                {split}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="standings__scroll">
+        <ol className="standings__list">
+          {rows.map((row) => {
+            const checkpoint =
+              row.checkpoint === null ? "Pending" : `CP ${row.checkpoint} / ${checkpointCount}`;
+            const split =
+              row.latestSplitSeconds === null ? "—" : formatRaceTime(row.latestSplitSeconds);
+            const progress = courseProgress(row.checkpoint, checkpointCount);
+            return (
+              <li
+                className={`standings__row${row.decisive ? " standings__row--decisive" : ""}`}
+                key={row.marbleIndex}
+                style={{ "--marble-color": row.color } as React.CSSProperties}
+              >
+                <span aria-label={`Position ${row.position}`} className="standings__position">
+                  {String(row.position).padStart(2, "0")}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="standings__marble"
+                  style={{ background: row.color }}
+                />
+                <span className="standings__name">{row.name}</span>
+                {row.decisive ? <span className="standings__decisive">{decisiveLabel}</span> : null}
+                <span aria-label={`Latest split ${split}`} className="standings__split">
+                  {split}
+                </span>
+                <span aria-hidden="true" className="standings__track">
+                  <span
+                    className="standings__track-fill"
+                    style={{ width: `${(progress * 100).toFixed(1)}%` }}
+                  />
+                </span>
+                <span className="standings__checkpoint">{checkpoint}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }

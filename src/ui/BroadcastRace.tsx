@@ -108,7 +108,7 @@ export function BroadcastRace({
   return (
     <main className="broadcast-race">
       <header aria-label="Race telemetry" className="broadcast-race__telemetry">
-        <p className="broadcast-race__live">
+        <p className="broadcast-race__live" data-state={countdown >= 0 ? "grid" : "live"}>
           <span>Race status</span>
           <strong>{countdown >= 0 ? "Starting grid" : "Live"}</strong>
         </p>

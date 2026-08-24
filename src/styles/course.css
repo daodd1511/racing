@@ -128,28 +128,101 @@ body {
 }
 
 .course-minimap {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  margin: 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: #202a30;
+}
+
+.course-minimap__caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid #3a464d;
+  background: #182026;
+  color: #9fb0b8;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.course-minimap__title {
+  margin: 0;
+}
+
+.course-minimap__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  color: #d8ff42;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-minimap__chip-swatch {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  aspect-ratio: 1;
+  border: 1px solid #10151a;
+  border-radius: 50%;
+}
+
+.course-minimap__canvas {
+  display: block;
   width: 100%;
   height: auto;
-  border-radius: 0.5rem;
 }
 
 .course-minimap__board {
   fill: #202a30;
-  stroke: #697a83;
-  stroke-width: 0.8;
+}
+
+.course-minimap__route-casing {
+  stroke: #10151a;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
 }
 
 .course-minimap__route {
   stroke: #d8ff42;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
+.course-minimap__start {
+  fill: #8fd9ee;
+  stroke: #10151a;
+  stroke-width: 0.8;
+}
+
+.course-minimap__finish {
+  fill: #eef4ef;
+  stroke: #10151a;
   stroke-width: 0.8;
 }
 
 .course-minimap__checkpoint {
-  fill: #eef4ef;
-  stroke: #12171c;
-  stroke-width: 0.4;
+  fill: #4c5b63;
+  stroke: #eef4ef;
+  stroke-width: 0.5;
+}
+
+.course-minimap__checkpoint--passed {
+  fill: #f18e46;
+}
+
+.course-minimap__halo {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 0.7;
+  opacity: 0.5;
 }
 
 .course-minimap__marble {
@@ -159,16 +232,7 @@ body {
 
 .course-minimap__marble--decisive {
   stroke: #ffffff;
-  stroke-width: 0.75;
-}
-
-.course-minimap__decisive-label {
-  fill: #ffffff;
-  font-family: "DM Mono", monospace;
-  font-size: 3.2px;
-  paint-order: stroke;
-  stroke: #10151a;
-  stroke-width: 0.7px;
+  stroke-width: 0.9;
 }
 
 .course-preview__roster {

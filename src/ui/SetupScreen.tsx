@@ -137,9 +137,11 @@ export function SetupScreen({
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const normalizedRoster = parseRoster(rosterInput);
   const validRoster = isValidRoster(normalizedRoster);
-  const countText = `${normalizedRoster.length} / ${DEFAULT_RACE_CONFIG.maximumRosterSize} marbles`;
-  const validationMessage = `Add between 1 and ${DEFAULT_RACE_CONFIG.maximumRosterSize} non-empty names.`;
+  const maximumRosterSize = DEFAULT_RACE_CONFIG.maximumRosterSize;
+  const countText = `${normalizedRoster.length} / ${maximumRosterSize} marbles`;
+  const validationMessage = `Add between 1 and ${maximumRosterSize} non-empty names.`;
   const copyButtonLabel = copyLabel(copyState);
+  const fillRatio = Math.min(1, normalizedRoster.length / maximumRosterSize);
 
   function handleRosterChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
     const value = event.currentTarget.value;
@@ -173,82 +175,96 @@ export function SetupScreen({
   return (
     <main className="setup-screen">
       <section aria-labelledby="setup-title" className="setup-screen__card">
-        <p className="setup-screen__eyebrow">Load the hopper</p>
-        <h1 id="setup-title">Ready, set, pick.</h1>
-        <p className="setup-screen__intro">
-          One name per marble. The Course stays physical and the result stays in this browser.
-        </p>
-        <form className="setup-screen__form" onSubmit={handleSubmit}>
-          <label className="setup-screen__label" htmlFor="race-roster">
-            Race Roster
-          </label>
-          <textarea
-            aria-describedby="roster-count roster-validation"
-            aria-invalid={showValidation && !validRoster}
-            id="race-roster"
-            maxLength={1200}
-            name="roster"
-            onChange={handleRosterChange}
-            placeholder={"Avery\nBlake\nCasey"}
-            rows={8}
-            value={rosterInput}
-          />
-          <div className="setup-screen__roster-footer">
-            <span id="roster-count">{countText}</span>
-            <button onClick={handleCopy} type="button">
-              {copyButtonLabel}
-            </button>
-          </div>
-          <fieldset className="setup-screen__modes">
-            <legend className="setup-screen__label">Who should be selected?</legend>
-            <div className="setup-screen__mode-options">
-              <ModeOption
-                detail="End the race when one marble crosses Finish."
-                mode="first"
-                onSelectionModeChange={onSelectionModeChange}
-                selectionMode={selectionMode}
-                title="First finisher"
-              />
-              <ModeOption
-                detail="Keep racing until the final marble reaches Finish."
-                mode="last"
-                onSelectionModeChange={onSelectionModeChange}
-                selectionMode={selectionMode}
-                title="Last finisher"
-              />
-            </div>
-          </fieldset>
-          <fieldset className="setup-screen__modes">
-            <legend className="setup-screen__label">Camera</legend>
-            <div className="setup-screen__mode-options">
-              <CameraOption
-                cameraMode={cameraMode}
-                detail="Elevated chase view with more of the Course visible."
-                mode="broadcast"
-                onCameraModeChange={onCameraModeChange}
-                title="Broadcast"
-              />
-              <CameraOption
-                cameraMode={cameraMode}
-                detail="Low track-level chase view directly above the marbles."
-                mode="close-up"
-                onCameraModeChange={onCameraModeChange}
-                title="Close up"
-              />
-            </div>
-          </fieldset>
-          <p
-            aria-live="polite"
-            className="setup-screen__validation"
-            id="roster-validation"
-            role="status"
-          >
-            {showValidation && !validRoster ? validationMessage : ""}
+        <div className="setup-screen__content">
+          <p className="setup-screen__eyebrow">Load the hopper</p>
+          <h1 id="setup-title">Ready, set, pick.</h1>
+          <p className="setup-screen__intro">
+            One name per marble. The Course stays physical and the result stays in this browser.
           </p>
-          <button className="setup-screen__start" type="submit">
-            Release the marbles
-          </button>
-        </form>
+          <form className="setup-screen__form" onSubmit={handleSubmit}>
+            <div className="setup-screen__field">
+              <label className="setup-screen__label" htmlFor="race-roster">
+                Race Roster
+              </label>
+              <textarea
+                aria-describedby="roster-count roster-validation"
+                aria-invalid={showValidation && !validRoster}
+                id="race-roster"
+                maxLength={1200}
+                name="roster"
+                onChange={handleRosterChange}
+                placeholder={"Avery\nBlake\nCasey"}
+                rows={5}
+                value={rosterInput}
+              />
+              <div className="setup-screen__roster-footer">
+                <span className="setup-screen__count" id="roster-count">
+                  <span aria-hidden="true" className="setup-screen__meter">
+                    <span
+                      className="setup-screen__meter-fill"
+                      style={{ width: `${(fillRatio * 100).toFixed(1)}%` }}
+                    />
+                  </span>
+                  {countText}
+                </span>
+                <button className="setup-screen__copy" onClick={handleCopy} type="button">
+                  {copyButtonLabel}
+                </button>
+              </div>
+            </div>
+            <div className="setup-screen__settings">
+              <fieldset className="setup-screen__modes">
+                <legend className="setup-screen__label">Who should be selected?</legend>
+                <div className="setup-screen__mode-options">
+                  <ModeOption
+                    detail="End when one marble crosses Finish."
+                    mode="first"
+                    onSelectionModeChange={onSelectionModeChange}
+                    selectionMode={selectionMode}
+                    title="First finisher"
+                  />
+                  <ModeOption
+                    detail="Race until the final marble reaches Finish."
+                    mode="last"
+                    onSelectionModeChange={onSelectionModeChange}
+                    selectionMode={selectionMode}
+                    title="Last finisher"
+                  />
+                </div>
+              </fieldset>
+              <fieldset className="setup-screen__modes">
+                <legend className="setup-screen__label">Camera</legend>
+                <div className="setup-screen__mode-options">
+                  <CameraOption
+                    cameraMode={cameraMode}
+                    detail="Elevated view with more Course visible."
+                    mode="broadcast"
+                    onCameraModeChange={onCameraModeChange}
+                    title="Broadcast"
+                  />
+                  <CameraOption
+                    cameraMode={cameraMode}
+                    detail="Track-level view directly above the marbles."
+                    mode="close-up"
+                    onCameraModeChange={onCameraModeChange}
+                    title="Close up"
+                  />
+                </div>
+              </fieldset>
+            </div>
+            <p
+              aria-live="polite"
+              className="setup-screen__validation"
+              id="roster-validation"
+              role="status"
+            >
+              {showValidation && !validRoster ? validationMessage : ""}
+            </p>
+            <button className="setup-screen__start" type="submit">
+              Release the marbles
+            </button>
+          </form>
+        </div>
         <div aria-hidden="true" className="setup-screen__marbles">
           <span />
           <span />

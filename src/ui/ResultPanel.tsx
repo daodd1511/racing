@@ -1,6 +1,6 @@
 import { DEFAULT_RACE_CONFIG } from "../race/config";
 import type { RaceRequest, RaceSnapshot } from "../race/liveTypes";
-import { createMarbleStyles } from "../render/marbleStyles";
+import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
 import { formatRaceTime } from "./Standings";
 
 export interface ResultPanelProps {
@@ -24,10 +24,12 @@ function RaceOrder({
   heading,
   order,
   roster,
+  marbleStyles,
 }: {
   readonly heading: string;
   readonly order: readonly number[];
   readonly roster: readonly string[];
+  readonly marbleStyles: readonly MarbleStyle[];
 }) {
   return (
     <section className="result-panel__order" aria-label={heading}>
@@ -35,7 +37,12 @@ function RaceOrder({
       <ol>
         {order.map((marbleIndex, index) => (
           <li key={`${heading}-${marbleIndex}`}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
+            <span className="result-panel__rank">{String(index + 1).padStart(2, "0")}</span>
+            <span
+              aria-hidden="true"
+              className="result-panel__swatch"
+              style={{ background: marbleStyles[marbleIndex]?.color ?? "#ffffff" }}
+            />
             {marbleName(roster, marbleIndex)}
           </li>
         ))}
@@ -53,7 +60,8 @@ export function ResultPanel({
   onNewRace,
 }: ResultPanelProps) {
   const selectedName = marbleName(request.roster, selectedMarbleIndex);
-  const selectedStyle = createMarbleStyles(request.roster.length)[selectedMarbleIndex];
+  const marbleStyles = createMarbleStyles(request.roster.length);
+  const selectedStyle = marbleStyles[selectedMarbleIndex];
 
   return (
     <section aria-labelledby="result-panel-title" className="result-panel">
@@ -84,8 +92,18 @@ export function ResultPanel({
         </div>
       </dl>
       <div className="result-panel__orders">
-        <RaceOrder heading="Finish order" order={finishOrder} roster={request.roster} />
-        <RaceOrder heading="Final ranking" order={finalRanking} roster={request.roster} />
+        <RaceOrder
+          heading="Finish order"
+          marbleStyles={marbleStyles}
+          order={finishOrder}
+          roster={request.roster}
+        />
+        <RaceOrder
+          heading="Final ranking"
+          marbleStyles={marbleStyles}
+          order={finalRanking}
+          roster={request.roster}
+        />
       </div>
       <button className="result-panel__new-race" onClick={onNewRace} type="button">
         New race

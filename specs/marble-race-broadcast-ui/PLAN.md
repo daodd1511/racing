@@ -102,8 +102,8 @@ review harness remain independently accessible development routes.
   Frame-rate-independent damping independently smooths decisive-target changes,
   Course heading, camera position, and look-at position. Setup offers a
   Broadcast camera and a Close up camera. Close up follows the same decisive
-  marble from its exact planar position directly above the Course, with a wider field
-  of view and longer forward sightline for a track-level racing perspective.
+  marble from its exact planar position five cell pitches above the Course, with a
+  wider field of view and longer forward sightline for a track-level racing perspective.
 - The live and frozen Course renderer omits connector roof and governor-ceiling
   visuals that block the elevated camera. Their colliders remain in the Course,
   so this presentation rule does not change race physics or validation.
@@ -112,9 +112,7 @@ review harness remain independently accessible development routes.
   use denser fields and stronger interactions, with validation guardrails for
   zero stalls and measurable scatter, shuffle, sort, or queue behavior.
 - Production Course generation applies one gentle race grade independently of
-  Showcase tuning. Seeded obstacle sections mount onto that continuous Course;
-  steep standalone Showcase shapes such as the Vortex bowl, staircase, and
-  steep zigzag are excluded from production Course selection. The production
+  Showcase tuning. Seeded obstacle sections mount onto that continuous Course. The production
   layout uses eight standard-width columns, adding enough smooth separation for
   more obstacles without stretching their geometry or increasing track grade.
 - Row-turn connectors lengthen to an approximately 10% average grade and
@@ -125,24 +123,21 @@ review harness remain independently accessible development routes.
   adjacent Module floor tops, and uses tangent-matched overlap beyond each
   anchor so no collision lip crosses the racing surface.
 - The production Course contains ten obstacle sections: three Diamond fields,
-  two Whoops sections, one Staircase, two Funnel chokes, and two Windmills.
+  three Whoops sections, two Staircases, and two Windmills. These four obstacle
+  types are the complete active catalog; Chute remains as structural Course.
   A dedicated seed substream shuffles that inventory into the ten obstacle
   Slots for each race, making the layout varied but reproducible from its seed.
+  The shuffle never places the same obstacle type in consecutive obstacle Slots.
   Every obstacle pair has a plain Chute section between it, and every row begins
   with a Chute so no obstacle blocks the chase camera immediately after a turn.
-  Vortex bowl, Rumble strip, and
-  Friction lanes remain excluded from production races but available in the
-  Showcase. Removed obstacle sections become plain gentle Chute sections in
-  the Course. The Diamond field uses ten tightly staggered rows
+  The Diamond field uses ten tightly staggered rows
   and larger posts, alternating four-post rows toward opposite rails so no
   straight empty lane crosses the field. Every edge retains more than one
   marble diameter of clearance, preventing rail pinch points. Its physics uses round posts matching each
   visible diamond's outer radius, eliminating stable multi-marble flat-face
   locks while retaining the Diamond visual. Course Whoops use a one-marble-diameter crest-to-trough wave
   across a 1.8 m section. The Course Staircase uses eight 0.16 m treads with
-  two-marble-radius rises. The 1.8 m Course Funnel uses a 1.15 m converging
-  entry, a 0.35 m straight passage three marbles wide, and a short 0.25 m
-  exit flare, in that order. The Course Windmill uses the original four blades
+  two-marble-radius rises. The Course Windmill uses the original four blades
   rotating at 1.8 rad/s. Showcase defaults remain independent.
 - A 3-2-1-GO start gate delays the live solver, and live rendering advances at
   a modest fraction of wall time while preserving the exact fixed simulation
@@ -316,6 +311,10 @@ and service calls.
   labels/markers.
 - Keep the Course visually dominant. Chrome may overlay unused edges but must
   not shrink the 3D viewport into a secondary preview.
+- Keep the wide setup screen within one viewport below the fixed application
+  header by compacting vertical spacing, using a bounded Roster input, and
+  placing Selection and Camera option groups in one settings row. Narrow
+  layouts may stack and scroll rather than clip controls.
 - UI transitions may animate opacity/transform; the frozen Course and result
   content remain usable when `prefers-reduced-motion` disables those effects.
 

@@ -20,11 +20,12 @@ describe("buildCourseConnector", () => {
       incomingSpeed: 0,
     });
 
-    expect(connector.spec.footprint.route).toHaveLength(4);
-    expect(connector.spec.colliders).toHaveLength(11);
-    expect(
-      connector.spec.colliders.filter(({ id }) => id.includes("-entrance-rail-")),
-    ).toHaveLength(2);
+    expect(connector.spec.footprint.route).toHaveLength(17);
+    expect(connector.spec.colliders).toHaveLength(1);
+    expect(connector.spec.colliders[0]).toMatchObject({
+      id: "connector-1-2-continuous-channel",
+      shape: { kind: "trimesh" },
+    });
     expect(connector.spec.footprint.entry.position).toEqual([0, 0, 0]);
     expect(connector.spec.footprint.exit.position).toEqual([0.4, -0.05, 0]);
   });
@@ -47,17 +48,17 @@ describe("buildCourseConnector", () => {
     );
     const rail = connector.spec.visuals.find(({ id }) => id.includes("rail-left"));
 
-    expect(route).toHaveLength(33);
+    expect(route).toHaveLength(97);
     expect(route[1][0]).toBeGreaterThan(route[0][0]);
     expect(Math.max(...route.map(([x]) => x))).toBeGreaterThan(
       Math.max(route[0][0], route.at(-1)![0]),
     );
     expect(route.every((point, index) => index === 0 || point[1] < route[index - 1][1])).toBe(true);
-    expect(connector.spec.colliders).toHaveLength(3);
-    expect(connector.spec.colliders.filter(({ id }) => id.includes("-governor-"))).toHaveLength(2);
-    expect(connector.spec.colliders.filter(({ id }) => id.endsWith("-tunnel"))).toHaveLength(1);
-    const governor = connector.spec.colliders.find(({ id }) => id.includes("-governor-axle-"));
-    expect(governor?.motion).toMatchObject({ kind: "rotation", angularVelocity: -0.5 });
+    expect(connector.spec.colliders).toHaveLength(1);
+    expect(connector.spec.colliders[0]).toMatchObject({
+      id: "connector-2-3-continuous-channel",
+      shape: { kind: "trimesh" },
+    });
     expect(rail?.shape.kind).toBe("cuboid");
     expect(rail?.shape.kind === "cuboid" ? rail.shape.halfExtents[1] * 2 : 0).toBeCloseTo(
       expectedRailHeight,

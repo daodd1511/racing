@@ -44,6 +44,7 @@ describe("SetupScreen", () => {
     expect(props.onStart).toHaveBeenCalledWith({
       roster: ["Avery", "Avery", "Blake"],
       selectionMode: "last",
+      cameraMode: "broadcast",
     });
   });
 

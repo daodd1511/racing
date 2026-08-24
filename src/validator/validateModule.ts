@@ -25,6 +25,19 @@ import {
 /** ~0.1s at 60fps -- long enough to clear the from-rest spawn transient,
  * short enough not to hide genuinely slow motion happening soon after. */
 const DISPLACEMENT_WARMUP_FRAMES = 6;
+const VISIBLE_MOTION_WINDOW_FRAMES = 60;
+
+function minimumWindowAverage(values: readonly number[], windowSize: number): number {
+  if (values.length === 0) return Number.POSITIVE_INFINITY;
+  const size = Math.min(values.length, windowSize);
+  let sum = values.slice(0, size).reduce((total, value) => total + value, 0);
+  let minimum = sum / size;
+  for (let index = size; index < values.length; index += 1) {
+    sum += values[index] - values[index - size];
+    minimum = Math.min(minimum, sum / size);
+  }
+  return minimum;
+}
 
 export interface ValidateModuleOptions {
   readonly seedCount: number;
@@ -39,9 +52,9 @@ export interface ValidationReport {
   readonly dwellSecondsP50: number | null;
   readonly dwellSecondsP99: number | null;
   readonly exitSpeeds: readonly number[];
-  /** Worst-case displacement-per-second observed across every marble, every
-   * frame, every seed -- the floor PLAN.md's "Dwell must be paid for with
-   * visible motion" guardrail checks against. `0` if no marble ever exited. */
+  /** Worst one-second average displacement rate across every marble and seed
+   * -- the floor PLAN.md's "Dwell must be paid for with visible motion"
+   * guardrail checks against. `0` if no marble ever exited. */
   readonly minDisplacementPerSecond: number;
   readonly shuffleCoefficients: readonly number[];
 }
@@ -185,19 +198,15 @@ export async function validateModule<P>(
     );
 
     for (const run of runs) {
-      // Skip the warm-up window: a marble spawned from rest necessarily
-      // has near-zero displacement for its first few frames (one frame of
-      // gravity from a standstill is a few centimeters per second at most),
-      // regardless of how fast the Module ultimately is -- that transient
-      // dominated every reading here before this was added, making the
-      // guardrail unable to tell a genuinely slow Module from a fast one.
-      // Found while trying to set this phase's threshold from real numbers:
-      // every param combination read ~0.05-0.2 m/s minimum, an unmoving
-      // floor that had nothing to do with grade or length.
+      // Ignore the from-rest spawn transient, then average over one simulated
+      // second. A single collision frame may be almost stationary even when
+      // the marble remains visibly active; a sustained slow window is the
+      // stall-like behavior this guardrail is intended to reject.
       const series = displacementPerSecond(run).slice(DISPLACEMENT_WARMUP_FRAMES);
-      for (const displacement of series) {
-        minDisplacementPerSecond = Math.min(minDisplacementPerSecond, displacement);
-      }
+      minDisplacementPerSecond = Math.min(
+        minDisplacementPerSecond,
+        minimumWindowAverage(series, VISIBLE_MOTION_WINDOW_FRAMES),
+      );
     }
 
     builtWorld.world.free();

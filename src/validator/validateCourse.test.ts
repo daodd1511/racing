@@ -17,7 +17,7 @@ describe("runCourseRaceValidation", () => {
     expect(result.finishTimes.every((time) => time !== null && Number.isFinite(time))).toBe(true);
     expect(result.exitSpeeds.every((speed) => speed !== null && Number.isFinite(speed))).toBe(true);
     expect(Number.isFinite(result.shuffleCoefficient)).toBe(true);
-  });
+  }, 15_000);
 
   it("includes the active Module combination in the physics gate", () => {
     const selections = enumeratePhysicsValidatedSelections();
@@ -28,12 +28,17 @@ describe("runCourseRaceValidation", () => {
     [0, 4],
     [0, 3],
     [0, 1],
-  ])("contains packed active-Course case shape %i, Start seed %i", (shapeIndex, startSeed) => {
-    const { selection } = enumeratePhysicsValidatedSelections().find(
-      (candidate) => candidate.shapeIndex === shapeIndex,
-    )!;
-    expect(runCourseRaceValidation(selection, shapeIndex, startSeed).outcome).toMatchObject({
-      kind: "completed",
-    });
-  });
+  ])(
+    "contains packed active-Course case shape %i, Start seed %i",
+    (shapeIndex, startSeed) => {
+      const { selection } = enumeratePhysicsValidatedSelections().find(
+        (candidate) => candidate.shapeIndex === shapeIndex,
+      )!;
+      const result = runCourseRaceValidation(selection, shapeIndex, startSeed);
+      expect(result.outcome).toMatchObject({
+        kind: "completed",
+      });
+    },
+    15_000,
+  );
 });

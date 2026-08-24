@@ -65,7 +65,10 @@ export interface ChannelOptions {
 // profile unless a future Module has a documented reason to differ.
 export const FLOOR_THICKNESS = 0.01;
 export const RAIL_THICKNESS = 0.006;
-export const RAIL_HEIGHT = SCALE.marbleRadius * 6;
+// Packed Course entries can stack marbles several diameters high after an
+// obstacle impact. Keep an open channel, but make the shared rails tall
+// enough to contain that stack without relying on roofs or recovery forces.
+export const RAIL_HEIGHT = SCALE.marbleRadius * 18;
 
 // Glossy injection-moulded plastic, per PLAN.md -> "Art direction" -- the
 // same colors the chute shipped with, now the channel's own defaults rather

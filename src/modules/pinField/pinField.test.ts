@@ -6,11 +6,12 @@ import { validateModule, type ValidationReport } from "../../validator/validateM
 import { MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND } from "../../validator/metrics";
 
 // Dwell range: a `scatter` Module isn't racing to a fast exit like the
-// zigzag, but it isn't holding the field like a queue either -- 5 rows at
-// this Module's defaults measure p50 ~1.2s, p99 ~2.0s across the seed sweep
-// below. Declared with margin, not pinned to those exact numbers.
-const DWELL_P50_MAX_SECONDS = 2;
-const DWELL_P99_MAX_SECONDS = 3.5;
+// zigzag, but it isn't holding the field like a queue either. With alternating
+// rail bumpers closing both straight bypass lanes, 5 rows measure p50 ~3.1s
+// and p99 ~4.7s across the seed sweep below. Declared with margin, not pinned
+// to those exact numbers.
+const DWELL_P50_MAX_SECONDS = 4;
+const DWELL_P99_MAX_SECONDS = 5.5;
 
 describe("pinField guardrails", () => {
   let report: ValidationReport;

@@ -35,14 +35,14 @@ describe("assembleCourse", () => {
       const course = assembleCourseFromRoleSelection(17, selection);
 
       expect(course.board).toBe(BOARD);
-      expect(course.modules).toHaveLength(7);
-      expect(course.connectors).toHaveLength(8);
-      expect(course.checkpoints).toHaveLength(9);
+      expect(course.modules).toHaveLength(22);
+      expect(course.connectors).toHaveLength(23);
+      expect(course.checkpoints).toHaveLength(24);
       expect(course.route[0]).toEqual(course.entry.position);
       expect(course.route.at(-1)).toEqual(course.exit.position);
       expect(
         course.modules.filter(({ role }) => role === "accel").map(({ moduleId }) => moduleId),
-      ).toEqual([selection.accel, selection.accel, selection.accel]);
+      ).toEqual(Array(12).fill(selection.accel));
       expect(course.checkpoints.map(({ routeDistance }) => routeDistance)).toEqual(
         course.checkpoints
           .map(({ routeDistance }) => routeDistance)

@@ -239,7 +239,7 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
   const route = routePoints(request);
   const isHairpin = direction(request.start).dot(direction(request.end)) < 0;
   const railHeight = Math.max(
-    isHairpin ? GOVERNOR_CLEARANCE + FLOOR_THICKNESS : RAIL_HEIGHT,
+    isHairpin ? Math.max(GOVERNOR_CLEARANCE + FLOOR_THICKNESS, RAIL_HEIGHT) : RAIL_HEIGHT,
     (request.incomingSpeed * request.incomingSpeed) / (2 * GRAVITY_MAGNITUDE) +
       SCALE.marbleRadius * 2,
   );

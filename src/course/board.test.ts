@@ -7,8 +7,8 @@ import { BOARD } from "./board";
 import { CONNECTOR_EDGE_CLEARANCE } from "./connectors";
 
 describe("BOARD", () => {
-  it("has fixed 3x3 dimensions aligned to the Cell pitch", () => {
-    expect(BOARD.columns).toBe(3);
+  it("has fixed 8x3 dimensions aligned to the Cell pitch", () => {
+    expect(BOARD.columns).toBe(8);
     expect(BOARD.rows).toBe(3);
     expect(BOARD.cellPitch).toBe(SCALE.cellPitch);
 

@@ -4,30 +4,17 @@ import { createSeededRandom, deriveRaceSeed } from "../race/random";
 import { ARC, enumerateRoleSelections, selectRoleModules } from "./arc";
 
 describe("ARC", () => {
-  it("is the fixed nine-Slot 3x3 serpentine", () => {
-    expect(ARC).toHaveLength(9);
-    expect(ARC.map(({ column, row }) => [column, row])).toEqual([
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [2, 1],
-      [1, 1],
-      [0, 1],
-      [0, 2],
-      [1, 2],
-      [2, 2],
-    ]);
-    expect(ARC.map(({ direction }) => direction)).toEqual([
-      "right",
-      "right",
-      "right",
-      "left",
-      "left",
-      "left",
-      "right",
-      "right",
-      "right",
-    ]);
+  it("is the fixed 24-Slot 8x3 serpentine", () => {
+    expect(ARC).toHaveLength(24);
+    expect(ARC.map(({ column, row }) => [column, row])).toEqual(
+      [0, 1, 2].flatMap((row) => {
+        const columns = Array.from({ length: 8 }, (_, column) => column);
+        return (row % 2 === 0 ? columns : columns.reverse()).map((column) => [column, row]);
+      }),
+    );
+    expect(ARC.map(({ direction }) => direction)).toEqual(
+      [0, 1, 2].flatMap((row) => Array(8).fill(row % 2 === 0 ? "right" : "left")),
+    );
     expect(Object.isFrozen(ARC)).toBe(true);
     ARC.forEach((slot) => expect(Object.isFrozen(slot)).toBe(true));
   });

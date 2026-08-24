@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate Modules — what they look like and what they do</title>
+<style>
+  :root{--ink:#16181d;--ink2:#4a5058;--ink3:#7a818b;--rule:#dfe2e7;--bg:#fbfbfa;--panel:#fff;
+        --accent:#2f5fd0;--accent2:#c2410c;--warn:#a8402c;--warnbg:#fdf3f0;--wall:#9aa1ac;--part:#3f4650;}
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px 26px 72px;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  main{max-width:1100px;margin:0 auto}
+  h1{font-size:27px;line-height:1.2;margin:0 0 10px;letter-spacing:-.015em}
+  .lede{font-size:17px;color:var(--ink2);margin:0 0 12px;max-width:70ch}
+  .lede strong{color:var(--ink);font-weight:600}
+  .scalebar{display:flex;gap:22px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ink2);
+            background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:11px 16px;margin-bottom:34px}
+  .scalebar b{color:var(--ink);font-weight:600}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);
+     margin:44px 0 6px;font-weight:600}
+  h2 + p.sub{margin:0 0 18px;font-size:13.5px;color:var(--ink2);max-width:74ch}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:#f0f1f3;
+       padding:1px 5px;border-radius:3px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:18px 18px 16px;
+        display:flex;flex-direction:column}
+  .card.hold{border-color:#f0d6cf;background:var(--warnbg)}
+  .card h3{margin:0;font-size:18px;letter-spacing:-.01em}
+  .hdr{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:2px}
+  .chip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.03em;
+        background:var(--accent);color:#fff;padding:2px 7px;border-radius:4px;font-weight:600}
+  .chip.q{background:#6d28d9}.chip.s{background:#0e7490}.chip.sh{background:#15803d}.chip.so{background:#b45309}
+  .view{font-size:11.5px;color:var(--ink3);margin:2px 0 10px;letter-spacing:.02em}
+  svg{display:block;width:100%;height:auto}
+  .plate{border:1px solid #eceef1;border-radius:6px;background:#fdfdfc;padding:4px}
+  .says{font-size:13.5px;color:var(--ink2);line-height:1.5;margin:12px 0 0}
+  .says b{color:var(--ink);font-weight:600}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:12px 0 0;font-size:12.5px}
+  dt{color:var(--ink3);font-weight:600}
+  dd{margin:0;color:var(--ink2)}
+  .risk{margin-top:11px;padding:9px 11px;border-radius:5px;background:#fdf3f0;border:1px solid #f2ddd6;
+        font-size:12.5px;color:#7d3a2a;line-height:1.45}
+  .card.hold .risk{background:#fff;border-color:#f0d6cf}
+  .risk b{font-weight:600}
+  .fieldstrip{margin-top:13px;padding-top:11px;border-top:1px dashed var(--rule)}
+  .fieldstrip .cap{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);
+                   font-weight:600;margin-bottom:5px}
+
+  .refgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .ref{background:var(--panel);border:1px solid var(--rule);border-radius:7px;padding:11px 12px 9px}
+  .ref .nm{font-size:13.5px;font-weight:600;margin-bottom:1px}
+  .ref .rl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--ink3);margin-bottom:7px}
+  .ref .ds{font-size:11.5px;color:var(--ink2);line-height:1.4;margin-top:7px}
+
+  footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);font-size:12.5px;
+         color:var(--ink3);line-height:1.6;max-width:80ch}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}.refgrid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.refgrid{grid-template-columns:1fr}body{padding:26px 16px 50px}h1{font-size:22px}}
+  @media print{body{background:#fff;padding:0}.card,.ref{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#2f5fd0"/></marker>
+  <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#c2410c"/></marker>
+  <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#7a818b"/></marker>
+</defs></svg>
+
+<main>
+  <h1>Candidate Modules: what each one looks like, and what it does to the field</h1>
+  <p class="lede">
+    Eight proposed Modules, drawn to the project's real scale. Each panel shows the geometry plus
+    the marble paths through it; the strip underneath shows what it does to marble
+    <strong>order</strong> — which is the whole reason a Role exists.
+    <strong>None of these are built.</strong> Every dimension is a design proposal, not a measurement.
+  </p>
+  <div class="scalebar">
+    <span><b>Marble</b> ⌀32 mm</span>
+    <span><b>Channel</b> 0.5 m wide</span>
+    <span><b>Cell pitch</b> 0.1 m</span>
+    <span><b>Module travel</b> 0.6–1.8 m</span>
+    <span><b>Gravity</b> 9.81 m/s²</span>
+    <span style="color:var(--ink3)">from <code>src/race/scale.ts</code></span>
+  </div>
+
+  <h2>Build first — the four that fill a Role cleanly</h2>
+  <p class="sub">One per obstacle Role. Together they take the Assembler from 1 possible Role selection to 16.</p>
+
+  <div class="grid">
+
+    <!-- ============ CROSSOVER WEAVE ============ -->
+    <div class="card">
+      <div class="hdr"><h3>Crossover weave</h3><span class="chip sh">shuffle</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: two lanes swap sides, one ramping over a bridge while the other tunnels beneath it, so marbles exit in swapped lateral order.">
+        <rect x="30" y="38" width="400" height="126" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <line x1="30" y1="38" x2="430" y2="38" stroke="var(--wall)" stroke-width="2.5"/>
+        <line x1="30" y1="164" x2="430" y2="164" stroke="var(--wall)" stroke-width="2.5"/>
+        <text x="34" y="32" font-size="10" fill="var(--ink3)">channel wall — 0.5 m apart</text>
+
+        <!-- lane B: tunnels under (drawn first, dashed through crossing) -->
+        <path d="M30 133 L150 133 C205 133 215 69 265 69 L430 69" fill="none" stroke="#c2410c"
+              stroke-width="2" stroke-dasharray="7 5"/>
+        <!-- lane A: ramps over -->
+        <path d="M30 69 L150 69 C205 69 215 133 265 133 L430 133" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <!-- bridge deck -->
+        <path d="M175 60 L250 124 L262 116 L187 52 Z" fill="#dbe4f7" stroke="var(--accent)" stroke-width="1"/>
+        <text x="196" y="98" font-size="9.5" fill="var(--accent)" transform="rotate(40 196 98)">bridge deck</text>
+
+        <circle cx="60" cy="69" r="7" fill="var(--accent)"/><text x="60" y="73" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+        <circle cx="60" cy="133" r="7" fill="var(--accent2)"/><text x="60" y="137" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+        <circle cx="400" cy="133" r="7" fill="var(--accent)"/><text x="400" y="137" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+        <circle cx="400" cy="69" r="7" fill="var(--accent2)"/><text x="400" y="73" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+
+        <text x="300" y="58" font-size="10" fill="var(--accent2)">lane B passes underneath</text>
+        <text x="300" y="152" font-size="10" fill="var(--accent)">lane A rides over the top</text>
+        <line x1="30" y1="180" x2="430" y2="180" stroke="var(--ink3)" stroke-width="1" marker-start="url(#arg)" marker-end="url(#arg)"/>
+        <text x="230" y="194" font-size="10" fill="var(--ink3)" text-anchor="middle">travel ≈ 0.8 m (8 Cells)</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> two channels braid past each other in the middle of the
+      Module. A marble that entered on the near lane leaves on the far lane, and vice versa. Nothing
+      moves — the swap is pure geometry, so it never jams and never stalls.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None. <code>step()</code> returns <code>[]</code>.</dd>
+        <dt>Dwell</dt><dd>Bounded by path length; no basin, no meeting point.</dd>
+        <dt>Params</dt><dd>Lane count (2–3), crossing length, bridge rise (≈40 mm — clears a 32 mm marble underneath).</dd>
+      </dl>
+      <div class="fieldstrip"><div class="cap">Effect on the field — order inverts, gaps unchanged</div>
+      <svg viewBox="0 0 340 40" role="img" aria-label="Entry order 1,2,3,4 becomes exit order 3,4,1,2 with spacing unchanged.">
+        <text x="0" y="24" font-size="10" fill="var(--ink3)">in</text>
+        <g><circle cx="30" cy="20" r="9" fill="#3f4650"/><text x="30" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="52" cy="20" r="9" fill="#3f4650"/><text x="52" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <g><circle cx="74" cy="20" r="9" fill="#3f4650"/><text x="74" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="96" cy="20" r="9" fill="#3f4650"/><text x="96" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <line x1="120" y1="20" x2="180" y2="20" stroke="var(--ink3)" stroke-width="1.5" marker-end="url(#arg)"/>
+        <text x="292" y="24" font-size="10" fill="var(--ink3)">out</text>
+        <g><circle cx="200" cy="20" r="9" fill="var(--accent)"/><text x="200" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="222" cy="20" r="9" fill="var(--accent)"/><text x="222" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <g><circle cx="244" cy="20" r="9" fill="var(--accent)"/><text x="244" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="266" cy="20" r="9" fill="var(--accent)"/><text x="266" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+      </svg></div>
+    </div>
+
+    <!-- ============ TURNSTILE ============ -->
+    <div class="card">
+      <div class="hdr"><h3>Turnstile</h3><span class="chip q">queue</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: a four-armed rotating cross in a narrow throat holds a queue of marbles above it and releases one per quarter turn onto the exit ramp.">
+        <path d="M25 62 L212 88" stroke="var(--wall)" stroke-width="2.5" fill="none"/>
+        <path d="M25 100 L206 126" stroke="var(--wall)" stroke-width="2.5" fill="none"/>
+        <path d="M296 150 L435 178" stroke="var(--wall)" stroke-width="2.5" fill="none"/>
+        <path d="M300 112 L435 140" stroke="var(--wall)" stroke-width="2.5" fill="none"/>
+        <text x="26" y="54" font-size="10" fill="var(--ink3)">incoming channel</text>
+
+        <circle cx="252" cy="118" r="48" fill="#f4f6fa" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 4"/>
+        <g stroke="var(--part)" stroke-width="7" stroke-linecap="round">
+          <line x1="252" y1="118" x2="252" y2="72"/>
+          <line x1="252" y1="118" x2="298" y2="118"/>
+          <line x1="252" y1="118" x2="252" y2="164"/>
+          <line x1="252" y1="118" x2="206" y2="118"/>
+        </g>
+        <circle cx="252" cy="118" r="9" fill="var(--part)"/>
+        <path d="M252 58 A60 60 0 0 1 312 118" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="318" y="72" font-size="10" fill="var(--accent)">ω fixed</text>
+
+        <circle cx="228" cy="90" r="8" fill="var(--accent)"/>
+        <circle cx="188" cy="112" r="8" fill="#3f4650"/>
+        <circle cx="166" cy="109" r="8" fill="#3f4650"/>
+        <circle cx="144" cy="106" r="8" fill="#3f4650"/>
+        <circle cx="122" cy="102" r="8" fill="#3f4650"/>
+        <text x="112" y="86" font-size="10" fill="var(--ink3)">field waits its turn</text>
+
+        <circle cx="330" cy="140" r="8" fill="var(--accent)"/>
+        <path d="M290 132 Q318 132 336 152" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text x="348" y="120" font-size="10" fill="var(--accent)">released, one at a time</text>
+        <text x="252" y="192" font-size="10" fill="var(--ink3)" text-anchor="middle">throat ≈ 1.6 marble widths · hub ⌀ ≈ 0.2 m</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> the pack piles up against a slowly spinning cross, and
+      each quarter turn lets exactly one marble drop through onto the exit ramp. Maximum suspense per
+      unit of geometry: you can count the marbles waiting. Unlike the windmill, which <i>bats</i>
+      marbles unpredictably, the turnstile <i>admits</i> them at a fixed rate.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>One kinematic hub — reuses <code>KinematicRotationMotion</code> unchanged.</dd>
+        <dt>Dwell</dt><dd>Bounded: worst case ≈ (field size ÷ arms) × rotation period.</dd>
+        <dt>Params</dt><dd>Arm count (3–4), angular velocity, throat width, hub radius.</dd>
+      </dl>
+      <div class="fieldstrip"><div class="cap">Effect on the field — order preserved, gaps forced open</div>
+      <svg viewBox="0 0 340 40" role="img" aria-label="Entry order 1,2,3,4 tightly packed becomes exit order 1,2,3,4 evenly and widely spaced.">
+        <text x="0" y="24" font-size="10" fill="var(--ink3)">in</text>
+        <g><circle cx="30" cy="20" r="9" fill="#3f4650"/><text x="30" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="50" cy="20" r="9" fill="#3f4650"/><text x="50" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <g><circle cx="70" cy="20" r="9" fill="#3f4650"/><text x="70" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="90" cy="20" r="9" fill="#3f4650"/><text x="90" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <line x1="115" y1="20" x2="165" y2="20" stroke="var(--ink3)" stroke-width="1.5" marker-end="url(#arg)"/>
+        <g><circle cx="188" cy="20" r="9" fill="#6d28d9"/><text x="188" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="226" cy="20" r="9" fill="#6d28d9"/><text x="226" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <g><circle cx="264" cy="20" r="9" fill="#6d28d9"/><text x="264" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="302" cy="20" r="9" fill="#6d28d9"/><text x="302" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+      </svg></div>
+    </div>
+
+    <!-- ============ BUMPER CLUSTER ============ -->
+    <div class="card">
+      <div class="hdr"><h3>Bumper cluster</h3><span class="chip s">scatter</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: five large round bumpers in an open chamber send two marbles that entered together onto sharply divergent ricochet paths.">
+        <rect x="28" y="26" width="404" height="152" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <line x1="28" y1="26" x2="432" y2="26" stroke="var(--wall)" stroke-width="2.5"/>
+        <line x1="28" y1="178" x2="432" y2="178" stroke="var(--wall)" stroke-width="2.5"/>
+        <g fill="#e6ebf6" stroke="var(--part)" stroke-width="2.5">
+          <circle cx="126" cy="76" r="25"/><circle cx="232" cy="52" r="19"/>
+          <circle cx="212" cy="132" r="27"/><circle cx="326" cy="104" r="23"/><circle cx="392" cy="52" r="16"/>
+        </g>
+        <path d="M28 44 L102 66 L150 44 L214 30 L252 66 L286 128 L246 160 L432 172" fill="none"
+              stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+        <path d="M28 52 L104 76 L166 108 L186 158 L250 162 L306 128 L348 82 L432 62" fill="none"
+              stroke="var(--accent2)" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ar2)"/>
+        <circle cx="34" cy="46" r="7" fill="var(--accent)"/>
+        <circle cx="34" cy="56" r="7" fill="var(--accent2)"/>
+        <text x="44" y="20" font-size="10" fill="var(--ink3)">two marbles enter side by side…</text>
+        <text x="300" y="192" font-size="10" fill="var(--ink3)" text-anchor="middle">…and leave 0.3 m apart · bumper ⌀ 60–110 mm (2–3½ marbles)</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a handful of big pinball bumpers in an open chamber.
+      Few contacts, each one violent and unmistakable. Where the pin field diffuses the pack gently
+      over dozens of tiny taps, this throws two neighbours to opposite walls in one hit — the same
+      Role, the opposite texture.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded — every surface is convex, so there is no pocket to settle in.</dd>
+        <dt>Params</dt><dd>Bumper count (4–6), radii, restitution (proposed 0.6–0.8 vs. the 0.15 track default).</dd>
+      </dl>
+      <div class="fieldstrip"><div class="cap">Effect on the field — order scrambled and spread out</div>
+      <svg viewBox="0 0 340 40" role="img" aria-label="Entry order 1,2,3,4 becomes exit order 3,1,4,2 at irregular spacing.">
+        <text x="0" y="24" font-size="10" fill="var(--ink3)">in</text>
+        <g><circle cx="30" cy="20" r="9" fill="#3f4650"/><text x="30" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="52" cy="20" r="9" fill="#3f4650"/><text x="52" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <g><circle cx="74" cy="20" r="9" fill="#3f4650"/><text x="74" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="96" cy="20" r="9" fill="#3f4650"/><text x="96" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <line x1="120" y1="20" x2="176" y2="20" stroke="var(--ink3)" stroke-width="1.5" marker-end="url(#arg)"/>
+        <g><circle cx="198" cy="20" r="9" fill="#0e7490"/><text x="198" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="230" cy="20" r="9" fill="#0e7490"/><text x="230" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="252" cy="20" r="9" fill="#0e7490"/><text x="252" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <g><circle cx="298" cy="20" r="9" fill="#0e7490"/><text x="298" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+      </svg></div>
+    </div>
+
+    <!-- ============ CASCADING LEDGES ============ -->
+    <div class="card">
+      <div class="hdr"><h3>Cascading ledges</h3><span class="chip so">sort</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: four descending ledges with gaps. A fast marble flies over all of them in one arc; a slow marble drops onto each ledge in turn and takes much longer.">
+        <path d="M26 40 L104 58" stroke="var(--wall)" stroke-width="3"/>
+        <text x="26" y="32" font-size="10" fill="var(--ink3)">entry ramp</text>
+        <g fill="var(--part)">
+          <rect x="104" y="58" width="64" height="7" rx="2"/>
+          <rect x="186" y="94" width="64" height="7" rx="2"/>
+          <rect x="268" y="130" width="64" height="7" rx="2"/>
+          <rect x="350" y="166" width="72" height="7" rx="2"/>
+        </g>
+        <text x="172" y="80" font-size="9.5" fill="var(--ink3)">gap</text>
+        <text x="254" y="116" font-size="9.5" fill="var(--ink3)">gap</text>
+        <text x="336" y="152" font-size="9.5" fill="var(--ink3)">gap</text>
+        <!-- fast: one long arc clearing everything -->
+        <path d="M104 56 Q250 30 420 158" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+        <circle cx="110" cy="54" r="7" fill="var(--accent)"/>
+        <text x="228" y="42" font-size="10.5" fill="var(--accent)" font-weight="600">fast — clears every gap</text>
+        <!-- slow: rides each ledge -->
+        <path d="M104 54 L162 60 Q176 62 182 78 L186 92 L244 98 Q258 100 264 114 L268 128 L326 134 Q340 136 346 150 L350 164 L420 170"
+              fill="none" stroke="var(--accent2)" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#ar2)"/>
+        <circle cx="110" cy="66" r="7" fill="var(--accent2)"/>
+        <text x="120" y="184" font-size="10.5" fill="var(--accent2)" font-weight="600">slow — rides all four, arrives well behind</text>
+        <text x="424" y="52" font-size="10" fill="var(--ink3)" text-anchor="end">ledge drop 36 mm · gap 18 mm</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a staircase with the risers removed. A marble carrying
+      speed launches off the first ledge and flies the whole flight in one arc; a slow one drops onto
+      every shelf and crawls. <b>The sorting criterion is visible</b> — you can see who flew, which is
+      exactly what friction-lanes could never show.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded — every ledge is a downhill surface, so nothing can rest.</dd>
+        <dt>Params</dt><dd>Ledge count (3–5), ledge length, gap width, drop per ledge, ledge tilt.</dd>
+      </dl>
+      <div class="fieldstrip"><div class="cap">Effect on the field — reordered by incoming speed, not by luck</div>
+      <svg viewBox="0 0 340 40" role="img" aria-label="Entry order 1,2,3,4 becomes exit order 4,2,1,3 with the fastest marbles pulled far ahead.">
+        <text x="0" y="24" font-size="10" fill="var(--ink3)">in</text>
+        <g><circle cx="30" cy="20" r="9" fill="#3f4650"/><text x="30" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="52" cy="20" r="9" fill="#3f4650"/><text x="52" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <g><circle cx="74" cy="20" r="9" fill="#3f4650"/><text x="74" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="96" cy="20" r="9" fill="#3f4650"/><text x="96" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <line x1="120" y1="20" x2="170" y2="20" stroke="var(--ink3)" stroke-width="1.5" marker-end="url(#arg)"/>
+        <text x="192" y="12" font-size="8.5" fill="var(--ink3)">fast</text>
+        <g><circle cx="192" cy="20" r="9" fill="#b45309"/><text x="192" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <g><circle cx="214" cy="20" r="9" fill="#b45309"/><text x="214" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <text x="286" y="12" font-size="8.5" fill="var(--ink3)">slow</text>
+        <g><circle cx="286" cy="20" r="9" fill="#b45309"/><text x="286" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="308" cy="20" r="9" fill="#b45309"/><text x="308" y="24" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+      </svg></div>
+    </div>
+
+  </div>
+
+  <h2>Held back — good ideas with an unresolved problem</h2>
+  <p class="sub">Each of these works on paper. Each also has one specific thing that has to be settled before it is safe to build.</p>
+
+  <div class="grid">
+
+    <!-- ============ SPLITTER TREE ============ -->
+    <div class="card hold">
+      <div class="hdr"><h3>Splitter tree</h3><span class="chip s">scatter</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: three levels of wedge splitters fan one input lane into eight output lanes across the channel width.">
+        <rect x="28" y="30" width="404" height="146" fill="#fdfdfc" stroke="#e4e7eb"/>
+        <line x1="28" y1="30" x2="432" y2="30" stroke="var(--wall)" stroke-width="2.5"/>
+        <line x1="28" y1="176" x2="432" y2="176" stroke="var(--wall)" stroke-width="2.5"/>
+        <g stroke="var(--ink3)" stroke-width="1.2" fill="none" stroke-dasharray="3 3">
+          <path d="M28 103 L96 103"/>
+          <path d="M120 103 L96 103 M120 67 L172 67 M120 139 L172 139"/>
+          <path d="M120 103 L120 67 M120 103 L120 139"/>
+          <path d="M196 67 L196 49 M196 67 L196 85 M196 139 L196 121 M196 139 L196 157"/>
+          <path d="M196 49 L248 49 M196 85 L248 85 M196 121 L248 121 M196 157 L248 157"/>
+          <path d="M272 49 L272 40 M272 49 L272 58 M272 85 L272 76 M272 85 L272 94
+                   M272 121 L272 112 M272 121 L272 130 M272 157 L272 148 M272 157 L272 166"/>
+          <path d="M272 40 L420 40 M272 58 L420 58 M272 76 L420 76 M272 94 L420 94
+                   M272 112 L420 112 M272 130 L420 130 M272 148 L420 148 M272 166 L420 166"/>
+        </g>
+        <g fill="var(--part)">
+          <path d="M100 103 L124 88 L124 118 Z"/>
+          <path d="M176 67 L200 54 L200 80 Z"/><path d="M176 139 L200 126 L200 152 Z"/>
+          <path d="M252 49 L276 40 L276 58 Z"/><path d="M252 85 L276 76 L276 94 Z"/>
+          <path d="M252 121 L276 112 L276 130 Z"/><path d="M252 157 L276 148 L276 166 Z"/>
+        </g>
+        <circle cx="52" cy="103" r="7" fill="var(--accent)"/>
+        <text x="112" y="20" font-size="10" fill="var(--ink3)">level 1</text>
+        <text x="188" y="20" font-size="10" fill="var(--ink3)">level 2</text>
+        <text x="264" y="20" font-size="10" fill="var(--ink3)">level 3</text>
+        <text x="428" y="20" font-size="10" fill="var(--ink3)" text-anchor="end">8 lanes at 60 mm pitch = 0.48 m ≈ full channel</text>
+        <line x1="112" y1="132" x2="112" y2="103" stroke="var(--warn)" stroke-width="1"/>
+        <text x="112" y="146" font-size="9.5" fill="var(--warn)" text-anchor="middle">a sharp apex can</text>
+        <text x="112" y="157" font-size="9.5" fill="var(--warn)" text-anchor="middle">balance a marble</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a Galton board built from seven big wedges instead of a
+      hundred pins. Each marble takes three visible left-or-right decisions and lands in one of eight
+      lanes. The randomness reads as a sequence of choices rather than as noise.</p>
+      <div class="risk"><b>Unresolved:</b> a 32 mm marble arriving dead-centre on a sharp wedge apex
+      can balance there indefinitely — an unbounded Dwell Time hiding inside otherwise safe geometry.
+      Round the apex to a radius the marble cannot rest on, or bias every wedge off-centre, before building.</div>
+    </div>
+
+    <!-- ============ POCKETED DRUM ============ -->
+    <div class="card hold">
+      <div class="hdr"><h3>Pocketed drum</h3><span class="chip sh">shuffle</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: a rotating drum with six rim pockets scoops marbles up on one side and tips them out on the other, with a queue building at the feed.">
+        <path d="M22 52 L142 82" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M22 88 L136 116" stroke="var(--wall)" stroke-width="2.5"/>
+        <circle cx="248" cy="104" r="72" fill="#f4f6fa" stroke="var(--part)" stroke-width="3"/>
+        <circle cx="248" cy="104" r="10" fill="var(--part)"/>
+        <g fill="#fff" stroke="var(--part)" stroke-width="2">
+          <circle cx="248" cy="42" r="15"/><circle cx="302" cy="73" r="15"/>
+          <circle cx="302" cy="135" r="15"/><circle cx="248" cy="166" r="15"/>
+          <circle cx="194" cy="135" r="15"/><circle cx="194" cy="73" r="15"/>
+        </g>
+        <circle cx="194" cy="135" r="7" fill="var(--accent)"/>
+        <circle cx="248" cy="166" r="7" fill="var(--accent)"/>
+        <circle cx="302" cy="135" r="7" fill="var(--accent2)"/>
+        <path d="M248 18 A86 86 0 0 1 334 104" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="342" y="34" font-size="10" fill="var(--accent)">ω fixed</text>
+        <path d="M330 92 Q356 96 368 122" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar2)"/>
+        <text x="330" y="82" font-size="10" fill="var(--accent2)">tipped out</text>
+        <path d="M356 128 L438 152" stroke="var(--wall)" stroke-width="2.5"/>
+        <g fill="#3f4650"><circle cx="112" cy="108" r="7"/><circle cx="90" cy="102" r="7"/><circle cx="68" cy="96" r="7"/><circle cx="46" cy="90" r="7"/></g>
+        <text x="30" y="76" font-size="10" fill="var(--warn)">overflow waits here</text>
+        <text x="248" y="192" font-size="10" fill="var(--ink3)" text-anchor="middle">drum ⌀ ≈ 0.29 m · 6 pockets</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> the classic marble-run crowd-pleaser. Marbles get
+      scooped into rim pockets, carried up and over, and tipped out in an order set by which pocket
+      caught them. Highly watchable, and it reuses the same rotation motion the windmill already has.</p>
+      <div class="risk"><b>Unresolved:</b> with 6 pockets and a field of 15, nine marbles wait outside
+      the drum on every pass — so it behaves as much like a Queue as a Shuffle. Either widen it until
+      pockets ≥ field size, or measure it in the Validator and register it under whichever Role it
+      actually earns.</div>
+    </div>
+
+    <!-- ============ ZIPPER MERGE ============ -->
+    <div class="card hold">
+      <div class="hdr"><h3>Zipper merge</h3><span class="chip q">queue</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: two lanes converge through an alternating comb into a single-file exit lane.">
+        <rect x="28" y="34" width="404" height="138" fill="#fdfdfc" stroke="#e4e7eb"/>
+        <path d="M28 52 L212 52 Q268 52 300 96 L432 96" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M28 154 L212 154 Q268 154 300 112 L432 112" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M28 100 L206 100 Q244 100 252 104" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <g stroke="var(--part)" stroke-width="5" stroke-linecap="round">
+          <line x1="248" y1="72" x2="266" y2="88"/><line x1="272" y1="126" x2="290" y2="112"/>
+          <line x1="288" y1="76" x2="302" y2="90"/>
+        </g>
+        <text x="262" y="60" font-size="9.5" fill="var(--part)">comb teeth</text>
+        <circle cx="70" cy="76" r="7" fill="var(--accent)"/><text x="70" y="80" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+        <circle cx="70" cy="128" r="7" fill="var(--accent2)"/><text x="70" y="132" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+        <circle cx="130" cy="76" r="7" fill="var(--accent)"/><text x="130" y="80" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+        <circle cx="130" cy="128" r="7" fill="var(--accent2)"/><text x="130" y="132" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">4</text>
+        <g><circle cx="340" cy="104" r="7" fill="var(--accent)"/><text x="340" y="108" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">1</text></g>
+        <g><circle cx="366" cy="104" r="7" fill="var(--accent2)"/><text x="366" y="108" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">2</text></g>
+        <g><circle cx="392" cy="104" r="7" fill="var(--accent)"/><text x="392" y="108" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">3</text></g>
+        <g><circle cx="418" cy="104" r="7" fill="var(--accent2)"/><text x="418" y="108" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">4</text></g>
+        <text x="366" y="76" font-size="10" fill="var(--ink3)" text-anchor="middle">single file, alternating</text>
+        <text x="230" y="188" font-size="10" fill="var(--warn)" text-anchor="middle">exit lane must stay &gt; 1 marble and &lt; 2 marbles wide</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> two lanes combing into one, alternating strictly, so the
+      field leaves in single file. The drama is watching which of two neighbours takes the gap.</p>
+      <div class="risk"><b>Unresolved:</b> this is funnel-choke's geometry with a comb bolted on. It is
+      only safe if the merge zone provably cannot hold two marbles abreast at any point. If you cannot
+      show that from the geometry, you are re-shipping the Module you just removed — skip it.</div>
+    </div>
+
+    <!-- ============ LOADED ROCKER ============ -->
+    <div class="card hold">
+      <div class="hdr"><h3>Loaded rocker</h3><span class="chip so">sort</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: a see-saw beam with a cup at each end tips under the weight of accumulated marbles, dumping one side and raising the other.">
+        <path d="M22 44 L120 68" stroke="var(--wall)" stroke-width="2.5"/>
+        <g stroke="var(--part)" stroke-width="8" stroke-linecap="round"><line x1="128" y1="78" x2="352" y2="140"/></g>
+        <path d="M118 66 L136 66 L142 84 L124 88 Z" fill="none" stroke="var(--part)" stroke-width="2.5"/>
+        <path d="M340 128 L360 132 L354 150 L336 146 Z" fill="none" stroke="var(--part)" stroke-width="2.5"/>
+        <path d="M240 110 L226 148 L254 148 Z" fill="var(--part)"/>
+        <circle cx="240" cy="109" r="6" fill="#fff" stroke="var(--part)" stroke-width="2"/>
+        <g stroke="var(--part)" stroke-width="6" stroke-linecap="round" stroke-dasharray="7 6" opacity="0.4">
+          <line x1="128" y1="140" x2="352" y2="78"/></g>
+        <text x="366" y="72" font-size="10" fill="var(--ink3)">dashed = tipped state</text>
+        <circle cx="130" cy="74" r="7" fill="var(--accent)"/>
+        <circle cx="144" cy="78" r="7" fill="var(--accent)"/>
+        <path d="M150 52 A54 54 0 0 1 196 46" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="150" y="40" font-size="10" fill="var(--accent)">tips once loaded</text>
+        <path d="M366 148 L440 168" stroke="var(--wall)" stroke-width="2.5"/>
+        <text x="230" y="186" font-size="10" fill="var(--ink3)" text-anchor="middle">beam ≈ 0.7 m · pivot at centre</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a see-saw that holds marbles until their combined weight
+      tips it, then dumps the load and swings back. Genuinely the most dramatic thing on this list.</p>
+      <div class="risk"><b>Unresolved — this one is a contract change, not a Module.</b> The tilt is
+      driven by marble contacts, so <code>step(spec, tSeconds)</code> could no longer be pure in
+      <code>t</code>. It needs a real dynamic body, which means the Validator's world and the
+      renderer's world stop being the same world. Decide that on purpose, in an ADR, before anyone
+      writes the geometry.</div>
+    </div>
+
+  </div>
+
+  <h2>For comparison — the four Modules already on the Board</h2>
+  <p class="sub">Same drawing conventions, so you can judge whether a candidate actually looks and behaves differently from what races already show.</p>
+  <div class="refgrid">
+
+    <div class="ref"><div class="nm">Pin field</div><div class="rl">scatter · live</div>
+      <svg viewBox="0 0 190 110" role="img" aria-label="Dense staggered grid of small pins with a marble zig-zagging down through them.">
+        <line x1="10" y1="14" x2="180" y2="14" stroke="var(--wall)" stroke-width="2"/>
+        <line x1="10" y1="100" x2="180" y2="100" stroke="var(--wall)" stroke-width="2"/>
+        <g fill="var(--part)">
+          <circle cx="34" cy="30" r="3.5"/><circle cx="62" cy="30" r="3.5"/><circle cx="90" cy="30" r="3.5"/><circle cx="118" cy="30" r="3.5"/><circle cx="146" cy="30" r="3.5"/>
+          <circle cx="48" cy="50" r="3.5"/><circle cx="76" cy="50" r="3.5"/><circle cx="104" cy="50" r="3.5"/><circle cx="132" cy="50" r="3.5"/><circle cx="160" cy="50" r="3.5"/>
+          <circle cx="34" cy="70" r="3.5"/><circle cx="62" cy="70" r="3.5"/><circle cx="90" cy="70" r="3.5"/><circle cx="118" cy="70" r="3.5"/><circle cx="146" cy="70" r="3.5"/>
+          <circle cx="48" cy="90" r="3.5"/><circle cx="76" cy="90" r="3.5"/><circle cx="104" cy="90" r="3.5"/><circle cx="132" cy="90" r="3.5"/><circle cx="160" cy="90" r="3.5"/>
+        </g>
+        <path d="M14 20 L40 34 L54 54 L84 62 L98 80 L128 92 L178 98" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      </svg>
+      <div class="ds">Many small deflections. Gentle, cumulative diffusion.</div></div>
+
+    <div class="ref"><div class="nm">Whoops</div><div class="rl">shuffle · live</div>
+      <svg viewBox="0 0 190 110" role="img" aria-label="A wavy sine-shaped floor with marbles riding the humps at different heights.">
+        <path d="M10 70 Q35 34 60 70 T110 70 T160 70 L182 74" fill="none" stroke="var(--part)" stroke-width="3.5"/>
+        <circle cx="46" cy="62" r="6" fill="var(--accent)"/>
+        <circle cx="98" cy="56" r="6" fill="var(--accent2)"/>
+        <circle cx="146" cy="64" r="6" fill="var(--accent)"/>
+        <text x="96" y="98" font-size="9.5" fill="var(--ink3)" text-anchor="middle">amplitude 6–16 mm</text>
+      </svg>
+      <div class="ds">Humps trade speed for height; the pack re-sorts over each wave.</div></div>
+
+    <div class="ref"><div class="nm">Staircase</div><div class="rl">sort · live</div>
+      <svg viewBox="0 0 190 110" role="img" aria-label="Descending steps with marbles bunched on the treads.">
+        <path d="M12 26 L60 26 L60 48 L104 48 L104 70 L148 70 L148 92 L182 92" fill="none" stroke="var(--part)" stroke-width="3.5"/>
+        <circle cx="38" cy="19" r="6" fill="var(--accent)"/>
+        <circle cx="84" cy="41" r="6" fill="var(--accent)"/>
+        <circle cx="96" cy="41" r="6" fill="var(--accent2)"/>
+        <circle cx="130" cy="63" r="6" fill="var(--accent)"/>
+      </svg>
+      <div class="ds">Treads catch and release; drop height sets who gets ahead.</div></div>
+
+    <div class="ref"><div class="nm">Windmill</div><div class="rl">queue · live</div>
+      <svg viewBox="0 0 190 110" role="img" aria-label="A four-bladed paddle wheel batting marbles that arrive along a sloped channel.">
+        <path d="M8 30 L62 44" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M126 66 L182 82" stroke="var(--wall)" stroke-width="2.5"/>
+        <circle cx="94" cy="56" r="34" fill="none" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3"/>
+        <g stroke="var(--part)" stroke-width="6" stroke-linecap="round">
+          <line x1="94" y1="56" x2="94" y2="24"/><line x1="94" y1="56" x2="126" y2="56"/>
+          <line x1="94" y1="56" x2="94" y2="88"/><line x1="94" y1="56" x2="62" y2="56"/></g>
+        <circle cx="94" cy="56" r="6" fill="var(--part)"/>
+        <circle cx="70" cy="40" r="6" fill="var(--accent)"/>
+      </svg>
+      <div class="ds">Blades bat arrivals. Meters the field, but strikes are unpredictable.</div></div>
+
+    <div class="ref"><div class="nm">Chute</div><div class="rl">accel · structural</div>
+      <svg viewBox="0 0 190 110" role="img" aria-label="A plain sloped channel with a marble accelerating down it.">
+        <path d="M10 26 L180 78" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M10 58 L180 110" stroke="var(--wall)" stroke-width="2.5"/>
+        <circle cx="56" cy="52" r="7" fill="var(--accent)"/>
+        <path d="M74 58 L136 78" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar)"/>
+      </svg>
+      <div class="ds">Track, not obstacle. Restores speed between Modules.</div></div>
+
+  </div>
+
+  <footer>
+    <strong>Scale and conventions.</strong> Every panel is drawn from the constants in
+    <code>src/race/scale.ts</code> — 32 mm marble, 0.5 m channel, 0.1 m Cell pitch — and Module
+    travel spans are consistent with the 0.6–1.8 m range the live Modules occupy. Plan views look at
+    the Board face-on from above, so the vertical axis is channel width; elevations are the viewer's
+    face-on view, so the vertical axis is gravity.<br>
+    <strong>Status.</strong> All eight candidates are unbuilt proposals from the 2026-08-24
+    brainstorm. Dimensions, pocket counts, restitution values, and dwell claims are design intent,
+    not Validator measurements — run each through the Validator before trusting any of them.
+    Live Module drawings are schematic, not traced from their <code>buildSpec</code> output.
+    Branch <code>marble-race-broadcast-ui/phase-4-production-release</code>. Drawn 2026-08-24.
+  </footer>
+</main>
+</body>
+</html>

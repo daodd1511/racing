@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marble Race Module catalog — coverage, failures, candidates</title>
+<style>
+  :root {
+    --ink: #16181d;
+    --ink-2: #4a5058;
+    --ink-3: #767d87;
+    --rule: #dfe2e7;
+    --bg: #fbfbfa;
+    --panel: #fff;
+    --accent: #2f5fd0;
+    --accent-soft: #e8eefb;
+    --warn: #a8402c;
+    --warn-soft: #fbeae6;
+    --live: #3f4650;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 28px 72px;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 27px; line-height: 1.2; margin: 0 0 10px; letter-spacing: -0.015em; }
+  .lede { font-size: 17px; line-height: 1.5; color: var(--ink-2); margin: 0 0 34px; max-width: 68ch; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+       margin: 44px 0 14px; font-weight: 600; }
+  h2:first-of-type { margin-top: 0; }
+  p { max-width: 72ch; }
+  .note { font-size: 13.5px; color: var(--ink-2); }
+
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 8px; }
+  .kpi { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; }
+  .kpi .num { font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.05; }
+  .kpi .num .was { color: var(--ink-3); font-weight: 400; }
+  .kpi .num .arrow { color: var(--ink-3); font-weight: 400; padding: 0 4px; }
+  .kpi .lbl { font-size: 12.5px; color: var(--ink-2); margin-top: 7px; line-height: 1.4; }
+  .kpi .unit { font-size: 11.5px; color: var(--ink-3); margin-top: 4px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--panel); }
+  caption { text-align: left; font-size: 13px; color: var(--ink-2); padding-bottom: 8px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em;
+             color: var(--ink-3); font-weight: 600; border-bottom: 1.5px solid #c8ccd3; }
+  tbody tr:last-child td { border-bottom: 1px solid #c8ccd3; }
+  td.role { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+         background: #f0f1f3; padding: 1px 5px; border-radius: 3px; }
+  .gone { color: var(--warn); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .cand { color: var(--accent); }
+  .cover { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar { display: inline-block; height: 9px; border-radius: 2px; vertical-align: middle;
+         margin-right: 6px; background: var(--accent); }
+  .bar.one { background: var(--warn); }
+
+  figure { margin: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+           padding: 18px 18px 14px; }
+  svg { display: block; width: 100%; height: auto; }
+
+  .key { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 14px;
+         padding-top: 14px; border-top: 1px solid var(--rule); font-size: 12.5px; }
+  .key h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em;
+            margin: 0 0 7px; color: var(--ink-3); font-weight: 600; }
+  .key ol { margin: 0; padding: 0; list-style: none; }
+  .key li { margin-bottom: 3px; color: var(--ink-2); line-height: 1.4; }
+  .key li b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums;
+              display: inline-block; min-width: 20px; }
+
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .step { background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+          border-radius: 6px; padding: 14px 15px; }
+  .step .ord { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+               color: var(--accent); font-weight: 650; }
+  .step .nm { font-size: 15.5px; font-weight: 600; margin: 5px 0 4px; }
+  .step .rl { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+              color: var(--ink-3); margin-bottom: 7px; }
+  .step .why { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+
+  .holds { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+  .hold { background: var(--warn-soft); border: 1px solid #f0d6cf; border-radius: 6px; padding: 13px 15px; }
+  .hold .nm { font-weight: 600; font-size: 14.5px; margin-bottom: 4px; }
+  .hold .why { font-size: 12.5px; color: #7d3a2a; line-height: 1.45; }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule);
+           font-size: 12.5px; color: var(--ink-3); line-height: 1.6; max-width: 78ch; }
+
+  @media (max-width: 760px) {
+    .kpis, .key, .steps, .holds { grid-template-columns: 1fr; }
+    body { padding: 28px 18px 56px; }
+    h1 { font-size: 23px; }
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .kpi, figure, .step, table { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Marble Race Module catalog: what the removal cost, and what to build next</h1>
+  <p class="lede">
+    The five removed Modules were <strong>exactly one per Role</strong>. The catalog went from
+    two Modules in every Role to one in every Role, which collapses
+    <code>selectRoleModules()</code> from 32 possible Role selections to <strong>1</strong> —
+    every race now draws the same four shapes, and only their order varies. Four new Modules,
+    one per obstacle Role, restore combinatorial variety.
+  </p>
+
+  <h2>The cost, in numbers</h2>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="num"><span class="was">9</span><span class="arrow">→</span>4</div>
+      <div class="lbl">Modules in <code>ALL_MODULES</code></div>
+      <div class="unit">count, after commit <code>fe48df4</code></div>
+    </div>
+    <div class="kpi">
+      <div class="num"><span class="was">32</span><span class="arrow">→</span>1</div>
+      <div class="lbl">Distinct Role selections the Assembler can produce</div>
+      <div class="unit">product of Modules per Role, across all 5 Roles</div>
+    </div>
+    <div class="kpi">
+      <div class="num">4<span class="was"> / 4</span></div>
+      <div class="lbl">Obstacle Roles now served by a single Module</div>
+      <div class="unit">scatter, shuffle, sort, queue — no alternates left</div>
+    </div>
+  </div>
+  <p class="note">
+    32 = 2 accel × 2 scatter × 2 shuffle × 2 sort × 2 queue. The count is a ceiling on Course
+    variety from Module choice; it excludes slot ordering, which <code>randomizedArc()</code>
+    still varies across the 10 obstacle slots.
+  </p>
+
+  <h2>Role coverage, before and after</h2>
+  <table>
+    <caption>Every Role lost its alternate. <code>chute</code> is retained as structural track, not as an obstacle.</caption>
+    <thead>
+      <tr>
+        <th style="width:11%">Role</th>
+        <th style="width:20%">Live</th>
+        <th style="width:20%">Removed</th>
+        <th style="width:29%">Candidates proposed</th>
+        <th style="width:20%">Coverage now → proposed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="role">accel</td>
+        <td>chute <span style="color:var(--ink-3)">(structural)</span></td>
+        <td class="gone">steep-zigzag</td>
+        <td class="note">none — banked turnarounds are polish, not a Role fill</td>
+        <td class="cover"><span class="bar one" style="width:9px"></span>1 → 1</td>
+      </tr>
+      <tr>
+        <td class="role">scatter</td>
+        <td>pin-field</td>
+        <td class="gone">rumble-strip</td>
+        <td class="cand">bumper cluster, splitter tree</td>
+        <td class="cover"><span class="bar" style="width:27px"></span>1 → 3</td>
+      </tr>
+      <tr>
+        <td class="role">shuffle</td>
+        <td>whoops</td>
+        <td class="gone">vortex-bowl</td>
+        <td class="cand">crossover weave, pocketed drum</td>
+        <td class="cover"><span class="bar" style="width:27px"></span>1 → 3</td>
+      </tr>
+      <tr>
+        <td class="role">sort</td>
+        <td>staircase</td>
+        <td class="gone">friction-lanes</td>
+        <td class="cand">cascading ledges <span class="note">(loaded rocker on hold)</span></td>
+        <td class="cover"><span class="bar" style="width:18px"></span>1 → 2</td>
+      </tr>
+      <tr>
+        <td class="role">queue</td>
+        <td>windmill</td>
+        <td class="gone">funnel-choke</td>
+        <td class="cand">turnstile <span class="note">(zipper merge on hold)</span></td>
+        <td class="cover"><span class="bar" style="width:18px"></span>1 → 2</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Why the five died — and where the candidates sit</h2>
+  <figure>
+    <svg viewBox="0 0 700 520" role="img" aria-labelledby="q-title q-desc">
+      <title id="q-title">Module trade-off quadrant: cause visibility against dwell-time boundedness</title>
+      <desc id="q-desc">
+        A scatter plot. The horizontal axis is how visible a Module's cause of overtaking is to the
+        viewer, low on the left to high on the right. The vertical axis is how well the worst-case
+        Dwell Time is bounded by geometry rather than luck, low at the bottom to high at the top.
+        All four live Modules and the strongest candidates cluster in the top-right quadrant.
+        Friction lanes and rumble strip sit far left: dwell was fine, but the viewer could not see
+        the cause. Vortex bowl and funnel choke sit at the bottom: visible, but each created a basin
+        with unbounded dwell. Steep zigzag sits mid-left and failed on a third criterion not shown
+        on these axes — its silhouette read as a chute.
+      </desc>
+
+      <!-- quadrant shading -->
+      <rect x="360" y="24" width="284" height="220" fill="#f2f6fd"/>
+      <rect x="76" y="24" width="284" height="220" fill="#fafafa"/>
+      <rect x="76" y="244" width="284" height="220" fill="#fdf6f4"/>
+      <rect x="360" y="244" width="284" height="220" fill="#fdf6f4"/>
+
+      <!-- quadrant labels -->
+      <text x="632" y="44" text-anchor="end" font-size="10.5" font-weight="600" fill="#5b7cc4" letter-spacing="0.04em">SHIPPABLE</text>
+      <text x="632" y="58" text-anchor="end" font-size="10" fill="#8a93a0">visible cause, bounded dwell</text>
+      <text x="88" y="44" font-size="10.5" font-weight="600" fill="#9aa1ac" letter-spacing="0.04em">INVISIBLE</text>
+      <text x="88" y="58" font-size="10" fill="#a8aeb8">safe, but reads as rigged</text>
+      <text x="88" y="452" font-size="10.5" font-weight="600" fill="#c08878" letter-spacing="0.04em">WORST CASE</text>
+      <text x="632" y="452" text-anchor="end" font-size="10.5" font-weight="600" fill="#c08878" letter-spacing="0.04em">STALL RISK</text>
+      <text x="632" y="438" text-anchor="end" font-size="10" fill="#c9a396">a basin: escape depends on luck</text>
+
+      <!-- axis frame -->
+      <line x1="76" y1="24" x2="76" y2="464" stroke="#c8ccd3" stroke-width="1"/>
+      <line x1="76" y1="464" x2="644" y2="464" stroke="#c8ccd3" stroke-width="1"/>
+      <line x1="360" y1="24" x2="360" y2="464" stroke="#c8ccd3" stroke-width="1" stroke-dasharray="3 3"/>
+      <line x1="76" y1="244" x2="644" y2="244" stroke="#c8ccd3" stroke-width="1" stroke-dasharray="3 3"/>
+
+      <!-- axis titles -->
+      <text x="360" y="494" text-anchor="middle" font-size="12" font-weight="600" fill="#4a5058">Cause of overtaking is visible to the viewer  →</text>
+      <text x="20" y="244" text-anchor="middle" font-size="12" font-weight="600" fill="#4a5058" transform="rotate(-90 20 244)">Worst-case Dwell Time bounded by geometry  →</text>
+      <text x="82" y="479" font-size="10" fill="#8a93a0">invisible</text>
+      <text x="638" y="479" text-anchor="end" font-size="10" fill="#8a93a0">unmistakable</text>
+      <text x="40" y="460" font-size="10" fill="#8a93a0" transform="rotate(-90 40 460)">luck</text>
+      <text x="40" y="34" font-size="10" fill="#8a93a0" transform="rotate(-90 40 34)">guaranteed</text>
+
+      <!-- LIVE: filled circles. x = 76 + v*568, y = 464 - v*440 -->
+      <g fill="#3f4650">
+        <circle cx="428" cy="46" r="5.5"/><text x="438" y="50" font-size="10.5" font-weight="600" fill="#3f4650">1</text>
+        <circle cx="559" cy="68" r="5.5"/><text x="569" y="72" font-size="10.5" font-weight="600" fill="#3f4650">2</text>
+        <circle cx="525" cy="86" r="5.5"/><text x="535" y="90" font-size="10.5" font-weight="600" fill="#3f4650">3</text>
+        <circle cx="496" cy="112" r="5.5"/><text x="506" y="116" font-size="10.5" font-weight="600" fill="#3f4650">4</text>
+        <circle cx="587" cy="138" r="5.5"/><text x="597" y="142" font-size="10.5" font-weight="600" fill="#3f4650">5</text>
+      </g>
+
+      <!-- CANDIDATES: hollow squares -->
+      <g fill="none" stroke="#2f5fd0" stroke-width="2">
+        <rect x="524" y="24" width="11" height="11"/>
+        <rect x="592" y="60" width="11" height="11"/>
+        <rect x="557" y="90" width="11" height="11"/>
+        <rect x="470" y="76" width="11" height="11"/>
+        <rect x="449" y="140" width="11" height="11"/>
+        <rect x="542" y="206" width="11" height="11"/>
+        <rect x="400" y="304" width="11" height="11"/>
+        <rect x="611" y="167" width="11" height="11" stroke-dasharray="3 2"/>
+      </g>
+      <g font-size="10.5" font-weight="600" fill="#2f5fd0">
+        <text x="518" y="34" text-anchor="end">6</text>
+        <text x="586" y="70" text-anchor="end">7</text>
+        <text x="551" y="100" text-anchor="end">8</text>
+        <text x="464" y="86" text-anchor="end">9</text>
+        <text x="443" y="150" text-anchor="end">10</text>
+        <text x="536" y="216" text-anchor="end">11</text>
+        <text x="394" y="314" text-anchor="end">12</text>
+        <text x="605" y="177" text-anchor="end">13</text>
+      </g>
+
+      <!-- REMOVED: crosses -->
+      <g stroke="#a8402c" stroke-width="2.2" stroke-linecap="round">
+        <path d="M126 80 l10 10 M136 80 l-10 10"/>
+        <path d="M167 106 l10 10 M177 106 l-10 10"/>
+        <path d="M287 115 l10 10 M297 115 l-10 10"/>
+        <path d="M366 361 l10 10 M376 361 l-10 10"/>
+        <path d="M470 397 l10 10 M480 397 l-10 10"/>
+      </g>
+      <g font-size="10.5" font-weight="600" fill="#a8402c">
+        <text x="142" y="90">R1</text>
+        <text x="183" y="116">R2</text>
+        <text x="303" y="125">R3</text>
+        <text x="382" y="371">R4</text>
+        <text x="486" y="407">R5</text>
+      </g>
+
+      <!-- callout for R3 -->
+      <line x1="300" y1="140" x2="300" y2="170" stroke="#c9a396" stroke-width="1"/>
+      <text x="300" y="184" text-anchor="middle" font-size="10" fill="#a8402c">failed on a third axis:</text>
+      <text x="300" y="196" text-anchor="middle" font-size="10" fill="#a8402c">silhouette read as a chute</text>
+    </svg>
+
+    <div class="key">
+      <div>
+        <h3>● Live catalog</h3>
+        <ol>
+          <li><b>1</b> chute <span style="color:var(--ink-3)">— structural</span></li>
+          <li><b>2</b> pin-field</li>
+          <li><b>3</b> whoops</li>
+          <li><b>4</b> staircase</li>
+          <li><b>5</b> windmill</li>
+        </ol>
+      </div>
+      <div>
+        <h3>▢ Candidates</h3>
+        <ol>
+          <li><b>6</b> crossover weave</li>
+          <li><b>7</b> bumper cluster</li>
+          <li><b>8</b> turnstile</li>
+          <li><b>9</b> cascading ledges</li>
+          <li><b>10</b> splitter tree</li>
+          <li><b>11</b> pocketed drum</li>
+          <li><b>12</b> zipper merge</li>
+          <li><b>13</b> loaded rocker <span style="color:var(--ink-3)">— dashed: breaks the pure-<code>step</code> contract</span></li>
+        </ol>
+      </div>
+      <div>
+        <h3>✕ Removed</h3>
+        <ol>
+          <li><b>R1</b> friction-lanes <span style="color:var(--ink-3)">sort</span></li>
+          <li><b>R2</b> rumble-strip <span style="color:var(--ink-3)">scatter</span></li>
+          <li><b>R3</b> steep-zigzag <span style="color:var(--ink-3)">accel</span></li>
+          <li><b>R4</b> funnel-choke <span style="color:var(--ink-3)">queue</span></li>
+          <li><b>R5</b> vortex-bowl <span style="color:var(--ink-3)">shuffle</span></li>
+        </ol>
+      </div>
+    </div>
+  </figure>
+  <p class="note" style="margin-top:12px">
+    <strong>Positions are design judgements, not measurements.</strong> No Validator Dwell Time
+    numbers were pulled for this page — the vertical axis is an assessment of whether geometry
+    guarantees an exit, not a recorded worst case. Run the Validator before trusting any
+    candidate's vertical position.
+  </p>
+
+  <h2>Build order</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="ord">First</div>
+      <div class="nm">Crossover weave</div>
+      <div class="rl">shuffle</div>
+      <div class="why">Lanes bridge over and under each other, inverting relative order. Static geometry, guaranteed exit, swap is legible face-on. Highest value per unit of risk.</div>
+    </div>
+    <div class="step">
+      <div class="ord">Second</div>
+      <div class="nm">Turnstile</div>
+      <div class="rl">queue</div>
+      <div class="why">A 3- or 4-armed cross in a throat, admitting one marble per arm. Dwell bounded at arms × period. Reuses <code>KinematicRotationMotion</code> as-is.</div>
+    </div>
+    <div class="step">
+      <div class="ord">Third</div>
+      <div class="nm">Bumper cluster</div>
+      <div class="rl">scatter</div>
+      <div class="why">A few large high-restitution bumpers: few contacts, huge deflections. The opposite texture to pin-field's fine diffusion. Convex, no basin.</div>
+    </div>
+    <div class="step">
+      <div class="ord">Fourth</div>
+      <div class="nm">Cascading ledges</div>
+      <div class="rl">sort</div>
+      <div class="why">Offset shelves where fast marbles fly the gap and slow ones ride down. A speed sort whose criterion the viewer can actually see.</div>
+    </div>
+  </div>
+  <p class="note" style="margin-top:12px">
+    These four take Role selections from <strong>1 to 16</strong> (2 × 2 × 2 × 2 across the
+    obstacle Roles) without touching <code>arc.ts</code>, <code>assembleCourse.ts</code>, or the
+    registry contract.
+  </p>
+
+  <h2>Held back, with reasons</h2>
+  <div class="holds">
+    <div class="hold">
+      <div class="nm">Zipper merge <span style="font-weight:400;color:#a8402c;font-size:12px">queue</span></div>
+      <div class="why">Two lanes combing into one sits close to the removed funnel-choke. Build it only if the comb geometry provably guarantees clearance; if you cannot prove it, you are re-shipping R4.</div>
+    </div>
+    <div class="hold">
+      <div class="nm">Loaded rocker <span style="font-weight:400;color:#a8402c;font-size:12px">sort</span></div>
+      <div class="why">A see-saw tipping under marble weight is contact-driven, so <code>step(spec, t)</code> could no longer be pure in <code>t</code>. It needs a dynamic body, which splits the Validator's world from the renderer's. A deliberate contract change, not a Module.</div>
+    </div>
+    <div class="hold">
+      <div class="nm">Pocketed drum <span style="font-weight:400;color:#a8402c;font-size:12px">shuffle</span></div>
+      <div class="why">Great drama, but if pockets are fewer than the field size the overflow queues outside the drum, making it part queue. It earns the shuffle tag only after a Validator sweep says so.</div>
+    </div>
+    <div class="hold">
+      <div class="nm">Splitter tree <span style="font-weight:400;color:#a8402c;font-size:12px">scatter</span></div>
+      <div class="why">Three levels of wedges fanning into eight lanes reads as discrete choices rather than noise. The risk is a marble balancing on a wedge apex — round or bias it before committing.</div>
+    </div>
+  </div>
+
+  <h2>One contract change worth making</h2>
+  <p class="note" style="max-width:72ch">
+    <code>ColliderSpec.motion</code> admits only <code>KinematicRotationMotion</code>. Adding a
+    translation or oscillation kind stays pure in <code>t</code>, costs little, and unlocks
+    sweeping gate bars, shuttle platforms, and launcher pistons — a class of legible moving
+    obstacles the Spec currently cannot express.
+  </p>
+
+  <footer>
+    <strong>Source.</strong> Module roles and registry contents read from the working tree at
+    <code>src/modules/registry.ts</code>, <code>src/modules/types.ts</code>, and
+    <code>src/course/arc.ts</code>; the five removed Modules' Roles recovered from
+    <code>git show fe48df4^</code>. Candidate Modules and all quadrant positions are design
+    proposals from the 2026-08-24 brainstorm — they are unbuilt and unmeasured.
+    Branch <code>marble-race-broadcast-ui/phase-4-production-release</code>. Pulled 2026-08-24.
+  </footer>
+
+</main>
+</body>
+</html>

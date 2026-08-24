@@ -32,6 +32,12 @@ describe("CourseMinimap", () => {
 
     document.body.innerHTML = markup;
     expect(document.querySelectorAll(".course-minimap__marble")).toHaveLength(3);
+    expect(document.querySelectorAll("pattern")).toHaveLength(3);
+    expect(
+      [...document.querySelectorAll(".course-minimap__marble")].every((marble) =>
+        marble.getAttribute("fill")?.startsWith("url(#"),
+      ),
+    ).toBe(true);
     expect(document.querySelector(".course-minimap__marble--decisive")?.tagName).toBe("path");
     expect(document.body.textContent).toContain("Decisive: Blake");
     expect(document.querySelector("svg")?.getAttribute("aria-label")).toBe("Course minimap");

@@ -1,5 +1,9 @@
 import type { Course } from "../course/types";
-import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
+import {
+  createMarbleStyles,
+  marbleStripeBackground,
+  type MarbleStyle,
+} from "../render/marbleStyles";
 import type { RaceSnapshot } from "../race/liveTypes";
 import type { SelectionMode } from "../race/types";
 
@@ -17,6 +21,7 @@ export interface StandingRow {
   readonly position: number;
   readonly name: string;
   readonly color: string;
+  readonly accentColor: string;
   readonly decisive: boolean;
   readonly checkpoint: number | null;
   readonly latestSplitSeconds: number | null;
@@ -62,6 +67,7 @@ export function createStandingsRows({
         position: index + 1,
         name: roster[marbleIndex] ?? `Marble ${marbleIndex + 1}`,
         color: marbleStyles[marbleIndex]?.color ?? "#ffffff",
+        accentColor: marbleStyles[marbleIndex]?.accentColor ?? "#12171c",
         decisive: snapshot?.decisiveMarbleIndex === marbleIndex,
         checkpoint: passedCheckpoint === null ? null : passedCheckpoint + 1,
         latestSplitSeconds: latestSplit(splits),
@@ -108,7 +114,13 @@ export function Standings({
                 <span
                   aria-hidden="true"
                   className="standings__marble"
-                  style={{ background: row.color }}
+                  style={{
+                    background: marbleStripeBackground({
+                      color: row.color,
+                      accentColor: row.accentColor,
+                      pattern: "stripe",
+                    }),
+                  }}
                 />
                 <span className="standings__name">{row.name}</span>
                 {row.decisive ? <span className="standings__decisive">{decisiveLabel}</span> : null}

@@ -1,14 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { START_POSITIONS, buildFinishSpec, buildStartSpec, stepStartGate } from "./startFinish";
+import {
+  START_GRID_CAPACITY,
+  START_ROW_CAPACITY,
+  buildFinishSpec,
+  buildStartSpec,
+  startGridPositions,
+  stepStartGate,
+} from "./startFinish";
 
 describe("Start infrastructure", () => {
-  it("provides a fixed 5-wide by 3-deep corral", () => {
-    expect(START_POSITIONS).toHaveLength(15);
-    expect(new Set(START_POSITIONS.map(([x]) => x)).size).toBe(5);
-    expect(new Set(START_POSITIONS.map(([, , z]) => z)).size).toBe(3);
-    expect(new Set(START_POSITIONS.map((position) => position.join(":"))).size).toBe(15);
-    expect(Object.isFrozen(START_POSITIONS)).toBe(true);
+  it("fills centered five-marble rows before adding the next row", () => {
+    const fullGrid = startGridPositions(START_GRID_CAPACITY);
+    const sevenMarbles = startGridPositions(7);
+
+    expect(START_ROW_CAPACITY).toBe(5);
+    expect(fullGrid).toHaveLength(15);
+    expect(new Set(fullGrid.map(([x]) => x)).size).toBe(5);
+    expect(new Set(fullGrid.map(([, , z]) => z)).size).toBe(3);
+    expect(new Set(fullGrid.map((position) => position.join(":"))).size).toBe(15);
+    expect(new Set(sevenMarbles.slice(0, 5).map(([, , z]) => z))).toHaveLength(1);
+    expect(new Set(sevenMarbles.slice(5).map(([, , z]) => z))).toHaveLength(1);
+    expect(sevenMarbles[5][0]).toBeCloseTo(-sevenMarbles[6][0]);
+    expect(Object.isFrozen(fullGrid)).toBe(true);
   });
 
   it("opens one shared kinematic gate deterministically from race time zero", () => {

@@ -1,6 +1,10 @@
 import { DEFAULT_RACE_CONFIG } from "../race/config";
 import type { RaceRequest, RaceSnapshot } from "../race/liveTypes";
-import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
+import {
+  createMarbleStyles,
+  marbleStripeBackground,
+  type MarbleStyle,
+} from "../render/marbleStyles";
 import { formatRaceTime } from "./Standings";
 
 export interface ResultPanelProps {
@@ -18,6 +22,10 @@ function marbleName(roster: readonly string[], marbleIndex: number): string {
 
 function selectionModeLabel(selectionMode: RaceRequest["selectionMode"]): string {
   return selectionMode === "first" ? "First finisher" : "Last finisher";
+}
+
+function stripeBackground(style: MarbleStyle | undefined): string {
+  return style === undefined ? "#ffffff" : marbleStripeBackground(style);
 }
 
 function RaceOrder({
@@ -41,7 +49,9 @@ function RaceOrder({
             <span
               aria-hidden="true"
               className="result-panel__swatch"
-              style={{ background: marbleStyles[marbleIndex]?.color ?? "#ffffff" }}
+              style={{
+                background: stripeBackground(marbleStyles[marbleIndex]),
+              }}
             />
             {marbleName(roster, marbleIndex)}
           </li>
@@ -71,7 +81,7 @@ export function ResultPanel({
           aria-label={`Selected marble: ${selectedName}, ${selectedStyle?.pattern ?? "solid"} pattern`}
           className="result-panel__marble"
           style={{
-            background: selectedStyle?.color ?? "#ffffff",
+            background: stripeBackground(selectedStyle),
             borderColor: selectedStyle?.accentColor ?? "#12171c",
           }}
         />

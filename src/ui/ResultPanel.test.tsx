@@ -35,7 +35,9 @@ describe("ResultPanel", () => {
 
     expect(screen.getByText(DEFAULT_RACE_CONFIG.resultLabel)).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Blake" })).toBeTruthy();
-    expect(screen.getByLabelText("Selected marble: Blake, orbit pattern")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Selected marble: Blake, stripe pattern").getAttribute("style"),
+    ).toContain("repeating-linear-gradient");
     expect(screen.getByText("91")).toBeTruthy();
     expect(screen.getByText("Last finisher")).toBeTruthy();
     expect(screen.getByText("01:04.20")).toBeTruthy();

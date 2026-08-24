@@ -79,14 +79,35 @@ vi.mock("../race/LiveRace", () => ({
 }));
 
 vi.mock("../course/render/CourseScene", () => ({
-  CourseScene({ snapshot }: { readonly snapshot: RaceSnapshot | null }) {
-    return <output>Course scene {snapshot?.elapsedSeconds ?? "pending"}</output>;
+  CourseScene({
+    snapshot,
+    stagedMarbleTransforms = [],
+  }: {
+    readonly snapshot: RaceSnapshot | null;
+    readonly stagedMarbleTransforms?: RaceSnapshot["marbleTransforms"];
+  }) {
+    return (
+      <>
+        <output>Course scene {snapshot?.elapsedSeconds ?? "pending"}</output>
+        <output>Staged marbles {stagedMarbleTransforms.length}</output>
+      </>
+    );
   },
 }));
 
 vi.mock("../race/DecisiveCamera", () => ({
-  DecisiveCamera({ snapshot }: { readonly snapshot: RaceSnapshot | null }) {
-    return <output>Camera {snapshot?.decisiveMarbleIndex ?? "pending"}</output>;
+  DecisiveCamera({
+    snapshot,
+    startingGridSize,
+  }: {
+    readonly snapshot: RaceSnapshot | null;
+    readonly startingGridSize?: number;
+  }) {
+    return (
+      <output>
+        Camera {snapshot?.decisiveMarbleIndex ?? "pending"} grid {startingGridSize}
+      </output>
+    );
   },
 }));
 
@@ -99,6 +120,11 @@ vi.mock("../race/CourseMinimap", () => ({
 const course = Object.freeze({
   board: Object.freeze({}),
   checkpoints: Object.freeze([Object.freeze({}), Object.freeze({})]),
+  entry: Object.freeze({
+    position: Object.freeze([0, 0, 0]),
+    tangent: Object.freeze([1, 0, 0]),
+    up: Object.freeze([0, 1, 0]),
+  }),
 }) as Course;
 
 afterEach(() => {
@@ -119,10 +145,12 @@ describe("BroadcastRace", () => {
     expect(screen.getByTestId("canvas")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
     expect(screen.getByText("Course scene pending")).toBeTruthy();
+    expect(screen.getByText("Staged marbles 2")).toBeTruthy();
+    expect(screen.getByText("Camera pending grid 2")).toBeTruthy();
     act(() => vi.advanceTimersByTime(2_250));
     expect(screen.getByText("GO!")).toBeTruthy();
     expect(screen.getByText("Course scene 4.2")).toBeTruthy();
-    expect(screen.getByText("Camera 1")).toBeTruthy();
+    expect(screen.getByText("Camera 1 grid 2")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Emit snapshot" }));
 
     expect(screen.getByText("Minimap 4.2")).toBeTruthy();

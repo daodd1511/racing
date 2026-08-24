@@ -29,6 +29,8 @@ const MATERIAL = Object.freeze({
   friction: SCALE.defaultFriction,
 });
 const WALL_VISUAL = Object.freeze({ color: "#d8ff42", metalness: 0.05, roughness: 0.2 });
+export const START_ROW_CAPACITY = 5;
+export const START_GRID_CAPACITY = 15;
 
 function vector(value: ThreeVector3): Vector3 {
   return [value.x, value.y, value.z];
@@ -44,15 +46,23 @@ function floorY(z: number, length: number, drop: number): number {
 
 const lateralSpacing = (SCALE.channelWidth - SCALE.marbleRadius * 4) / 5;
 const rowSpacing = SCALE.marbleRadius * 3;
-export const START_POSITIONS: readonly Vector3[] = Object.freeze(
-  Array.from({ length: 3 }, (_, row) =>
-    Array.from({ length: 5 }, (_, column): Vector3 => {
-      const z = GATE_Z - SCALE.marbleRadius * 3 - row * rowSpacing;
-      const x = (column - 2) * lateralSpacing;
-      return Object.freeze([x, floorY(z, START_LENGTH, START_DROP) + SCALE.marbleRadius, z]);
-    }),
-  ).flat(),
-);
+export function startGridPositions(rosterSize: number): readonly Vector3[] {
+  if (!Number.isSafeInteger(rosterSize) || rosterSize < 1 || rosterSize > START_GRID_CAPACITY) {
+    throw new RangeError(`Roster size must be between 1 and ${START_GRID_CAPACITY}`);
+  }
+
+  const rowCount = Math.ceil(rosterSize / START_ROW_CAPACITY);
+  return Object.freeze(
+    Array.from({ length: rowCount }, (_, row) => {
+      const marblesInRow = Math.min(START_ROW_CAPACITY, rosterSize - row * START_ROW_CAPACITY);
+      return Array.from({ length: marblesInRow }, (_, column): Vector3 => {
+        const z = GATE_Z - SCALE.marbleRadius * 3 - row * rowSpacing;
+        const x = (column - (marblesInRow - 1) / 2) * lateralSpacing;
+        return Object.freeze([x, floorY(z, START_LENGTH, START_DROP) + SCALE.marbleRadius, z]);
+      });
+    }).flat(),
+  );
+}
 
 function expandedBounds(
   bounds: Footprint["bounds"],

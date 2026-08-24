@@ -67,6 +67,9 @@ describe("Standings", () => {
     expect(items[0].textContent).toContain("Leader pick");
     expect(items[0].textContent).toContain("CP 3 / 3");
     expect(items[0].textContent).toContain("00:03.40");
+    expect(document.querySelector(".standings__marble")?.getAttribute("style")).toContain(
+      "repeating-linear-gradient",
+    );
   });
 
   it("renders all fifteen possible Roster entries", () => {

@@ -1,5 +1,11 @@
+import { useId } from "react";
+
 import type { BoardSpec, Course } from "../course/types";
-import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
+import {
+  createMarbleStyles,
+  marbleStripeBackground,
+  type MarbleStyle,
+} from "../render/marbleStyles";
 import type { Vector3 } from "./types";
 import type { RaceSnapshot } from "./liveTypes";
 
@@ -116,6 +122,7 @@ export function CourseMinimap({
   roster,
   marbleStyles = createMarbleStyles(roster.length),
 }: CourseMinimapProps) {
+  const patternPrefix = useId().replaceAll(":", "");
   const projection = createMinimapProjection(board, course.route);
   const route = routePoints(projection, course.route);
   const decisiveIndex = snapshot?.decisiveMarbleIndex ?? null;
@@ -136,7 +143,10 @@ export function CourseMinimap({
             <span
               aria-hidden="true"
               className="course-minimap__chip-swatch"
-              style={{ background: decisiveStyle?.color ?? "#ffffff" }}
+              style={{
+                background:
+                  decisiveStyle == null ? "#ffffff" : marbleStripeBackground(decisiveStyle),
+              }}
             />
             Decisive: {marbleName(roster, decisiveIndex)}
           </span>
@@ -149,6 +159,21 @@ export function CourseMinimap({
         viewBox={`0 0 ${projection.width} ${projection.height.toFixed(2)}`}
       >
         <title>Course minimap</title>
+        <defs>
+          {marbleStyles.map((style, marbleIndex) => (
+            <pattern
+              key={marbleIndex}
+              id={`${patternPrefix}-marble-stripe-${marbleIndex}`}
+              height="4"
+              patternTransform="rotate(35)"
+              patternUnits="userSpaceOnUse"
+              width="4"
+            >
+              <rect fill={style.color} height="4" width="4" />
+              <rect fill={style.accentColor} height="4" width="1.5" />
+            </pattern>
+          ))}
+        </defs>
         <rect
           className="course-minimap__board"
           height={projection.height}
@@ -180,14 +205,18 @@ export function CourseMinimap({
           const point = projection.project(marble.position);
           const isDecisive = marble.marbleIndex === decisiveIndex;
           const label = marbleName(roster, marble.marbleIndex);
-          const color = marbleStyles[marble.marbleIndex]?.color ?? "#ffffff";
+          const style = marbleStyles[marble.marbleIndex];
+          const fill =
+            style === undefined
+              ? "#ffffff"
+              : `url(#${patternPrefix}-marble-stripe-${marble.marbleIndex})`;
           return isDecisive ? (
             <g key={marble.marbleIndex} aria-label={`Decisive marble: ${label}`}>
               <circle className="course-minimap__halo" cx={point.x} cy={point.y} r="5" />
               <path
                 className="course-minimap__marble course-minimap__marble--decisive"
                 d={diamondPath(point, 3.1)}
-                fill={color}
+                fill={fill}
               />
             </g>
           ) : (
@@ -197,7 +226,7 @@ export function CourseMinimap({
               className="course-minimap__marble"
               cx={point.x}
               cy={point.y}
-              fill={color}
+              fill={fill}
               r="1.7"
             />
           );

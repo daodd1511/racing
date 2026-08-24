@@ -8,6 +8,7 @@ import { DecisiveCamera } from "../race/DecisiveCamera";
 import { LiveRace } from "../race/LiveRace";
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "../race/liveTypes";
 import type { CameraMode } from "../race/types";
+import { startingGridTransforms } from "../race/startAssignment";
 import { createMarbleStyles } from "../render/marbleStyles";
 import { formatRaceTime, Standings } from "./Standings";
 
@@ -56,6 +57,7 @@ export function BroadcastRace({
 }: BroadcastRaceProps) {
   const [latestSnapshot, setLatestSnapshot] = useState<RaceSnapshot | null>(null);
   const [marbleStyles] = useState(() => createMarbleStyles(request.roster.length));
+  const stagedMarbleTransforms = startingGridTransforms(course, request.seed, request.roster.length);
   const snapshot = externalSnapshot ?? latestSnapshot;
   const countdown = useRaceCountdown(request.seed, frozen);
   const raceStarted = frozen || countdown <= 0;
@@ -68,7 +70,12 @@ export function BroadcastRace({
   const courseContent = frozen ? (
     <>
       <CourseScene course={course} marbleStyles={marbleStyles} snapshot={snapshot} />
-      <DecisiveCamera course={course} mode={cameraMode} snapshot={snapshot} />
+      <DecisiveCamera
+        course={course}
+        mode={cameraMode}
+        snapshot={snapshot}
+        startingGridSize={request.roster.length}
+      />
     </>
   ) : raceStarted ? (
     <LiveRace
@@ -81,14 +88,29 @@ export function BroadcastRace({
       {({ snapshot: liveSnapshot }) => (
         <>
           <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
-          <DecisiveCamera course={course} mode={cameraMode} snapshot={liveSnapshot} />
+          <DecisiveCamera
+            course={course}
+            mode={cameraMode}
+            snapshot={liveSnapshot}
+            startingGridSize={request.roster.length}
+          />
         </>
       )}
     </LiveRace>
   ) : (
     <>
-      <CourseScene course={course} marbleStyles={marbleStyles} snapshot={null} />
-      <DecisiveCamera course={course} mode={cameraMode} snapshot={null} />
+      <CourseScene
+        course={course}
+        marbleStyles={marbleStyles}
+        snapshot={null}
+        stagedMarbleTransforms={stagedMarbleTransforms}
+      />
+      <DecisiveCamera
+        course={course}
+        mode={cameraMode}
+        snapshot={null}
+        startingGridSize={request.roster.length}
+      />
     </>
   );
 

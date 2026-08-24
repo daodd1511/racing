@@ -39,8 +39,8 @@ _Avoid_: track, layout, level
 ### Modules
 
 **Module**:
-One self-contained, independently authored piece of the Course — a vortex bowl,
-a pin field, a chute. The unit of composition and of the Showcase.
+One self-contained, independently authored piece of the Course — a pin field,
+a staircase, a chute. The unit of composition and of the Showcase.
 _Avoid_: obstacle (too narrow — a chute is a Module but obstructs nothing),
 component, piece, section
 

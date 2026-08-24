@@ -5,8 +5,7 @@ import { buildChannel, FLOOR_THICKNESS, RAIL_HEIGHT, RAIL_THICKNESS } from "./ch
 import { SCALE } from "../../race/scale";
 import type { Quaternion, Vector3 } from "../../race/types";
 
-// No renderer runs in this suite -- geometry is verified numerically, the
-// same convention `revolve.test.ts` uses.
+// No renderer runs in this suite; geometry is verified numerically.
 
 const MATERIAL = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
 

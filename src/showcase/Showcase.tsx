@@ -178,9 +178,7 @@ export function Showcase() {
           <ambientLight intensity={0.5} />
           <directionalLight position={[0.6, 1, 0.4]} intensity={1.4} castShadow />
           {/* Fits the camera to the selected Module and then lets the user
-           * zoom/pan/orbit freely -- see CameraFraming.tsx. The old fixed
-           * position only ever suited the chute; the vortex bowl's bounds
-           * run more than twice as wide. */}
+           * zoom/pan/orbit freely -- see CameraFraming.tsx. */}
           <CameraFraming bounds={framingBounds} />
           <Physics
             gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}

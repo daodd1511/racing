@@ -76,8 +76,7 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
       default: DEFAULT_PARAMS.riseHeight,
     } satisfies NumberParamField,
     {
-      // Pinned to SCALE.channelWidth, same reasoning as steepZigzag's
-      // `width` field: the Validator's multi-marble spawn spread
+      // Pinned to SCALE.channelWidth because the Validator's multi-marble spawn spread
       // (validateModule.ts's spawnMarbles) is hardcoded to SCALE.channelWidth
       // regardless of a Module's own width, so a narrower value spreads
       // marbles outside this Module's own rails from spawn.

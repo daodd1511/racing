@@ -1,13 +1,8 @@
 import { chute } from "./chute";
-import { frictionLanes } from "./frictionLanes";
-import { funnelChoke } from "./funnelChoke";
 import type { ParamValues } from "./params";
 import { pinField } from "./pinField";
-import { rumbleStrip } from "./rumbleStrip";
 import { staircase } from "./staircase";
-import { steepZigzag } from "./steepZigzag";
 import type { KinematicTransform, ModuleDefinition, ModuleMeta, Role, Spec } from "./types";
-import { vortexBowl } from "./vortexBowl";
 import { windmill } from "./windmill";
 import { whoops } from "./whoops";
 
@@ -47,14 +42,9 @@ function toRegisteredModule<P>(module: ModuleDefinition<P>): RegisteredModule {
 
 export const ALL_MODULES: readonly RegisteredModule[] = [
   toRegisteredModule(chute),
-  toRegisteredModule(vortexBowl),
-  toRegisteredModule(steepZigzag),
   toRegisteredModule(pinField),
-  toRegisteredModule(rumbleStrip),
   toRegisteredModule(staircase),
-  toRegisteredModule(frictionLanes),
   toRegisteredModule(whoops),
-  toRegisteredModule(funnelChoke),
   toRegisteredModule(windmill),
 ];
 

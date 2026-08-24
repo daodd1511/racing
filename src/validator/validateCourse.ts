@@ -29,7 +29,6 @@ import { shuffleCoefficient } from "./metrics";
 
 const VALIDATION_START_SEEDS = 5;
 const VALIDATION_MARBLES = 15;
-const EXCLUDED_PHYSICS_MODULE_IDS = new Set(["vortex-bowl"]);
 
 export interface ValidatedRoleSelection {
   readonly selection: RoleSelection;
@@ -38,10 +37,8 @@ export interface ValidatedRoleSelection {
 
 export function enumeratePhysicsValidatedSelections(): readonly ValidatedRoleSelection[] {
   return Object.freeze(
-    enumerateRoleSelections().flatMap((selection, shapeIndex) =>
-      Object.values(selection).some((moduleId) => EXCLUDED_PHYSICS_MODULE_IDS.has(moduleId))
-        ? []
-        : [Object.freeze({ selection, shapeIndex })],
+    enumerateRoleSelections().map((selection, shapeIndex) =>
+      Object.freeze({ selection, shapeIndex }),
     ),
   );
 }

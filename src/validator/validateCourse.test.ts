@@ -19,17 +19,16 @@ describe("runCourseRaceValidation", () => {
     expect(Number.isFinite(result.shuffleCoefficient)).toBe(true);
   });
 
-  it("excludes only vortex shapes from the successful physics gate", () => {
+  it("includes the active Module combination in the physics gate", () => {
     const selections = enumeratePhysicsValidatedSelections();
-    expect(selections).toHaveLength(16);
-    expect(selections.every(({ selection }) => selection.shuffle !== "vortex-bowl")).toBe(true);
+    expect(selections).toHaveLength(1);
   });
 
   it.each([
-    [14, 4],
-    [21, 3],
-    [28, 1],
-  ])("contains known packed seam case shape %i, Start seed %i", (shapeIndex, startSeed) => {
+    [0, 4],
+    [0, 3],
+    [0, 1],
+  ])("contains packed active-Course case shape %i, Start seed %i", (shapeIndex, startSeed) => {
     const { selection } = enumeratePhysicsValidatedSelections().find(
       (candidate) => candidate.shapeIndex === shapeIndex,
     )!;

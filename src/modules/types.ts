@@ -50,10 +50,8 @@ export interface Footprint {
 /** Geometric primitives a Module can be built from. Shared by `ColliderSpec`
  * and `VisualSpec`: for most Modules the collision volume and the drawn mesh
  * are the same box/cylinder/ball, so one union serves both rather than
- * duplicating shape math per concern. `trimesh` exists from the start (not
- * added ad hoc in Phase 4) so the vortex bowl's revolved geometry doesn't
- * force a breaking change to a contract Phase 3's renderer already depends
- * on. */
+ * duplicating shape math per concern. `trimesh` supports smooth visual
+ * surfaces while physics can use simpler colliders. */
 export type Shape =
   | { readonly kind: "cuboid"; readonly halfExtents: Vector3 }
   | { readonly kind: "cylinder"; readonly radius: number; readonly halfHeight: number }

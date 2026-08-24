@@ -98,9 +98,8 @@ const MAX_SAGITTA_FRACTION_OF_MARBLE_RADIUS = 0.25;
 // The visual needs no separate high-resolution request: its shared indexed
 // mesh is smooth-lit by the renderer, while the collision safety floor below
 // resolves the shape far more accurately than a visual-only convenience
-// setting would. This mirrors vortexBowl's `COLLIDER_SEGMENTS_REQUEST = 1`:
-// do not create collision plates at a visual segment count without a physics
-// reason for each one.
+// setting would. Do not create collision plates at a visual segment count
+// without a physics reason for each one.
 const COLLIDER_SEGMENTS_REQUEST = 1;
 const FLOOR_MATERIAL = { restitution: 0.1, friction: 0 };
 const FLOOR_VISUAL_MATERIAL = { color: "#5b8cff", metalness: 0.08, roughness: 0.24 };

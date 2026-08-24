@@ -141,8 +141,7 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
 const FLOOR_GRADE = 0.5;
 // Long enough that a marble spawned at rest (the Feeder's own convention --
 // see chute/index.ts) has picked up real speed before reaching the first
-// row: rumbleStrip's own LEAD_IN hit this exact failure first (see its
-// comment) -- a marble arriving at an obstacle with near-zero speed sees a
+// row: a marble arriving at an obstacle with near-zero speed sees a
 // genuine wall, not a deflection. Measured directly: at `MARBLE_DIAMETER * 3`
 // the first row parked every marble near-motionless for dozens of frames.
 const LEAD_IN = MARBLE_DIAMETER * 18;
@@ -164,8 +163,7 @@ function toQuaternion(q: ThreeQuaternion): Quaternion {
 }
 
 /** The 8 corners of a cuboid with the given half-extents, position, and
- * rotation -- the same helper `channel.ts` and `steepZigzag/index.ts` use to
- * accumulate an axis-aligned `bounds` box that actually accounts for a
+ * rotation to accumulate an axis-aligned `bounds` box that actually accounts for a
  * rotated collider's true extent, rather than a shortcut that only accounts
  * for part of the rotation. */
 function cuboidCorners(

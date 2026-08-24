@@ -2,7 +2,7 @@ import type { Vector3 } from "./types";
 
 // Toy-scale constants shared by every Module and the Validator. Starting
 // values per PLAN.md -> "Scale and materials" -- tuned empirically in the
-// Showcase (Phase 3) and against the vortex bowl (Phase 4), not fixed here.
+// Showcase, not fixed here.
 // This is the fix for the previous build's "marbles look extremely slow":
 // apparent speed on screen goes as v/L ~ sqrt(g/L), so shrinking the world
 // (not boosting gravity) buys the same speed while keeping every number a

@@ -13,7 +13,6 @@ const COURSE_MODULE_IDS = new Set([
   "pin-field",
   "whoops",
   "staircase",
-  "funnel-choke",
   "windmill",
 ]);
 
@@ -44,17 +43,6 @@ export function courseParamValues(module: RegisteredModule): ParamValues {
       stepCount: 8,
       tread: 0.16,
       riseHeight: SCALE.marbleRadius * 2,
-    });
-  }
-  if (module.id === "funnel-choke") {
-    return Object.freeze({
-      ...defaults,
-      throatWidth: SCALE.marbleRadius * 6,
-      length: 1.8,
-      courseApproachRun: 1.15,
-      courseThroatRun: 0.35,
-      courseFlareRun: 0.25,
-      courseGrade: COURSE_GRADE,
     });
   }
   if (module.id === "windmill") {

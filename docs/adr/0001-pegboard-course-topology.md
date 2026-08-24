@@ -11,7 +11,6 @@ many Courses safe.
 
 ## Consequences
 
-Depth becomes decoration rather than gameplay: Modules may lean into or out of
-the Board (the vortex bowl needs exactly that) but the Course routes in x and y
-only, and the camera pans without rotating. Free-3D course shapes are given up
-deliberately.
+Depth becomes decoration rather than gameplay: Modules may use depth for their
+geometry, but the Course routes in x and y only. Free-3D Course shapes are
+given up deliberately.

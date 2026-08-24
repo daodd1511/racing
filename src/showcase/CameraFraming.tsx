@@ -8,10 +8,8 @@ import type { Footprint } from "../modules/types";
 // Fits the camera to a Module's Footprint.bounds, then hands off to
 // OrbitControls so the user can zoom out (or in, or orbit) freely from
 // there. The old camera was one fixed position `{[0, 0.3, 0.6], fov: 50}`
-// tuned for the chute -- fine for a ~0.6 m Module, but the vortex bowl's
-// bounds run to nearly 1.4 m across (a 30-marble-radii rim plus its entry
-// ramp), so that fixed framing left most of it outside the viewport with
-// no way to back the camera up at all.
+// tuned for the chute, so larger Modules could extend outside the viewport
+// with no way to back the camera up.
 
 /** Padding around the bounds so a Module's own edges aren't touching the
  * viewport's -- a tight crop reads as "cut off", not "fits". */

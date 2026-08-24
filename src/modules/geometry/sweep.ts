@@ -1,6 +1,5 @@
 import type { Quaternion, Vector3 } from "../../race/types";
 import type { Shape } from "../types";
-import type { PlatePlacement } from "./revolve";
 
 // A longitudinal swept floor for Modules such as whoops. The centreline is
 // sampled in the Module's Y/Z plane: +Y is up, +Z is travel, and its constant
@@ -20,8 +19,11 @@ const PLATE_THICKNESS = 0.01;
 const PLATE_SEAM_OVERLAP_RADIUS_FRACTION = 0.05;
 const X_AXIS: Vector3 = [1, 0, 0];
 
-export interface SweepPlatePlacement extends PlatePlacement {
+export interface SweepPlatePlacement {
   readonly id: string;
+  readonly halfExtents: Vector3;
+  readonly position: Vector3;
+  readonly rotation: Quaternion;
 }
 
 interface SweepCell {
@@ -185,7 +187,7 @@ export function sweepProfileToPlates(
     const centre = scale(add(cell.start, cell.end), 0.5);
     // The cuboid top face is the sampled surface. Offset its centre down
     // along the plate normal so its thickness is entirely below the visual,
-    // as revolveProfileToPlates does for the vortex bowl.
+    // so the physical plate remains entirely below the visual surface.
     const position = subtract(centre, scale(cell.normal, PLATE_THICKNESS / 2));
     const id = idPrefix.length === 0 ? `plate-${index}` : `${idPrefix}-plate-${index}`;
 

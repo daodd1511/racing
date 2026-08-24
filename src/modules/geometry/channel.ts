@@ -16,8 +16,8 @@ import type { Anchor, ColliderMaterial, ColliderSpec, Footprint, VisualSpec } fr
 // `Anchor`s and local-space `bounds` a `Footprint` needs. Three.js's
 // Vector3/Quaternion are internal math scratch space only, converted to
 // plain tuples before anything leaves `buildChannel` -- the same convention
-// `chute/index.ts` and `geometry/revolve.ts` already follow, so this file
-// stays a legitimate Validator input.
+// `chute/index.ts` already follows, so this file stays a legitimate Validator
+// input.
 
 /** One straight run of channel floor, in the caller's own local space --
  * `start` and `end` are the centreline's endpoints, `width` the lateral gap

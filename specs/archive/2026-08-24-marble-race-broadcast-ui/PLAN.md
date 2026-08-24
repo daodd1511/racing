@@ -351,8 +351,8 @@ beneath it. Avoid horizontal scrolling at the supported 1-15 Roster range.
   exists.
 - Remove legacy warm-arcade CSS that no surviving entry imports.
 - Remove any remaining root `ui-variant-*.html` explorations. Historical specs
-  and `specs/prototypes/first-look.html` remain documentation, not production
-  inputs.
+  and `../2026-08-24-marble-race-picker/prototypes/first-look.html` remain
+  documentation, not production inputs.
 
 ## Test strategy
 

@@ -252,7 +252,7 @@ without losing the mode-selected position.
 
 ## Implementation map
 
-The prototype at `specs/prototypes/first-look.html` is rejected as a visual and
+The prototype at `prototypes/first-look.html` is rejected as a visual and
 track reference; it remains only as historical physics exploration.
 `ui-variant-2-arcade.html` is the selected visual reference for the
 production interface: use its warm arcade palette, tactile controls, cabinet

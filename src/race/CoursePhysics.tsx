@@ -8,7 +8,7 @@ import { INITIAL_FIXED_STEP_BACKLOG, advanceFixedStepBacklog } from "./fixedStep
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "./liveTypes";
 
 const MAXIMUM_STEPS_PER_FRAME = 8;
-export const LIVE_RACE_PLAYBACK_RATE = 0.72;
+export const LIVE_RACE_PLAYBACK_RATE = 1;
 let rapierReady: Promise<void> | null = null;
 
 function initializeRapier(): Promise<void> {

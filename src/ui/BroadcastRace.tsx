@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CourseScene } from "../course/render/CourseScene";
 import type { Course } from "../course/types";
@@ -14,6 +14,7 @@ import { formatRaceTime, Standings } from "./Standings";
 
 const INITIAL_CAMERA = Object.freeze({ fov: 42, position: [0, 0, 6] as const });
 const COUNTDOWN_STEP_MS = 750;
+const TELEMETRY_STEP_SECONDS = 0.1;
 
 function useRaceCountdown(seed: number, frozen: boolean): number {
   const [countdown, setCountdown] = useState(frozen ? -1 : 3);
@@ -56,6 +57,7 @@ export function BroadcastRace({
   onOutcome,
 }: BroadcastRaceProps) {
   const [latestSnapshot, setLatestSnapshot] = useState<RaceSnapshot | null>(null);
+  const telemetrySnapshotRef = useRef<RaceSnapshot | null>(null);
   const [marbleStyles] = useState(() => createMarbleStyles(request.roster.length));
   const stagedMarbleTransforms = startingGridTransforms(
     course,
@@ -119,8 +121,16 @@ export function BroadcastRace({
   );
 
   function handleSnapshot(nextSnapshot: RaceSnapshot): void {
-    setLatestSnapshot(nextSnapshot);
     onSnapshot?.(nextSnapshot);
+    const previous = telemetrySnapshotRef.current;
+    if (
+      previous === null ||
+      nextSnapshot.elapsedSeconds < previous.elapsedSeconds ||
+      nextSnapshot.elapsedSeconds - previous.elapsedSeconds >= TELEMETRY_STEP_SECONDS
+    ) {
+      telemetrySnapshotRef.current = nextSnapshot;
+      setLatestSnapshot(nextSnapshot);
+    }
   }
 
   function handleContact(event: RaceContactEvent): void {
@@ -152,7 +162,12 @@ export function BroadcastRace({
         </p>
       </header>
       <section aria-label="Live Course" className="broadcast-race__course">
-        <Canvas camera={INITIAL_CAMERA} shadows>
+        <Canvas
+          camera={INITIAL_CAMERA}
+          dpr={[1, 1.5]}
+          gl={{ antialias: true, powerPreference: "high-performance" }}
+          shadows="percentage"
+        >
           <color attach="background" args={["#17304b"]} />
           <ambientLight intensity={1.05} />
           <directionalLight castShadow intensity={2.2} position={[4, 8, 8]} />

@@ -119,7 +119,7 @@ describe("CoursePhysics", () => {
       runtime.frame?.({}, 1 / 60);
     });
 
-    expect(backlogRuntime.advance).toHaveBeenCalledWith(expect.anything(), (1 / 60) * 0.72, 8);
+    expect(backlogRuntime.advance).toHaveBeenCalledWith(expect.anything(), 1 / 60, 8);
     expect(events).toEqual(["snapshot:0", "snapshot:4", "outcome"]);
   });
 });

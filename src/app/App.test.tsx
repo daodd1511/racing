@@ -13,6 +13,7 @@ import type { RaceStore } from "../storage/raceStore";
 import { App } from "./App";
 
 const broadcastRuntime = vi.hoisted(() => ({
+  renderCount: 0,
   snapshot: Object.freeze({
     elapsedSeconds: 4.2,
     marbleTransforms: Object.freeze([]),
@@ -54,6 +55,7 @@ vi.mock("../ui/BroadcastRace", () => ({
     readonly onContact: (event: RaceContactEvent) => void;
     readonly onOutcome: (outcome: RaceOutcome) => void;
   }) {
+    broadcastRuntime.renderCount += 1;
     function emitSnapshot(): void {
       onSnapshot(broadcastRuntime.snapshot);
     }
@@ -155,6 +157,7 @@ function createStore(): MemoryRaceStore {
 
 afterEach(() => {
   cleanup();
+  broadcastRuntime.renderCount = 0;
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -200,7 +203,7 @@ describe("App", () => {
     expect(screen.getByText("Race seed 93")).toBeTruthy();
   });
 
-  it("retains live snapshots and forwards runtime events at the app boundary", async () => {
+  it("retains live snapshots without rerendering the app and forwards runtime events", async () => {
     const user = userEvent.setup();
     const onRaceContact = vi.fn();
     const onRaceOutcome = vi.fn();
@@ -218,11 +221,13 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Release the marbles" }));
     expect(screen.getByRole("switch", { name: "Race audio" })).toBeTruthy();
     expect(screen.getByText("Race snapshot pending")).toBeTruthy();
+    const renderCountBeforeSnapshot = broadcastRuntime.renderCount;
 
     await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
     await user.click(screen.getByRole("button", { name: "Emit race contact" }));
 
-    expect(screen.getByText("Race snapshot 4.2")).toBeTruthy();
+    expect(screen.getByText("Race snapshot pending")).toBeTruthy();
+    expect(broadcastRuntime.renderCount).toBe(renderCountBeforeSnapshot);
     expect(onRaceContact).toHaveBeenCalledWith(broadcastRuntime.contact);
 
     await user.click(screen.getByRole("button", { name: "Emit race outcome" }));

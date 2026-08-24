@@ -17,6 +17,22 @@ const runtime = vi.hoisted(() => ({
     passedCheckpoints: Object.freeze([0, 1]),
     splitTimes: Object.freeze([Object.freeze([1.1]), Object.freeze([1.2])]),
   }),
+  nearSnapshot: Object.freeze({
+    elapsedSeconds: 4.25,
+    marbleTransforms: Object.freeze([]),
+    ranking: Object.freeze([1, 0]),
+    decisiveMarbleIndex: 1,
+    passedCheckpoints: Object.freeze([0, 1]),
+    splitTimes: Object.freeze([Object.freeze([1.1]), Object.freeze([1.2])]),
+  }),
+  laterSnapshot: Object.freeze({
+    elapsedSeconds: 4.31,
+    marbleTransforms: Object.freeze([]),
+    ranking: Object.freeze([1, 0]),
+    decisiveMarbleIndex: 1,
+    passedCheckpoints: Object.freeze([0, 1]),
+    splitTimes: Object.freeze([Object.freeze([1.1]), Object.freeze([1.2])]),
+  }),
   contact: Object.freeze({ elapsedSeconds: 4.2, marbleIndices: Object.freeze([0]), impulse: 2 }),
   outcome: Object.freeze({
     kind: "completed" as const,
@@ -57,6 +73,14 @@ vi.mock("../race/LiveRace", () => ({
       onContact?.(runtime.contact);
     }
 
+    function emitNearSnapshot(): void {
+      onSnapshot?.(runtime.nearSnapshot);
+    }
+
+    function emitLaterSnapshot(): void {
+      onSnapshot?.(runtime.laterSnapshot);
+    }
+
     function emitOutcome(): void {
       onOutcome?.(runtime.outcome);
     }
@@ -68,6 +92,12 @@ vi.mock("../race/LiveRace", () => ({
         </button>
         <button onClick={emitContact} type="button">
           Emit contact
+        </button>
+        <button onClick={emitNearSnapshot} type="button">
+          Emit near snapshot
+        </button>
+        <button onClick={emitLaterSnapshot} type="button">
+          Emit later snapshot
         </button>
         <button onClick={emitOutcome} type="button">
           Emit outcome
@@ -155,6 +185,11 @@ describe("BroadcastRace", () => {
 
     expect(screen.getByText("Minimap 4.2")).toBeTruthy();
     expect(screen.getAllByRole("listitem")[0].textContent).toContain("Blake");
+
+    fireEvent.click(screen.getByRole("button", { name: "Emit near snapshot" }));
+    expect(screen.getByText("Minimap 4.2")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Emit later snapshot" }));
+    expect(screen.getByText("Minimap 4.31")).toBeTruthy();
   });
 
   it("forwards contact and outcome callbacks without deriving runtime state", () => {

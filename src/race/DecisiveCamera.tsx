@@ -31,10 +31,13 @@ const CLOSE_UP_LOOK_AHEAD_CELLS = 10;
 const START_CLOSE_UP_TRAIL_CELLS = 6;
 const START_CLOSE_UP_ABOVE_CELLS = 3;
 const START_CLOSE_UP_LOOK_AHEAD_CELLS = 8;
-const TARGET_DAMPING = 3;
-const FORWARD_DAMPING = 2;
-const CAMERA_DAMPING = 2.5;
-const LOOK_AT_DAMPING = 2.5;
+// Keep one short smoothing window for fixed-step motion without making the
+// camera visibly trail the marble. The previous low rates compounded target
+// and camera damping into roughly a half-second of perceived input lag.
+const TARGET_DAMPING = 12;
+const FORWARD_DAMPING = 8;
+const CAMERA_DAMPING = 10;
+const LOOK_AT_DAMPING = 10;
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const DEPTH_AXIS = new THREE.Vector3(0, 0, 1);
 /** Above this the view is close enough to vertical that a world-up camera

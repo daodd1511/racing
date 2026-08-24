@@ -12,7 +12,6 @@ export interface RacingSession {
   readonly kind: "racing";
   readonly request: RaceRequest;
   readonly course: Course;
-  readonly snapshot: RaceSnapshot | null;
 }
 
 export interface ResultSession {
@@ -38,7 +37,6 @@ export type AppAction =
   | { readonly kind: "set-roster"; readonly roster: readonly string[] }
   | { readonly kind: "set-selection-mode"; readonly selectionMode: SelectionMode }
   | { readonly kind: "start-race"; readonly request: RaceRequest; readonly course: Course }
-  | { readonly kind: "record-snapshot"; readonly seed: number; readonly snapshot: RaceSnapshot }
   | {
       readonly kind: "complete-race";
       readonly outcome: Extract<RaceOutcome, { readonly kind: "completed" }>;
@@ -80,7 +78,6 @@ function racingSession(request: RaceRequest, course: Course): RacingSession {
     kind: "racing",
     request: immutableRequest(request),
     course,
-    snapshot: null,
   });
 }
 
@@ -113,10 +110,6 @@ export function reduceSession(session: AppSession, action: AppAction): AppSessio
         : session;
     case "start-race":
       return session.kind === "setup" ? racingSession(action.request, action.course) : session;
-    case "record-snapshot":
-      return session.kind === "racing" && sameRace(session, action.seed)
-        ? Object.freeze({ ...session, snapshot: action.snapshot })
-        : session;
     case "complete-race":
       if (session.kind !== "racing" || !sameRace(session, action.outcome.seed)) {
         return session;

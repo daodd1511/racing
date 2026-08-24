@@ -100,15 +100,6 @@ describe("reduceSession", () => {
     ).toBe(active);
   });
 
-  it("retains an immutable snapshot only for the active race", () => {
-    const active = racingSession();
-    const updated = reduceSession(active, { kind: "record-snapshot", seed: 7, snapshot });
-
-    expect(updated).toMatchObject({ kind: "racing", snapshot });
-    expect(updated.kind === "racing" && Object.isFrozen(updated)).toBe(true);
-    expect(reduceSession(updated, { kind: "record-snapshot", seed: 8, snapshot })).toBe(updated);
-  });
-
   it("enters a hidden result only for the active completed race", () => {
     const result = reduceSession(racingSession(), {
       kind: "complete-race",

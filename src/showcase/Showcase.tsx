@@ -170,7 +170,7 @@ export function Showcase() {
         {/* `position` here is only a fallback for the first frame, before
          * `<CameraFraming>`'s effect runs and overwrites it -- keeps that
          * frame from flashing R3F's own generic default camera position. */}
-        <Canvas camera={{ position: [0, 0.3, 0.6], fov: 50 }} shadows>
+        <Canvas camera={{ position: [0, 0.3, 0.6], fov: 50 }} shadows="percentage">
           {/* Dark charcoal per PLAN.md -> "Art direction" -- set on the
            * scene itself, not left to the page's CSS behind a possibly-
            * transparent canvas. */}

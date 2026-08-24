@@ -166,7 +166,6 @@ export function App({
   function handleSnapshot(snapshot: RaceSnapshot): void {
     if (session.kind === "racing") {
       snapshotRef.current = snapshot;
-      dispatch({ kind: "record-snapshot", seed: session.request.seed, snapshot });
     }
   }
 
@@ -250,7 +249,6 @@ export function App({
         onOutcome={handleOutcome}
         onSnapshot={handleSnapshot}
         request={session.request}
-        snapshot={session.snapshot}
       />
     );
   } else if (session.kind === "result") {

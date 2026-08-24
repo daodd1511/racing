@@ -170,4 +170,18 @@ describe("DecisiveCamera", () => {
     camera.getWorldDirection(jitteredDirection);
     expect(jitteredDirection.angleTo(initialDirection)).toBeCloseTo(0, 8);
   });
+
+  it("catches up promptly when the tracked marble advances", () => {
+    const camera = new THREE.PerspectiveCamera();
+    cameraRuntime.camera = camera;
+    const view = render(<DecisiveCamera course={EASTBOUND_COURSE} snapshot={snapshotAt(0, 0)} />);
+    settleCamera();
+
+    view.rerender(<DecisiveCamera course={EASTBOUND_COURSE} snapshot={snapshotAt(1, 0)} />);
+    for (let frame = 0; frame < 12; frame += 1) {
+      advanceCamera(1 / 60);
+    }
+
+    expect(camera.position.x).toBeGreaterThan(-1.45);
+  });
 });

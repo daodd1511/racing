@@ -130,7 +130,7 @@ export function CoursePreview() {
         selectionMode={pendingSelectionMode}
       />
       <section aria-label="Live Course" className="course-preview__stage">
-        <Canvas camera={{ fov: 42, position: [0, 0, 6] }} shadows>
+        <Canvas camera={{ fov: 42, position: [0, 0, 6] }} shadows="percentage">
           <color attach="background" args={["#12171c"]} />
           <ambientLight intensity={0.8} />
           <directionalLight castShadow intensity={1.8} position={[4, 8, 6]} />

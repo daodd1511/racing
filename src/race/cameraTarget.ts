@@ -152,13 +152,14 @@ function routeForward(
     : ([dx / length, dy / length, dz / length] as const);
 }
 
-/** Returns the decisive marble transform and the local forward Course direction. */
-export function decisiveMarbleTarget(
+/** Returns one marble's transform and the local forward Course direction. */
+export function marbleCameraTarget(
   course: Course,
   snapshot: RaceSnapshot,
+  marbleIndex: number,
 ): DecisiveMarbleTarget | null {
   const marble = snapshot.marbleTransforms.find(
-    ({ marbleIndex }) => marbleIndex === snapshot.decisiveMarbleIndex,
+    (transform) => transform.marbleIndex === marbleIndex,
   );
   if (marble === undefined) {
     return null;
@@ -169,4 +170,12 @@ export function decisiveMarbleTarget(
     position: marble.position,
     forward: routeForward(course, snapshot, marble.marbleIndex, marble.position),
   });
+}
+
+/** Returns the decisive marble transform used by live broadcast consumers. */
+export function decisiveMarbleTarget(
+  course: Course,
+  snapshot: RaceSnapshot,
+): DecisiveMarbleTarget | null {
+  return marbleCameraTarget(course, snapshot, snapshot.decisiveMarbleIndex);
 }

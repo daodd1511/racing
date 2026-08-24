@@ -3,6 +3,7 @@ import {
   DataTexture,
   LinearFilter,
   LinearMipmapLinearFilter,
+  RepeatWrapping,
   RGBAFormat,
   SRGBColorSpace,
   UnsignedByteType,
@@ -10,10 +11,10 @@ import {
 
 import type { MarbleStyle } from "./marbleStyles";
 
-const TEXTURE_WIDTH = 64;
-const TEXTURE_HEIGHT = 32;
-const STRIPE_PERIOD = 24;
-const ACCENT_WIDTH = 9;
+const STRIPE_PERIOD = 32;
+const TEXTURE_WIDTH = STRIPE_PERIOD * 4;
+const TEXTURE_HEIGHT = STRIPE_PERIOD * 2;
+const ACCENT_WIDTH = 12;
 
 const stripeTextures = new Map<string, DataTexture>();
 
@@ -46,6 +47,7 @@ function createStripeTexture(style: MarbleStyle): DataTexture {
     UnsignedByteType,
   );
   texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = RepeatWrapping;
   texture.magFilter = LinearFilter;
   texture.minFilter = LinearMipmapLinearFilter;
   texture.generateMipmaps = true;

@@ -6,7 +6,7 @@ import type { Course } from "../course/types";
 import type { RaceSnapshot } from "./liveTypes";
 import { START_GRID_CAPACITY } from "../course/startFinish";
 import type { CameraMode } from "./types";
-import { decisiveMarbleTarget } from "./cameraTarget";
+import { decisiveMarbleTarget, marbleCameraTarget } from "./cameraTarget";
 import { startingGridCameraTarget } from "./startAssignment";
 
 const BROADCAST_FOV = 45;
@@ -35,6 +35,12 @@ const START_CLOSE_UP_LOOK_AHEAD_CELLS = 8;
 // camera visibly trail the marble. The previous low rates compounded target
 // and camera damping into roughly a half-second of perceived input lag.
 const TARGET_DAMPING = 12;
+const TARGET_SWITCH_DAMPING = 3;
+const TARGET_SWITCH_SECONDS = 0.35;
+// Rankings can alternate every physics snapshot when two marbles run side by
+// side. Require one candidate to remain decisive before moving the camera;
+// otherwise the camera jumps between two valid but distant transforms.
+const TARGET_HANDOFF_SECONDS = 0.6;
 const FORWARD_DAMPING = 8;
 const CAMERA_DAMPING = 10;
 const LOOK_AT_DAMPING = 10;
@@ -122,6 +128,11 @@ export function DecisiveCamera({
   const viewDirectionRef = useRef(new THREE.Vector3());
   const cameraUpRef = useRef(new THREE.Vector3(0, 1, 0));
   const followingRef = useRef(false);
+  const trackedMarbleIndexRef = useRef<number | null>(null);
+  const pendingMarbleIndexRef = useRef<number | null>(null);
+  const pendingMarbleSecondsRef = useRef(0);
+  const targetSwitchSecondsRef = useRef(0);
+  const snapshotElapsedSecondsRef = useRef(0);
   const snapshotRef = useRef<RaceSnapshot | null>(null);
   const courseRef = useRef(course);
   const modeRef = useRef(mode);
@@ -145,20 +156,63 @@ export function DecisiveCamera({
       forwardRef.current.set(...nextStartingTarget.forward);
       desiredForwardRef.current.copy(forwardRef.current);
       followingRef.current = false;
+      trackedMarbleIndexRef.current = null;
+      pendingMarbleIndexRef.current = null;
+      pendingMarbleSecondsRef.current = 0;
+      targetSwitchSecondsRef.current = 0;
+      snapshotElapsedSecondsRef.current = 0;
       snapshotRef.current = null;
       initializedRef.current = false;
     }
 
     if (snapshotRef.current !== snapshot) {
       snapshotRef.current = snapshot;
-      const marble = snapshot === null ? null : decisiveMarbleTarget(course, snapshot);
+      const decisiveMarble = snapshot === null ? null : decisiveMarbleTarget(course, snapshot);
+      const snapshotDelta =
+        snapshot === null
+          ? 0
+          : Math.max(0, snapshot.elapsedSeconds - snapshotElapsedSecondsRef.current);
+      if (snapshot !== null) snapshotElapsedSecondsRef.current = snapshot.elapsedSeconds;
+      let marble = decisiveMarble;
+      if (
+        snapshot !== null &&
+        decisiveMarble !== null &&
+        trackedMarbleIndexRef.current !== null &&
+        decisiveMarble.marbleIndex !== trackedMarbleIndexRef.current
+      ) {
+        if (pendingMarbleIndexRef.current === decisiveMarble.marbleIndex) {
+          pendingMarbleSecondsRef.current += snapshotDelta;
+        } else {
+          pendingMarbleIndexRef.current = decisiveMarble.marbleIndex;
+          pendingMarbleSecondsRef.current = 0;
+        }
+        if (pendingMarbleSecondsRef.current < TARGET_HANDOFF_SECONDS) {
+          marble = marbleCameraTarget(course, snapshot, trackedMarbleIndexRef.current);
+        }
+      } else {
+        pendingMarbleIndexRef.current = null;
+        pendingMarbleSecondsRef.current = 0;
+      }
       if (marble === null) {
         const nextStartingTarget = startingGridCameraTarget(course, startingGridSize);
         desiredTargetRef.current.set(...nextStartingTarget.position);
         desiredForwardRef.current.set(...nextStartingTarget.forward);
         forwardRef.current.copy(desiredForwardRef.current);
         followingRef.current = false;
+        trackedMarbleIndexRef.current = null;
+        pendingMarbleIndexRef.current = null;
+        pendingMarbleSecondsRef.current = 0;
+        targetSwitchSecondsRef.current = 0;
       } else {
+        if (
+          trackedMarbleIndexRef.current !== null &&
+          trackedMarbleIndexRef.current !== marble.marbleIndex
+        ) {
+          targetSwitchSecondsRef.current = TARGET_SWITCH_SECONDS;
+          pendingMarbleIndexRef.current = null;
+          pendingMarbleSecondsRef.current = 0;
+        }
+        trackedMarbleIndexRef.current = marble.marbleIndex;
         desiredTargetRef.current.set(...marble.position);
         desiredForwardRef.current.set(...marble.forward).normalize();
         if (!followingRef.current) forwardRef.current.copy(desiredForwardRef.current);
@@ -166,7 +220,10 @@ export function DecisiveCamera({
       }
     }
 
-    targetRef.current.lerp(desiredTargetRef.current, frameDamping(TARGET_DAMPING, deltaSeconds));
+    const targetDamping =
+      targetSwitchSecondsRef.current > 0 ? TARGET_SWITCH_DAMPING : TARGET_DAMPING;
+    targetSwitchSecondsRef.current = Math.max(0, targetSwitchSecondsRef.current - deltaSeconds);
+    targetRef.current.lerp(desiredTargetRef.current, frameDamping(targetDamping, deltaSeconds));
     const framing = framingForMode(mode, followingRef.current);
     const { fov } = framing;
     const desiredPosition = desiredPositionRef.current.copy(targetRef.current);

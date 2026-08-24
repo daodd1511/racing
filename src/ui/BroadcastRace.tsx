@@ -67,6 +67,7 @@ export function BroadcastRace({
   const snapshot = externalSnapshot ?? latestSnapshot;
   const countdown = useRaceCountdown(request.seed, frozen);
   const raceStarted = frozen || countdown <= 0;
+  const marbleNames = cameraMode === "close-up" && raceStarted ? request.roster : undefined;
   const decisiveMarbleIndex = snapshot?.decisiveMarbleIndex ?? null;
   const trackedName =
     decisiveMarbleIndex === null
@@ -75,7 +76,12 @@ export function BroadcastRace({
   const trackingLabel = request.selectionMode === "first" ? "Tracking leader" : "Tracking trailer";
   const courseContent = frozen ? (
     <>
-      <CourseScene course={course} marbleStyles={marbleStyles} snapshot={snapshot} />
+      <CourseScene
+        course={course}
+        marbleNames={marbleNames}
+        marbleStyles={marbleStyles}
+        snapshot={snapshot}
+      />
       <DecisiveCamera
         course={course}
         mode={cameraMode}
@@ -93,7 +99,12 @@ export function BroadcastRace({
     >
       {({ snapshot: liveSnapshot }) => (
         <>
-          <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
+          <CourseScene
+            course={course}
+            marbleNames={marbleNames}
+            marbleStyles={marbleStyles}
+            snapshot={liveSnapshot}
+          />
           <DecisiveCamera
             course={course}
             mode={cameraMode}

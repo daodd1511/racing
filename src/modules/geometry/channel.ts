@@ -57,7 +57,7 @@ export interface ChannelOptions {
   /** Replace closed floor/rail boxes with only the surfaces marbles should
    * touch. Use this at a connector-fed Module boundary to remove hidden end
    * faces without changing the rendered channel. */
-  readonly openContactSurfaces?: boolean;
+  readonly openContactSurfaces?: boolean | "entry";
 }
 
 // Module-level defaults, reused from the chute's own values (its original
@@ -172,9 +172,10 @@ function cuboidCorners(
   return corners;
 }
 
-/** Builds a rendered floor cuboid plus two rendered rail cuboids per segment,
- * with top-only floor and inward-only rail contact surfaces. Each segment's
- * rotation comes from `setFromUnitVectors` over
+/** Builds a rendered floor cuboid plus two rendered rail cuboids per segment.
+ * Callers can replace the closed physics boxes with top-only floor and
+ * inward-only rail contact surfaces. Each segment's rotation comes from
+ * `setFromUnitVectors` over
  * its own `start -> end`, never a hand-picked axis-angle sign -- see the
  * comment at `chute/index.ts`'s original construction (now delegated here)
  * for the bug that convention exists to prevent: a guessed sign is
@@ -253,10 +254,13 @@ export function buildChannel(
     const floorHalfExtents: Vector3 = [width / 2, FLOOR_THICKNESS / 2, segmentLength / 2];
     const floorShape = { kind: "cuboid" as const, halfExtents: floorHalfExtents };
     const floorId = segmentId(idPrefix, "floor", index, segments.length);
+    const openContactSurfaces =
+      options.openContactSurfaces === true ||
+      (options.openContactSurfaces === "entry" && index === 0);
 
     colliders.push({
       id: floorId,
-      shape: options.openContactSurfaces ? floorContactShape(floorHalfExtents) : floorShape,
+      shape: openContactSurfaces ? floorContactShape(floorHalfExtents) : floorShape,
       position: toVector(floorCenter),
       rotation: toQuaternion(pitch),
       material,
@@ -287,10 +291,10 @@ export function buildChannel(
 
       colliders.push({
         id: railId,
-        shape: options.openContactSurfaces
+        shape: openContactSurfaces
           ? railContactShape(side, width, railHeight, segmentLength / 2)
           : railShape,
-        position: toVector(options.openContactSurfaces ? floorCenter : railCenter),
+        position: toVector(openContactSurfaces ? floorCenter : railCenter),
         rotation: toQuaternion(pitch),
         material: { ...material, friction: 0 },
       });

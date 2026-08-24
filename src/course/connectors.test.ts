@@ -25,6 +25,7 @@ describe("buildCourseConnector", () => {
     expect(connector.spec.colliders[0]).toMatchObject({
       id: "connector-1-2-continuous-channel",
       shape: { kind: "trimesh" },
+      material: { restitution: 0 },
     });
     expect(connector.spec.footprint.entry.position).toEqual([0, 0, 0]);
     expect(connector.spec.footprint.exit.position).toEqual([0.4, -0.05, 0]);
@@ -58,6 +59,7 @@ describe("buildCourseConnector", () => {
     expect(connector.spec.colliders[0]).toMatchObject({
       id: "connector-2-3-continuous-channel",
       shape: { kind: "trimesh" },
+      material: { restitution: 0 },
     });
     expect(rail?.shape.kind).toBe("cuboid");
     expect(rail?.shape.kind === "cuboid" ? rail.shape.halfExtents[1] * 2 : 0).toBeCloseTo(

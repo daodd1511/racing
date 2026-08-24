@@ -158,7 +158,9 @@ function buildSpec(params: StaircaseParams): Spec {
     cursor = riserBottom;
   }
 
-  const channel = buildChannel(segments, channelMaterial, "tread");
+  const channel = buildChannel(segments, channelMaterial, "tread", {
+    openContactSurfaces: "entry",
+  });
   const colliders: ColliderSpec[] = [...channel.colliders];
   const visuals: VisualSpec[] = [...channel.visuals];
 

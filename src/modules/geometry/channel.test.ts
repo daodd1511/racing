@@ -152,6 +152,29 @@ describe("buildChannel", () => {
     ]);
   });
 
+  it("opens only the entry segment when requested", () => {
+    const parts = buildChannel(
+      [
+        { start: [0, 0, 0], end: [0, -0.1, 0.6], width: 0.5 },
+        { start: [0, -0.1, 0.6], end: [0, -0.2, 1.2], width: 0.5 },
+      ],
+      MATERIAL,
+      "entry",
+      { openContactSurfaces: "entry" },
+    );
+
+    expect(
+      parts.colliders
+        .filter(({ id }) => id.endsWith("-0"))
+        .every(({ shape }) => shape.kind === "trimesh"),
+    ).toBe(true);
+    expect(
+      parts.colliders
+        .filter(({ id }) => id.endsWith("-1"))
+        .every(({ shape }) => shape.kind === "cuboid"),
+    ).toBe(true);
+  });
+
   it("rejects a zero-length segment", () => {
     expect(() =>
       buildChannel([{ start: [0, 0, 0], end: [0, 0, 0], width: 0.5 }], MATERIAL, "seg"),

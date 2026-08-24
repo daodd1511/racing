@@ -13,7 +13,7 @@ import type { Vector3 } from "../race/types";
 import type { CourseConnector } from "./types";
 
 const GRAVITY_MAGNITUDE = Math.hypot(...SCALE.gravity);
-const JOINT_OVERLAP = SCALE.marbleRadius;
+const SEGMENT_OVERLAP = SCALE.marbleRadius;
 const MINIMUM_HAIRPIN_REACH = SCALE.channelWidth / 2 + SCALE.marbleRadius * 4;
 // A row turn should read as part of the raceway, not a drop chute. The
 // centreline gains at least ten metres of horizontal travel per metre of
@@ -24,7 +24,9 @@ const HAIRPIN_SAMPLES = 96;
 export const CONNECTOR_EDGE_CLEARANCE =
   MINIMUM_HAIRPIN_REACH + SCALE.channelWidth / 2 + RAIL_THICKNESS;
 const CONNECTOR_MATERIAL = Object.freeze({
-  restitution: SCALE.defaultRestitution,
+  // Connectors are infrastructure, not obstacles. Any rebound here exposes
+  // a sampled contact normal as a visible kick on an otherwise empty run.
+  restitution: 0,
   friction: SCALE.defaultFriction,
 });
 const HAIRPIN_MATERIAL = Object.freeze({ restitution: 0, friction: 0.3 });
@@ -139,7 +141,7 @@ function physicalSegments(
   railHeight: number,
 ): readonly ChannelSegment[] {
   const segmentIndices = route.slice(0, -1).map((_, index) => index);
-  const overlap = JOINT_OVERLAP;
+  const overlap = SEGMENT_OVERLAP;
   return segmentIndices.map((routeIndex, physicalIndex) => {
     const start = new ThreeVector3(...route[routeIndex]);
     const end = new ThreeVector3(...route[routeIndex + 1]);
@@ -172,10 +174,10 @@ function smoothOpenChannelCollider(
   railHeight: number,
   id: string,
   material: ColliderSpec["material"] = CONNECTOR_MATERIAL,
-  endOverlap: number = JOINT_OVERLAP,
+  endOverlap: number = SEGMENT_OVERLAP,
 ): ChannelCollider {
   const floorRoute: readonly Vector3[] = [
-    vector(new ThreeVector3(...route[0]).sub(direction(start).multiplyScalar(JOINT_OVERLAP))),
+    vector(new ThreeVector3(...route[0]).sub(direction(start).multiplyScalar(SEGMENT_OVERLAP))),
     ...route.map((point): Vector3 => [...point]),
     vector(new ThreeVector3(...route.at(-1)!).add(direction(end).multiplyScalar(endOverlap))),
   ];
@@ -248,9 +250,9 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
     isHairpin ? HAIRPIN_MATERIAL : CONNECTOR_MATERIAL,
     request.id,
   );
-  // Use one open swept contact mesh for both links and row turns. The old
-  // closed hairpin tunnel gave fast marbles a roof to ricochet between while
-  // its coarse outer wall changed collision normal at every facet.
+  // The open swept mesh removes the old closed hairpin roof, while the
+  // zero-restitution track material prevents sampled surface normals from
+  // becoming visible rebound kicks.
   const smoothChannel = smoothOpenChannelCollider(
     route,
     request.start,
@@ -258,7 +260,7 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
     railHeight,
     `${request.id}-continuous-channel`,
     isHairpin ? HAIRPIN_MATERIAL : CONNECTOR_MATERIAL,
-    isHairpin ? SCALE.marbleRadius * 4 : JOINT_OVERLAP,
+    isHairpin ? SCALE.marbleRadius * 4 : SEGMENT_OVERLAP,
   );
   const extraBounds = [smoothChannel.bounds];
   const bounds = extraBounds.reduce(

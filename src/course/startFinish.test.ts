@@ -38,6 +38,10 @@ describe("Start infrastructure", () => {
     expect(open).toEqual(stepStartGate(spec, 10));
     expect(spec).toEqual(snapshot);
     expect(spec.colliders.filter(({ kinematic }) => kinematic)).toHaveLength(1);
+    expect(spec.colliders.find(({ id }) => id === "start-floor")).toMatchObject({
+      shape: { kind: "trimesh" },
+      material: { restitution: 0 },
+    });
   });
 });
 
@@ -50,6 +54,10 @@ describe("Finish infrastructure", () => {
     expect(sensors[0].id).toBe("photo-finish-sensor");
     expect(sensors[0].shape.kind).toBe("cuboid");
     expect(spec.colliders.some(({ id }) => id === "finish-catch-wall")).toBe(true);
+    expect(spec.colliders.find(({ id }) => id === "finish-floor")).toMatchObject({
+      shape: { kind: "trimesh" },
+      material: { restitution: 0 },
+    });
     expect(spec.footprint.route[0]).toEqual(spec.footprint.entry.position);
     expect(spec.footprint.route.at(-1)).toEqual(spec.footprint.exit.position);
   });

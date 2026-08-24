@@ -34,6 +34,9 @@ function colliderDesc(spec: ColliderSpec, relativeToSharedBody: boolean): RAPIER
     .setRestitution(spec.material.restitution)
     .setFriction(spec.material.friction)
     .setSensor(spec.sensor ?? false);
+  if (spec.material.restitution === 0) {
+    desc.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min);
+  }
   if (relativeToSharedBody) {
     desc.setTranslation(spec.position[0], spec.position[1], spec.position[2]).setRotation({
       x: spec.rotation[0],

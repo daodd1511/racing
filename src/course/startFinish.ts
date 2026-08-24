@@ -28,6 +28,7 @@ const MATERIAL = Object.freeze({
   restitution: SCALE.defaultRestitution,
   friction: SCALE.defaultFriction,
 });
+const CHANNEL_MATERIAL = Object.freeze({ restitution: 0, friction: SCALE.defaultFriction });
 const WALL_VISUAL = Object.freeze({ color: "#d8ff42", metalness: 0.05, roughness: 0.2 });
 export const START_ROW_CAPACITY = 5;
 export const START_GRID_CAPACITY = 15;
@@ -99,8 +100,9 @@ function infrastructurePart(
 export function buildStartSpec(): Spec {
   const channel = buildChannel(
     [{ start: [0, 0, 0], end: [0, -START_DROP, START_LENGTH], width: SCALE.channelWidth }],
-    MATERIAL,
+    CHANNEL_MATERIAL,
     "start",
+    { openContactSurfaces: true },
   );
   const back = infrastructurePart(
     "start-back-wall",
@@ -142,8 +144,9 @@ export function buildStartSpec(): Spec {
 export function buildFinishSpec(): Spec {
   const channel = buildChannel(
     [{ start: [0, 0, 0], end: [0, -FINISH_DROP, FINISH_LENGTH], width: SCALE.channelWidth }],
-    MATERIAL,
+    CHANNEL_MATERIAL,
     "finish",
+    { openContactSurfaces: true },
   );
   const sensorY = floorY(SENSOR_Z, FINISH_LENGTH, FINISH_DROP);
   const sensor: ColliderSpec = {

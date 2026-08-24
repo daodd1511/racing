@@ -63,7 +63,7 @@ const PARAM_SCHEMA: ParamSchema = Object.freeze({
 function buildSpec(params: ChuteParams): Spec {
   const { length, grade, width } = params;
   const drop = length * grade;
-  const material = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
+  const material = { restitution: 0, friction: SCALE.defaultFriction };
 
   // Empty `idPrefix`: a chute is always a single segment, and `buildChannel`
   // then emits bare ids ("floor", "rail-left", "rail-right") matching this

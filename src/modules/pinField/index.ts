@@ -261,7 +261,7 @@ function buildSpec(params: PinFieldParams): Spec {
   const totalRun = LEAD_IN + Math.max(0, rowCount - 1) * rowPitch + LEAD_OUT;
   const drop = totalRun * (params.courseGrade ?? FLOOR_GRADE);
   const channelMaterial = {
-    restitution: SCALE.defaultRestitution,
+    restitution: 0,
     friction: SCALE.defaultFriction,
   };
 
@@ -269,6 +269,7 @@ function buildSpec(params: PinFieldParams): Spec {
     [{ start: [0, 0, 0], end: [0, -drop, totalRun], width: SCALE.channelWidth }],
     channelMaterial,
     "",
+    { openContactSurfaces: true },
   );
   const colliders: ColliderSpec[] = [...channel.colliders];
   const visuals: VisualSpec[] = [...channel.visuals];

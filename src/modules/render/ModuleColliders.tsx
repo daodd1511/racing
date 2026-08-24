@@ -41,6 +41,8 @@ function ColliderPrimitive({
   const { shape, material } = collider;
   const position = relativeToRigidBody ? ORIGIN : collider.position;
   const quaternion = relativeToRigidBody ? IDENTITY_ROTATION : collider.rotation;
+  const restitutionCombineRule =
+    material.restitution === 0 ? RAPIER.CoefficientCombineRule.Min : undefined;
 
   switch (shape.kind) {
     case "cuboid":
@@ -50,6 +52,7 @@ function ColliderPrimitive({
           position={position}
           quaternion={quaternion}
           restitution={material.restitution}
+          restitutionCombineRule={restitutionCombineRule}
           friction={material.friction}
         />
       );
@@ -60,6 +63,7 @@ function ColliderPrimitive({
           position={position}
           quaternion={quaternion}
           restitution={material.restitution}
+          restitutionCombineRule={restitutionCombineRule}
           friction={material.friction}
         />
       );
@@ -70,6 +74,7 @@ function ColliderPrimitive({
           position={position}
           quaternion={quaternion}
           restitution={material.restitution}
+          restitutionCombineRule={restitutionCombineRule}
           friction={material.friction}
         />
       );
@@ -86,6 +91,7 @@ function ColliderPrimitive({
           position={position}
           quaternion={quaternion}
           restitution={material.restitution}
+          restitutionCombineRule={restitutionCombineRule}
           friction={material.friction}
         />
       );

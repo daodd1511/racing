@@ -13,6 +13,10 @@ Spec 1 acceptance is **not** an agent's to declare — see "Spec gate" below and
 
 ## STATUS
 
+- Overall four-spec rebuild: done-with-debt. The user accepted Spec 4's shipped browser
+  behavior, directed its merge to `main`, closed the master rebuild, and requested archival
+  plus pruning of every merged phase branch on 2026-08-24. Existing per-spec verification
+  debt remains historical and no waived gate is represented as passing.
 - Current phase: 4 — done-with-debt. **Spec 1 closed 2026-08-20 by the user**, who accepted it
   and merged all four phases to `main` (merge commit `d161514`), with the bowl's remaining work
   deferred per "Parked 2026-08-20" below. Acceptance was the user's, per PLAN.md → "Acceptance";

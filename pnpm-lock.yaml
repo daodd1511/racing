@@ -11,6 +11,9 @@ importers:
       '@dimforge/rapier3d-compat':
         specifier: 0.19.2
         version: 0.19.2
+      '@fontsource/bowlby-one-sc':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/dm-mono':
         specifier: ^5.3.0
         version: 5.3.0
@@ -95,6 +98,9 @@ packages:
 
   '@dimforge/rapier3d-compat@0.19.2':
     resolution: {integrity: sha512-AZHL1jqUF55QJkJyU1yKeh4ImX2J93bVLIezT1+o0FZqTix6O06MOaqpKoJ4MmbDCsoZmwO+qc471/SDMDm2AA==}
+
+  '@fontsource/bowlby-one-sc@5.3.0':
+    resolution: {integrity: sha512-MIotGvS9UrEAGMW5z0ZUMmdho+EsgyqX5lQe2hm4phxmECPQhk8l+S0QWXzEgTji9XCR5tE7eBtqF4GhRNgvuA==}
 
   '@fontsource/dm-mono@5.3.0':
     resolution: {integrity: sha512-OINjI8C1S/wpchhQxl7njZdMn4+hnDCpQ4YtvvOpKNARo+0J8O1x1IcrChxNjHOhfVv1by8C/FQoy3hXK+C1Ug==}
@@ -1234,6 +1240,8 @@ snapshots:
   '@dimforge/rapier3d-compat@0.12.0': {}
 
   '@dimforge/rapier3d-compat@0.19.2': {}
+
+  '@fontsource/bowlby-one-sc@5.3.0': {}
 
   '@fontsource/dm-mono@5.3.0': {}
 

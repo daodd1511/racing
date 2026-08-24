@@ -144,7 +144,7 @@ export function CoursePreview() {
             {({ snapshot: liveSnapshot }) => (
               <>
                 <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
-                <DecisiveCamera board={course.board} snapshot={liveSnapshot} />
+                <DecisiveCamera course={course} snapshot={liveSnapshot} />
               </>
             )}
           </LiveRace>

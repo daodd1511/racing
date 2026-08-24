@@ -14,7 +14,7 @@ function quaternion(value: ThreeQuaternion): Quaternion {
   return [value.x, value.y, value.z, value.w];
 }
 
-function stepRotatingSpec(spec: Spec, tSeconds: number): readonly KinematicTransform[] {
+export function stepRotatingSpec(spec: Spec, tSeconds: number): readonly KinematicTransform[] {
   return spec.colliders.flatMap((collider) => {
     const motion = collider.motion;
     if (!collider.kinematic || motion?.kind !== "rotation") return [];

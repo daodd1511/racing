@@ -4,8 +4,9 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
 
-import type { BoardSpec } from "../course/types";
+import type { BoardSpec, Course } from "../course/types";
 import type { RaceSnapshot } from "./liveTypes";
+import type { Vector3 } from "./types";
 
 const cameraRuntime = vi.hoisted(() => ({
   camera: null as THREE.PerspectiveCamera | null,
@@ -32,6 +33,26 @@ const BOARD: BoardSpec = Object.freeze({
   edgeMargin: 0.2,
   bounds: Object.freeze({ min: [-2, -2, -0.5] as const, max: [2, 2, 0.5] as const }),
 });
+
+function course(route: readonly Vector3[]): Course {
+  return {
+    seed: 1,
+    board: BOARD,
+    modules: [],
+    connectors: [],
+    route,
+    checkpoints: [],
+    start: {} as Course["start"],
+    finish: {} as Course["finish"],
+    entry: {} as Course["entry"],
+    exit: {} as Course["exit"],
+  };
+}
+
+const EASTBOUND_COURSE = course([
+  [-2, 0, 0],
+  [2, 0, 0],
+]);
 
 function snapshotAt(x: number, y: number, z = 0): RaceSnapshot {
   return {
@@ -63,23 +84,36 @@ describe("DecisiveCamera", () => {
     const camera = new THREE.PerspectiveCamera();
     const viewDirection = new THREE.Vector3();
     cameraRuntime.camera = camera;
-    const view = render(<DecisiveCamera board={BOARD} snapshot={snapshotAt(0, 0)} />);
+    render(<DecisiveCamera course={EASTBOUND_COURSE} snapshot={snapshotAt(0, 0)} />);
     advanceCamera(1 / 60);
 
-    view.rerender(<DecisiveCamera board={BOARD} snapshot={snapshotAt(1, 0)} />);
-    advanceCamera(1);
-
     expect(camera.fov).toBe(40);
-    expect(camera.position.x).toBeGreaterThan(0.9);
-    expect(camera.position.y).toBeCloseTo(1.8, 5);
-    expect(camera.position.z).toBeCloseTo(0.5, 5);
+    expect(camera.position.x).toBeCloseTo(-3, 5);
+    expect(camera.position.y).toBeCloseTo(3, 5);
+    expect(camera.position.z).toBeCloseTo(2, 5);
     expect(camera.up.toArray()).toEqual([0, 1, 0]);
     camera.getWorldDirection(viewDirection);
+    expect(viewDirection.x).toBeGreaterThan(0.65);
+    expect(viewDirection.y).toBeLessThan(-0.6);
+    expect(viewDirection.z).toBeLessThan(-0.4);
+  });
+
+  it("moves behind the Course after its direction turns", () => {
+    const southboundCourse = course([
+      [0, 2, 0],
+      [0, -2, 0],
+    ]);
+    const camera = new THREE.PerspectiveCamera();
+    const viewDirection = new THREE.Vector3();
+    cameraRuntime.camera = camera;
+    render(<DecisiveCamera course={southboundCourse} snapshot={snapshotAt(0, 0)} />);
+    advanceCamera(1 / 60);
+
+    expect(camera.position.x).toBeCloseTo(0, 5);
+    expect(camera.position.y).toBeCloseTo(6, 5);
+    camera.getWorldDirection(viewDirection);
     expect(viewDirection.x).toBeCloseTo(0, 5);
-    expect(viewDirection.y).toBeLessThan(-0.5);
-    expect(viewDirection.z).toBeLessThan(-0.1);
-    expect(Math.abs(viewDirection.y)).toBeGreaterThan(Math.abs(viewDirection.x) * 2);
-    expect(Math.abs(viewDirection.y)).toBeGreaterThan(Math.abs(viewDirection.z) * 2);
+    expect(viewDirection.y).toBeLessThan(-0.95);
   });
 
   it("keeps its heading stable through tiny marble movement", () => {
@@ -87,7 +121,7 @@ describe("DecisiveCamera", () => {
     const initialDirection = new THREE.Vector3();
     const jitteredDirection = new THREE.Vector3();
     cameraRuntime.camera = camera;
-    const view = render(<DecisiveCamera board={BOARD} snapshot={snapshotAt(0, 0)} />);
+    const view = render(<DecisiveCamera course={EASTBOUND_COURSE} snapshot={snapshotAt(0, 0)} />);
     advanceCamera(1 / 60);
     camera.getWorldDirection(initialDirection);
 
@@ -96,7 +130,7 @@ describe("DecisiveCamera", () => {
       [-0.001, 0.001],
       [0.002, -0.002],
     ] as const) {
-      view.rerender(<DecisiveCamera board={BOARD} snapshot={snapshotAt(x, y)} />);
+      view.rerender(<DecisiveCamera course={EASTBOUND_COURSE} snapshot={snapshotAt(x, y)} />);
       advanceCamera(1 / 60);
     }
 

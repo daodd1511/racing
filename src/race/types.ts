@@ -1,5 +1,7 @@
 export type SelectionMode = "first" | "last";
 
+export type CameraMode = "broadcast" | "close-up";
+
 export type Vector3 = readonly [x: number, y: number, z: number];
 
 export type Quaternion = readonly [x: number, y: number, z: number, w: number];

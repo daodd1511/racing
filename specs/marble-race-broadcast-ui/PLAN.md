@@ -94,10 +94,62 @@ review harness remain independently accessible development routes.
   and the final finite Finish crossing completes the race.
 - The decisive camera and minimap continue to consume the same snapshot. The
   camera uses an elevated third-person chase view above the track and behind
-  the decisive marble, uses a stable downhill Course heading instead of noisy
-  frame-to-frame velocity, and keeps both the channel surface and nearby marble
-  pack visible without becoming either a lateral side view or a straight
-  vertical view.
+  the decisive marble, derives a stable heading from the local Course route
+  tangent instead of noisy frame-to-frame velocity or a fixed Board axis, and
+  keeps the marble low in frame with the upcoming channel visible. It combines
+  a route-relative trailing offset with gravity-up Y elevation and a smaller
+  outward Z offset, avoiding both a side view and a straight overhead view.
+  Frame-rate-independent damping independently smooths decisive-target changes,
+  Course heading, camera position, and look-at position. Setup offers a
+  Broadcast camera and a Close up camera. Close up follows the same decisive
+  marble from its exact planar position directly above the Course, with a wider field
+  of view and longer forward sightline for a track-level racing perspective.
+- The live and frozen Course renderer omits connector roof and governor-ceiling
+  visuals that block the elevated camera. Their colliders remain in the Course,
+  so this presentation rule does not change race physics or validation.
+- Race connectors render as continuous swept floors with low continuous rails
+  instead of exposing the physical collider tiling. Default obstacle Modules
+  use denser fields and stronger interactions, with validation guardrails for
+  zero stalls and measurable scatter, shuffle, sort, or queue behavior.
+- Production Course generation applies one gentle race grade independently of
+  Showcase tuning. Seeded obstacle sections mount onto that continuous Course;
+  steep standalone Showcase shapes such as the Vortex bowl, staircase, and
+  steep zigzag are excluded from production Course selection. The production
+  layout uses eight standard-width columns, adding enough smooth separation for
+  more obstacles without stretching their geometry or increasing track grade.
+- Row-turn connectors lengthen to an approximately 10% average grade and
+  distribute their vertical drop by horizontal curve distance, preventing a
+  steep section at the turn apex. Straight connectors use one continuous
+  swept floor collider instead of overlapping cuboid segments. The collider
+  preserves the exact entry and exit vertices, aligns its surface with the
+  adjacent Module floor tops, and uses tangent-matched overlap beyond each
+  anchor so no collision lip crosses the racing surface.
+- The production Course contains ten obstacle sections: three Diamond fields,
+  two Whoops sections, one Staircase, two Funnel chokes, and two Windmills.
+  A dedicated seed substream shuffles that inventory into the ten obstacle
+  Slots for each race, making the layout varied but reproducible from its seed.
+  Every obstacle pair has a plain Chute section between it, and every row begins
+  with a Chute so no obstacle blocks the chase camera immediately after a turn.
+  Vortex bowl, Rumble strip, and
+  Friction lanes remain excluded from production races but available in the
+  Showcase. Removed obstacle sections become plain gentle Chute sections in
+  the Course. The Diamond field uses ten tightly staggered rows
+  and larger posts, alternating four-post rows toward opposite rails so no
+  straight empty lane crosses the field. Every edge retains more than one
+  marble diameter of clearance, preventing rail pinch points. Its physics uses round posts matching each
+  visible diamond's outer radius, eliminating stable multi-marble flat-face
+  locks while retaining the Diamond visual. Course Whoops use a one-marble-diameter crest-to-trough wave
+  across a 1.8 m section. The Course Staircase uses eight 0.16 m treads with
+  two-marble-radius rises. The 1.8 m Course Funnel uses a 1.15 m converging
+  entry, a 0.35 m straight passage three marbles wide, and a short 0.25 m
+  exit flare, in that order. The Course Windmill uses the original four blades
+  rotating at 1.8 rad/s. Showcase defaults remain independent.
+- A 3-2-1-GO start gate delays the live solver, and live rendering advances at
+  a modest fraction of wall time while preserving the exact fixed simulation
+  step, deterministic outcome, and 120-second simulation watchdog.
+- The production shell uses a playful arcade-broadcast visual system with a
+  mode-aware tracking HUD. The dark monitoring-dashboard treatment is not part
+  of the retained capability baseline.
 - The 120-second watchdog remains a failure ceiling, not a selection fallback.
 
 ## Application architecture
@@ -195,7 +247,9 @@ The desktop composition uses three visual layers:
 
 1. A header with Selection Mode, elapsed simulation time, seed, and audio
    control.
-2. A full racing viewport with the top-down decisive follow camera.
+2. A full racing viewport with a third-person decisive chase camera. It follows the
+   local Course tangent, keeps the decisive marble low in frame, and shows the
+   upcoming Course rather than using a fixed Board direction.
 3. An overlaid side rail containing the standings panel and existing whole-Board
    minimap. The side rail scrolls its 1–15-row standings internally; it never
    reduces the Course to a secondary preview.

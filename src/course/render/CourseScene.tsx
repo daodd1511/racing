@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import type { Course } from "../types";
 import { SpecVisuals } from "../../modules/render/ModuleColliders";
 import { stepCourse } from "../stepCourse";
@@ -5,6 +7,7 @@ import { createMarbleStyles, type MarbleStyle } from "../../render/marbleStyles"
 import { SCALE } from "../../race/scale";
 import type { RaceSnapshot } from "../../race/liveTypes";
 import { Board } from "./Board";
+import { raceVisibleSpec } from "./raceVisuals";
 
 export interface CourseSceneProps {
   readonly course: Course;
@@ -43,11 +46,15 @@ function Marble({
 export function CourseScene({ course, snapshot, marbleStyles }: CourseSceneProps) {
   const styles = marbleStyles ?? createMarbleStyles(snapshot?.marbleTransforms.length ?? 0);
   const transforms = stepCourse(course, snapshot?.elapsedSeconds ?? 0);
+  const visibleSpecs = useMemo(
+    () => sceneSpecs(course).map(({ id, spec }) => ({ id, spec: raceVisibleSpec(spec) })),
+    [course],
+  );
 
   return (
     <group name="course-scene">
       <Board board={course.board} />
-      {sceneSpecs(course).map(({ id, spec }) => (
+      {visibleSpecs.map(({ id, spec }) => (
         <SpecVisuals key={id} spec={spec} transforms={transforms} />
       ))}
       {snapshot?.marbleTransforms.map(({ marbleIndex, position, rotation }) => (

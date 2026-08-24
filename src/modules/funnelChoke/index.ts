@@ -26,6 +26,11 @@ export interface FunnelChokeParams {
   readonly wallRestitution: number;
   /** Total length of the approach, throat, and flare, in meters. */
   readonly length: number;
+  /** Course-only placement grade; the Showcase keeps its isolated tuning. */
+  readonly courseGrade?: number;
+  readonly courseApproachRun?: number;
+  readonly courseThroatRun?: number;
+  readonly courseFlareRun?: number;
 }
 
 const MARBLE_DIAMETER = SCALE.marbleRadius * 2;
@@ -153,6 +158,37 @@ function buildWallPaths(params: FunnelChokeParams): readonly WallPath[] {
   const lateralRun = outerWallCentre - throatWallCentre;
   const sideRun = lateralRun / Math.tan(params.approachAngle);
 
+  if (
+    params.courseApproachRun !== undefined &&
+    params.courseThroatRun !== undefined &&
+    params.courseFlareRun !== undefined
+  ) {
+    const entryRun =
+      params.length - params.courseApproachRun - params.courseThroatRun - params.courseFlareRun;
+    if (entryRun < 0) {
+      throw new Error("funnelChoke Course runs exceed its total length");
+    }
+    const throatStart = entryRun + params.courseApproachRun;
+    const throatEnd = throatStart + params.courseThroatRun;
+    return ([-1, 1] as const).flatMap((side): readonly WallPath[] => [
+      {
+        id: `funnel-approach-${side < 0 ? "left" : "right"}`,
+        start: new ThreeVector3(side * outerWallCentre, 0, entryRun),
+        end: new ThreeVector3(side * throatWallCentre, 0, throatStart),
+      },
+      {
+        id: `funnel-throat-${side < 0 ? "left" : "right"}`,
+        start: new ThreeVector3(side * throatWallCentre, 0, throatStart),
+        end: new ThreeVector3(side * throatWallCentre, 0, throatEnd),
+      },
+      {
+        id: `funnel-flare-${side < 0 ? "left" : "right"}`,
+        start: new ThreeVector3(side * throatWallCentre, 0, throatEnd),
+        end: new ThreeVector3(side * outerWallCentre, 0, params.length),
+      },
+    ]);
+  }
+
   if (params.length - sideRun < MINIMUM_FLARE_RUN) {
     throw new Error("funnelChoke length is too short for its throat and approach angle");
   }
@@ -185,7 +221,7 @@ function buildWallPaths(params: FunnelChokeParams): readonly WallPath[] {
 }
 
 function buildSpec(params: FunnelChokeParams): Spec {
-  const drop = params.length * FLOOR_GRADE;
+  const drop = params.length * (params.courseGrade ?? FLOOR_GRADE);
   const floorMaterial = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
   const wallMaterial = { restitution: params.wallRestitution, friction: params.wallFriction };
   const channel = buildChannel(

@@ -1,14 +1,19 @@
-import { defaultParamValues } from "../modules/params";
 import { ALL_MODULES } from "../modules/registry";
 import type { Role, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
-import { ARC, enumerateRoleSelections, type RoleSelection } from "./arc";
+import {
+  ARC,
+  COURSE_OBSTACLE_INVENTORY,
+  enumerateRoleSelections,
+  type RoleSelection,
+} from "./arc";
 import { CONNECTOR_EDGE_CLEARANCE, HAIRPIN_REACH_PER_DROP } from "./connectors";
+import { COURSE_MODULES, courseModulesByRole, courseParamValues } from "./courseModules";
 import { buildFinishSpec, buildStartSpec } from "./startFinish";
 import type { BoardSpec } from "./types";
 
-const SLOT_COLUMNS = 3;
+const SLOT_COLUMNS = 8;
 const SLOT_ROWS = 3;
 const CONNECTOR_MARGIN_CELLS = 2;
 const SAME_ROW_CONNECTOR_DROP = SCALE.cellPitch / 2;
@@ -55,7 +60,7 @@ function projectedDefaultSize(moduleId: string): ProjectedSize {
   }
 
   const size = projectedSpecSize(
-    module.buildSpec(defaultParamValues(module.meta.params)),
+    module.buildSpec(courseParamValues(module)),
     module.id,
   );
   projectedSizeCache.set(moduleId, size);
@@ -72,7 +77,7 @@ function vector(x: number, y: number, z: number): Vector3 {
 
 const roleMaxima = new Map<Role, ProjectedSize>();
 for (const role of ROLES) {
-  const modules = ALL_MODULES.filter((module) => module.role === role);
+  const modules = courseModulesByRole(role);
   if (modules.length === 0) {
     throw new Error(`Role ${role} has no registered Module`);
   }
@@ -96,12 +101,24 @@ for (const role of ROLES) {
 
 const startSize = projectedSpecSize(buildStartSpec(), "Start");
 const finishSize = projectedSpecSize(buildFinishSpec(), "Finish");
+const obstacleSizes = [...new Set(COURSE_OBSTACLE_INVENTORY)].map(projectedDefaultSize);
+const obstacleMaximum: ProjectedSize = Object.freeze({
+  travel: Math.max(...obstacleSizes.map(({ travel }) => travel)),
+  vertical: Math.max(...obstacleSizes.map(({ vertical }) => vertical)),
+  depth: Math.max(...obstacleSizes.map(({ depth }) => depth)),
+  minYFromEntry: Math.min(...obstacleSizes.map(({ minYFromEntry }) => minYFromEntry)),
+  maxYFromEntry: Math.max(...obstacleSizes.map(({ maxYFromEntry }) => maxYFromEntry)),
+  exitDrop: Math.max(...obstacleSizes.map(({ exitDrop }) => exitDrop)),
+});
 
 function slotSize(slot: (typeof ARC)[number], selection: RoleSelection): ProjectedSize {
   if (slot.kind !== "module") {
     return slot.kind === "start" ? startSize : finishSize;
   }
-  return projectedDefaultSize(selection[slot.role]);
+  if (slot.fixedModuleId !== "chute") {
+    return obstacleMaximum;
+  }
+  return projectedDefaultSize(slot.fixedModuleId ?? selection[slot.role]);
 }
 
 function maximumRowSpan(): number {
@@ -146,7 +163,7 @@ const boardHeight = SLOT_ROWS * bayHeight + edgeMargin * 2;
 const boardDepth =
   roundUpToCell(Math.max(...ROLES.map((role) => roleMaxima.get(role)!.depth))) + edgeMargin * 2;
 
-for (const module of ALL_MODULES) {
+for (const module of COURSE_MODULES) {
   const size = projectedDefaultSize(module.id);
   if (
     size.travel > bayWidth - connectorMargin * 2 ||

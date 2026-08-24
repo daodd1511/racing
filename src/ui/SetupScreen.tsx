@@ -1,20 +1,59 @@
 import { useState } from "react";
 
 import { DEFAULT_RACE_CONFIG } from "../race/config";
-import type { SelectionMode } from "../race/types";
+import type { CameraMode, SelectionMode } from "../race/types";
 
 export interface SetupRaceInput {
   readonly roster: readonly string[];
   readonly selectionMode: SelectionMode;
+  readonly cameraMode: CameraMode;
 }
 
 export interface SetupScreenProps {
   readonly roster: readonly string[];
   readonly selectionMode: SelectionMode;
+  readonly cameraMode?: CameraMode;
   readonly onRosterChange: (roster: readonly string[]) => void;
   readonly onSelectionModeChange: (selectionMode: SelectionMode) => void;
+  readonly onCameraModeChange?: (cameraMode: CameraMode) => void;
   readonly onStart: (input: SetupRaceInput) => void;
   readonly copyRoster?: (value: string) => Promise<void>;
+}
+
+function CameraOption({
+  mode,
+  title,
+  detail,
+  cameraMode,
+  onCameraModeChange,
+}: {
+  readonly mode: CameraMode;
+  readonly title: string;
+  readonly detail: string;
+  readonly cameraMode: CameraMode;
+  readonly onCameraModeChange?: (cameraMode: CameraMode) => void;
+}) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    if (event.currentTarget.checked) {
+      onCameraModeChange?.(mode);
+    }
+  }
+
+  return (
+    <label className="setup-screen__mode-option">
+      <input
+        checked={cameraMode === mode}
+        name="camera-mode"
+        onChange={handleChange}
+        type="radio"
+        value={mode}
+      />
+      <span className="setup-screen__mode-copy">
+        <strong>{title}</strong>
+        <span>{detail}</span>
+      </span>
+    </label>
+  );
 }
 
 type CopyState = "idle" | "copied" | "unavailable";
@@ -86,8 +125,10 @@ function ModeOption({
 export function SetupScreen({
   roster,
   selectionMode,
+  cameraMode = "broadcast",
   onRosterChange,
   onSelectionModeChange,
+  onCameraModeChange,
   onStart,
   copyRoster = writeRosterToClipboard,
 }: SetupScreenProps) {
@@ -126,16 +167,16 @@ export function SetupScreen({
     if (!validRoster) {
       return;
     }
-    onStart({ roster: normalizedRoster, selectionMode });
+    onStart({ roster: normalizedRoster, selectionMode, cameraMode });
   }
 
   return (
     <main className="setup-screen">
       <section aria-labelledby="setup-title" className="setup-screen__card">
-        <p className="setup-screen__eyebrow">Live marble selection</p>
-        <h1 id="setup-title">Let the Course decide.</h1>
+        <p className="setup-screen__eyebrow">Load the hopper</p>
+        <h1 id="setup-title">Ready, set, pick.</h1>
         <p className="setup-screen__intro">
-          One person per marble. The race stays physical and the Roster stays in this browser.
+          One name per marble. The Course stays physical and the result stays in this browser.
         </p>
         <form className="setup-screen__form" onSubmit={handleSubmit}>
           <label className="setup-screen__label" htmlFor="race-roster">
@@ -177,6 +218,25 @@ export function SetupScreen({
               />
             </div>
           </fieldset>
+          <fieldset className="setup-screen__modes">
+            <legend className="setup-screen__label">Camera</legend>
+            <div className="setup-screen__mode-options">
+              <CameraOption
+                cameraMode={cameraMode}
+                detail="Elevated chase view with more of the Course visible."
+                mode="broadcast"
+                onCameraModeChange={onCameraModeChange}
+                title="Broadcast"
+              />
+              <CameraOption
+                cameraMode={cameraMode}
+                detail="Low track-level chase view directly above the marbles."
+                mode="close-up"
+                onCameraModeChange={onCameraModeChange}
+                title="Close up"
+              />
+            </div>
+          </fieldset>
           <p
             aria-live="polite"
             className="setup-screen__validation"
@@ -186,9 +246,16 @@ export function SetupScreen({
             {showValidation && !validRoster ? validationMessage : ""}
           </p>
           <button className="setup-screen__start" type="submit">
-            Start race
+            Release the marbles
           </button>
         </form>
+        <div aria-hidden="true" className="setup-screen__marbles">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
       </section>
     </main>
   );

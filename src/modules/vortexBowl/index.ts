@@ -148,10 +148,13 @@ const BOWL_RESTITUTION = 0.05; // Low: a bouncy basin flings marbles out of orbi
 const ENTRY_APPROACH_LENGTH = 0.34;
 const ENTRY_APPROACH_DROP = 0.18;
 const ENTRY_INWARD_LEAN_RADIANS = 0.35; // ~20 deg off pure tangent -- see buildSpec's comment.
-const ENTRY_CHANNEL_WIDTH = SCALE.marbleRadius * 4;
-const ENTRY_FLOOR_THICKNESS = 0.01;
+// The Course hands the full pack to this ramp from a channel this wide. A
+// narrow two-marble chute left most of the incoming pack with no floor under
+// it at the connector seam.
+const ENTRY_CHANNEL_WIDTH = SCALE.channelWidth;
+const ENTRY_HANDOFF_WIDTH = SCALE.marbleRadius * 15;
 const ENTRY_RAIL_THICKNESS = 0.006;
-const ENTRY_RAIL_HEIGHT = 0.03;
+const ENTRY_RAIL_HEIGHT = SCALE.marbleRadius * 8;
 const ROUTE_ORBITS = 3;
 
 function smoothstep(t: number): number {
@@ -186,7 +189,7 @@ export interface BasinProfile {
   readonly entryRing: ProfileRing;
 }
 
-const RIM_OUTER_MARGIN_RADII = 4;
+const RIM_OUTER_MARGIN_RADII = 10;
 
 // Exported so tests (this module's guardrail test and the tuning probe
 // behind the comments below) can read the profile's actual rings directly
@@ -313,21 +316,35 @@ function buildEntryRamp(rimEntryPosition: ThreeVector3, rimTangent: ThreeVector3
   );
   const up = new ThreeVector3(0, 1, 0).applyQuaternion(pitch).normalize();
   const tangent = new ThreeVector3(0, 0, 1).applyQuaternion(pitch).normalize();
+  const lateral = new ThreeVector3(1, 0, 0).applyQuaternion(pitch).normalize();
 
-  const floorCenter = entryPosition.clone().add(rimEntryPosition).multiplyScalar(0.5);
+  const startLeft = entryPosition
+    .clone()
+    .sub(lateral.clone().multiplyScalar(ENTRY_CHANNEL_WIDTH / 2));
+  const startRight = entryPosition
+    .clone()
+    .add(lateral.clone().multiplyScalar(ENTRY_CHANNEL_WIDTH / 2));
+  const endLeft = rimEntryPosition
+    .clone()
+    .sub(lateral.clone().multiplyScalar(ENTRY_HANDOFF_WIDTH / 2));
+  const endRight = rimEntryPosition
+    .clone()
+    .add(lateral.clone().multiplyScalar(ENTRY_HANDOFF_WIDTH / 2));
   const parts: LocalPart[] = [
     {
       id: "entry-floor",
       shape: {
-        kind: "cuboid",
-        halfExtents: [
-          ENTRY_CHANNEL_WIDTH / 2,
-          ENTRY_FLOOR_THICKNESS / 2,
-          ENTRY_APPROACH_LENGTH / 2,
+        kind: "trimesh",
+        vertices: [
+          ...toVector(startLeft),
+          ...toVector(startRight),
+          ...toVector(endLeft),
+          ...toVector(endRight),
         ],
+        indices: [0, 2, 1, 1, 2, 3],
       },
-      position: floorCenter,
-      rotation: pitch,
+      position: new ThreeVector3(0, 0, 0),
+      rotation: new ThreeQuaternion(),
       visualColor: "#e8e2d0",
       metalness: 0.05,
       roughness: 0.25,
@@ -335,19 +352,31 @@ function buildEntryRamp(rimEntryPosition: ThreeVector3, rimTangent: ThreeVector3
   ];
 
   for (const side of [-1, 1] as const) {
-    const lateral = ENTRY_CHANNEL_WIDTH / 2 + ENTRY_RAIL_THICKNESS / 2;
-    const railCenter = floorCenter
+    const railStart = entryPosition
       .clone()
-      .add(new ThreeVector3(side * lateral, 0, 0))
+      .add(lateral.clone().multiplyScalar(side * ENTRY_CHANNEL_WIDTH / 2));
+    const railEnd = rimEntryPosition
+      .clone()
+      .add(lateral.clone().multiplyScalar(side * ENTRY_HANDOFF_WIDTH / 2));
+    const railDirection = railEnd.clone().sub(railStart);
+    const railLength = railDirection.length();
+    const railRotation = new ThreeQuaternion().setFromUnitVectors(
+      new ThreeVector3(0, 0, 1),
+      railDirection.normalize(),
+    );
+    const railCenter = railStart
+      .clone()
+      .add(railEnd)
+      .multiplyScalar(0.5)
       .add(up.clone().multiplyScalar(ENTRY_RAIL_HEIGHT / 2));
     parts.push({
       id: side < 0 ? "entry-rail-left" : "entry-rail-right",
       shape: {
         kind: "cuboid",
-        halfExtents: [ENTRY_RAIL_THICKNESS / 2, ENTRY_RAIL_HEIGHT / 2, ENTRY_APPROACH_LENGTH / 2],
+        halfExtents: [ENTRY_RAIL_THICKNESS / 2, ENTRY_RAIL_HEIGHT / 2, railLength / 2],
       },
       position: railCenter,
-      rotation: pitch,
+      rotation: railRotation,
       visualColor: "#d8ff42",
       metalness: 0.05,
       roughness: 0.2,

@@ -4,7 +4,7 @@ import { createRaceAudio, type RaceAudio } from "../audio/createRaceAudio";
 import { assembleCourse } from "../course/assembleCourse";
 import type { Course } from "../course/types";
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "../race/liveTypes";
-import type { CommittedRaceRecord, SelectionMode } from "../race/types";
+import type { CameraMode, CommittedRaceRecord, SelectionMode } from "../race/types";
 import { createRaceStore, type RaceStore } from "../storage/raceStore";
 import { AudioToggle } from "../ui/AudioToggle";
 import { BroadcastRace } from "../ui/BroadcastRace";
@@ -57,16 +57,24 @@ function FrozenRace({
   course,
   request,
   snapshot,
+  cameraMode,
   children,
 }: {
   readonly course: Course;
   readonly request: RaceRequest;
   readonly snapshot: RaceSnapshot;
+  readonly cameraMode: CameraMode;
   readonly children: ReactNode;
 }) {
   return (
     <div className="terminal-race">
-      <BroadcastRace course={course} frozen request={request} snapshot={snapshot} />
+      <BroadcastRace
+        cameraMode={cameraMode}
+        course={course}
+        frozen
+        request={request}
+        snapshot={snapshot}
+      />
       {children === null ? null : <div className="terminal-race__overlay">{children}</div>}
     </div>
   );
@@ -85,6 +93,7 @@ export function App({
     createInitialSession(activeStore.load()),
   );
   const [muted, setMuted] = useState(true);
+  const [cameraMode, setCameraMode] = useState<CameraMode>("broadcast");
   const audioRef = useRef<RaceAudio | null>(null);
   const snapshotRef = useRef<RaceSnapshot | null>(null);
   const terminalSeedRef = useRef<number | null>(null);
@@ -135,7 +144,12 @@ export function App({
     store.saveSettings({ selectionMode });
   }
 
+  function handleCameraModeChange(nextCameraMode: CameraMode): void {
+    setCameraMode(nextCameraMode);
+  }
+
   function handleStart(input: SetupRaceInput): void {
+    setCameraMode(input.cameraMode);
     const seed = createSeed();
     const request: RaceRequest = Object.freeze({
       seed,
@@ -218,6 +232,8 @@ export function App({
   if (session.kind === "setup") {
     content = (
       <SetupScreen
+        cameraMode={cameraMode}
+        onCameraModeChange={handleCameraModeChange}
         onRosterChange={handleRosterChange}
         onSelectionModeChange={handleSelectionModeChange}
         onStart={handleStart}
@@ -228,6 +244,7 @@ export function App({
   } else if (session.kind === "racing") {
     content = (
       <BroadcastRace
+        cameraMode={cameraMode}
         course={session.course}
         onContact={handleContact}
         onOutcome={handleOutcome}
@@ -238,7 +255,12 @@ export function App({
     );
   } else if (session.kind === "result") {
     content = (
-      <FrozenRace course={session.course} request={session.request} snapshot={session.snapshot}>
+      <FrozenRace
+        cameraMode={cameraMode}
+        course={session.course}
+        request={session.request}
+        snapshot={session.snapshot}
+      >
         {session.revealVisible ? (
           <ResultPanel
             finalRanking={session.record.finalRanking}
@@ -253,7 +275,12 @@ export function App({
     );
   } else {
     content = (
-      <FrozenRace course={session.course} request={session.request} snapshot={session.snapshot}>
+      <FrozenRace
+        cameraMode={cameraMode}
+        course={session.course}
+        request={session.request}
+        snapshot={session.snapshot}
+      >
         <WatchdogPanel
           onBackToSetup={handleBackToSetup}
           onRetryRace={handleRetryRace}
@@ -267,7 +294,7 @@ export function App({
   return (
     <div className="app-shell">
       <header className="app-shell__header">
-        <p className="app-shell__brand">Marble Race</p>
+        <p className="app-shell__brand">Marble Mayhem</p>
         <AudioToggle muted={muted} onMutedChange={handleMutedChange} />
       </header>
       {content}

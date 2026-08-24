@@ -1,13 +1,14 @@
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
-import { defaultParamValues, type ParamValues } from "../modules/params";
+import type { ParamValues } from "../modules/params";
 import { ALL_MODULES } from "../modules/registry";
 import type { Anchor, Cell, ColliderSpec, Role, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Quaternion, Vector3 } from "../race/types";
-import { ARC, selectRoleModules, type RoleSelection } from "./arc";
+import { randomizedArc, selectRoleModules, type RoleSelection } from "./arc";
 import { BOARD } from "./board";
 import { buildCourseConnector } from "./connectors";
+import { courseParamValues } from "./courseModules";
 import {
   rasterizeAnchorSeamCells,
   rasterizeCuboidCells,
@@ -62,13 +63,13 @@ function localSpecForSlot(slot: ArcSlot, selection: RoleSelection): Omit<SlotDra
     };
   }
 
-  const moduleId = selection[slot.role];
+  const moduleId = slot.fixedModuleId ?? selection[slot.role];
   const module = ALL_MODULES.find(({ id }) => id === moduleId);
   if (!module || module.role !== slot.role) {
     throw new Error(`Module ${moduleId} does not satisfy Slot ${slot.slotIndex} Role ${slot.role}`);
   }
-  const params = defaultParamValues(module.meta.params);
-  return { slot, localSpec: module.buildSpec(params), moduleId, role: slot.role, params };
+  const params = courseParamValues(module);
+  return { slot, localSpec: module.buildSpec(params), moduleId, role: module.role, params };
 }
 
 function horizontalPlacement(slot: ArcSlot, localSpec: Spec): CoursePlacement {
@@ -88,14 +89,15 @@ function horizontalPlacement(slot: ArcSlot, localSpec: Spec): CoursePlacement {
   return { position: [x, 0, z], rotation };
 }
 
-function placeRows(selection: RoleSelection): readonly PlacedSlot[] {
+function placeRows(seed: number, selection: RoleSelection): readonly PlacedSlot[] {
   const placed: PlacedSlot[] = [];
+  const arc = randomizedArc(seed);
 
   for (let row = 0; row < BOARD.rows; row += 1) {
     const rowDrafts: SlotDraft[] = [];
     let previousExitY: number | undefined;
 
-    for (const slot of ARC.filter((candidate) => candidate.row === row)) {
+    for (const slot of arc.filter((candidate) => candidate.row === row)) {
       const draft = localSpecForSlot(slot, selection);
       const horizontal = horizontalPlacement(slot, draft.localSpec);
       const rotated = transformSpec(
@@ -340,7 +342,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 export function assembleCourseFromRoleSelection(seed: number, selection: RoleSelection): Course {
-  const slots = placeRows(selection);
+  const slots = placeRows(seed, selection);
   const connectors = buildConnectors(slots);
   const elements = interleaveElements(slots, connectors);
 

@@ -8,6 +8,13 @@ import { INITIAL_FIXED_STEP_BACKLOG, advanceFixedStepBacklog } from "./fixedStep
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "./liveTypes";
 
 const MAXIMUM_STEPS_PER_FRAME = 8;
+export const LIVE_RACE_PLAYBACK_RATE = 0.72;
+let rapierReady: Promise<void> | null = null;
+
+function initializeRapier(): Promise<void> {
+  rapierReady ??= RAPIER.init();
+  return rapierReady;
+}
 
 export interface CoursePhysicsProps {
   readonly course: Course;
@@ -41,7 +48,7 @@ export function CoursePhysics({
 
   useEffect(() => {
     let active = true;
-    void RAPIER.init().then(() => {
+    void initializeRapier().then(() => {
       if (!active) return;
       const runtime = new CourseRaceRuntime(course, request);
       runtimeRef.current = runtime;
@@ -62,7 +69,7 @@ export function CoursePhysics({
 
     const advance = advanceFixedStepBacklog(
       backlogRef.current,
-      deltaSeconds,
+      deltaSeconds * LIVE_RACE_PLAYBACK_RATE,
       MAXIMUM_STEPS_PER_FRAME,
     );
     backlogRef.current = advance.backlog;

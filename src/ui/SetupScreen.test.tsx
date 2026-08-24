@@ -37,7 +37,7 @@ describe("SetupScreen", () => {
     await user.type(screen.getByLabelText("Race Roster"), "  Avery \n\nAvery\n Blake ");
     await user.click(screen.getByRole("radio", { name: /^Last finisher/ }));
     rerender(<SetupScreen {...props} selectionMode="last" />);
-    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Release the marbles" }));
 
     expect(props.onRosterChange).toHaveBeenLastCalledWith(["Avery", "Avery", "Blake"]);
     expect(props.onSelectionModeChange).toHaveBeenCalledWith("last");
@@ -62,7 +62,7 @@ describe("SetupScreen", () => {
     const user = userEvent.setup();
     const { props } = renderSetup();
 
-    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Release the marbles" }));
 
     expect(screen.getByText("Add between 1 and 15 non-empty names.")).toBeTruthy();
     expect(props.onStart).not.toHaveBeenCalled();

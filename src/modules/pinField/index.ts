@@ -33,6 +33,8 @@ export interface PinFieldParams {
   readonly postWidth: number;
   /** Longitudinal pitch between rows, meters. */
   readonly rowPitch: number;
+  /** Course-only placement grade; the Showcase keeps its isolated tuning. */
+  readonly courseGrade?: number;
 }
 
 // OBSTACLE-IDEAS' own build note: post half-extents [0.25, 0.45, 0.25] at
@@ -71,11 +73,11 @@ const POST_SPACING_MIN = POST_DIAGONAL_MAX + MIN_POST_GAP;
 const ROW_PITCH_MIN = POST_DIAGONAL_MAX + MIN_POST_GAP;
 
 const DEFAULT_PARAMS: PinFieldParams = Object.freeze({
-  rowCount: 5,
-  postSpacing: POST_SPACING_MIN * 1.3,
-  postHeight: DEFAULT_POST_HEIGHT,
-  postWidth: DEFAULT_POST_WIDTH,
-  rowPitch: ROW_PITCH_MIN * 1.7,
+  rowCount: 10,
+  postSpacing: POST_SPACING_MIN,
+  postHeight: DEFAULT_POST_HEIGHT * 1.24,
+  postWidth: DEFAULT_POST_WIDTH * 1.2,
+  rowPitch: ROW_PITCH_MIN * 1.15,
 });
 
 const PARAM_SCHEMA: ParamSchema = Object.freeze({
@@ -186,38 +188,32 @@ function cuboidCorners(
   return corners;
 }
 
-/** Evenly spaced lateral offsets spanning `channelWidth`, nominally centered
- * but shifted a quarter-spacing off the centerline (see the comment inside),
- * alternating rows shifted by a further half a pitch for the classic
- * Galton-board stagger. `usableWidth` leaves a margin so a post's own
- * half-extent (post-rotation, its footprint reaches out to `postSpacing`'s
- * own scale, not just `postWidth/2`) doesn't collide with the rails. */
+/** Alternates four-post rows toward opposite rails. Every row leaves safe
+ * rail clearance, while the next row blocks the prior row's side corridor so
+ * no straight lateral bypass remains open through the whole field. */
 function postLateralOffsets(
   rowIsOffset: boolean,
   postSpacing: number,
+  postWidth: number,
   channelWidth: number,
 ): number[] {
-  const usableWidth = Math.max(postSpacing, channelWidth - postSpacing);
-  const count = Math.max(1, Math.floor(usableWidth / postSpacing) + 1);
+  const rotatedHalfWidth = (postWidth * Math.SQRT2) / 2;
+  const count = 4;
   const span = (count - 1) * postSpacing;
-  // The quarter-spacing term keeps X=0 -- the channel's own centerline,
-  // which the Validator's spawn spread (validateModule.ts's spawnMarbles)
-  // can place a marble arbitrarily close to -- from ever landing exactly on
-  // a post center in ANY row, offset or not. A dead-center hit on a
-  // diamond's own corner is the one collision angle with no natural
-  // left/right bias to deflect off of, and measured directly it parked a
-  // marble balanced there, near motionless, for dozens of frames before
-  // numerical noise finally tipped it -- a single such frame anywhere in a
-  // run is enough to fail minDisplacementPerSecond even though the marble
-  // was never truly stalled.
-  const start = -span / 2 + postSpacing / 4 + (rowIsOffset ? postSpacing / 2 : 0);
+  const railClearance = SCALE.marbleRadius * 2.5;
+  const availableShift = Math.max(
+    0,
+    channelWidth / 2 - rotatedHalfWidth - railClearance - span / 2,
+  );
+  const rowShift = rowIsOffset ? availableShift : -availableShift;
+  const start = -span / 2 + rowShift;
   return Array.from({ length: count }, (_, index) => start + index * postSpacing);
 }
 
 function buildSpec(params: PinFieldParams): Spec {
   const { rowCount, postSpacing, postHeight, postWidth, rowPitch } = params;
   const totalRun = LEAD_IN + Math.max(0, rowCount - 1) * rowPitch + LEAD_OUT;
-  const drop = totalRun * FLOOR_GRADE;
+  const drop = totalRun * (params.courseGrade ?? FLOOR_GRADE);
   const channelMaterial = {
     restitution: SCALE.defaultRestitution,
     friction: SCALE.defaultFriction,
@@ -247,6 +243,11 @@ function buildSpec(params: PinFieldParams): Spec {
   const postRotation = pitch.clone().multiply(postSpin);
   const postHalfExtents: Vector3 = [postWidth / 2, postHeight / 2, postWidth / 2];
   const postShape = { kind: "cuboid" as const, halfExtents: postHalfExtents };
+  const postColliderShape = {
+    kind: "cylinder" as const,
+    halfHeight: postHeight / 2,
+    radius: (postWidth * Math.SQRT2) / 2,
+  };
 
   const min: [number, number, number] = [...bounds.min];
   const max: [number, number, number] = [...bounds.max];
@@ -263,7 +264,12 @@ function buildSpec(params: PinFieldParams): Spec {
 
   for (let row = 0; row < rowCount; row += 1) {
     const rowZ = LEAD_IN + row * rowPitch;
-    const offsets = postLateralOffsets(row % 2 === 1, postSpacing, SCALE.channelWidth);
+    const offsets = postLateralOffsets(
+      row % 2 === 1,
+      postSpacing,
+      postWidth,
+      SCALE.channelWidth,
+    );
     offsets.forEach((lateralOffset, col) => {
       const localPoint = new ThreeVector3(
         lateralOffset,
@@ -275,9 +281,9 @@ function buildSpec(params: PinFieldParams): Spec {
 
       const postCollider: ColliderSpec = {
         id,
-        shape: postShape,
+        shape: postColliderShape,
         position: toVector(position),
-        rotation: toQuaternion(postRotation),
+        rotation: toQuaternion(pitch),
         material: POST_MATERIAL,
       };
       colliders.push(postCollider);

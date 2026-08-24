@@ -32,6 +32,8 @@ export interface FrictionLanesParams {
   readonly slowFriction: number;
   readonly fastFriction: number;
   readonly dividerHeight: number;
+  /** Course-only placement grade; the Showcase keeps its isolated tuning. */
+  readonly courseGrade?: number;
 }
 
 const DEFAULT_PARAMS: FrictionLanesParams = Object.freeze({
@@ -135,7 +137,7 @@ function cuboidCorners(
 
 function buildSpec(params: FrictionLanesParams): Spec {
   const { laneCount, length, slowFriction, fastFriction, dividerHeight } = params;
-  const drop = length * FLOOR_GRADE;
+  const drop = length * (params.courseGrade ?? FLOOR_GRADE);
   const shellMaterial = { restitution: SCALE.defaultRestitution, friction: SCALE.defaultFriction };
 
   const channel = buildChannel(

@@ -1,7 +1,8 @@
-export type RaceRandomStream = "course" | "start";
+export type RaceRandomStream = "course" | "course-obstacles" | "start";
 
 const RACE_STREAM_SALTS: Readonly<Record<RaceRandomStream, number>> = Object.freeze({
   course: 0x9e37_79b9,
+  "course-obstacles": 0xb7e1_5163,
   start: 0x243f_6a88,
 });
 

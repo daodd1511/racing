@@ -27,6 +27,8 @@ export interface WindmillParams {
   readonly angularVelocity: number;
   /** Perpendicular distance from the floor surface to the hub centre. */
   readonly hubHeight: number;
+  /** Course-only placement grade; the Showcase keeps its isolated tuning. */
+  readonly courseGrade?: number;
 }
 
 const CHANNEL_LENGTH = 1.2;
@@ -144,7 +146,7 @@ function motionForBlade(
 }
 
 function buildSpec(params: WindmillParams): Spec {
-  const drop = CHANNEL_LENGTH * FLOOR_GRADE;
+  const drop = CHANNEL_LENGTH * (params.courseGrade ?? FLOOR_GRADE);
   const channel = buildChannel(
     [{ start: [0, 0, 0], end: [0, -drop, CHANNEL_LENGTH], width: SCALE.channelWidth }],
     CHANNEL_MATERIAL,

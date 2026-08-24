@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CoursePhysics } from "./CoursePhysics";
@@ -36,7 +37,16 @@ const runtime = vi.hoisted(() => {
   };
 });
 
-vi.mock("@dimforge/rapier3d-compat", () => ({ default: { init: vi.fn(async () => undefined) } }));
+const backlogRuntime = vi.hoisted(() => ({
+  advance: vi.fn(() => ({
+    backlog: Object.freeze({ accumulatorSeconds: 0 }),
+    stepTimes: [4],
+  })),
+}));
+
+const rapierRuntime = vi.hoisted(() => ({ init: vi.fn(async () => undefined) }));
+
+vi.mock("@dimforge/rapier3d-compat", () => ({ default: { init: rapierRuntime.init } }));
 
 vi.mock("@react-three/fiber", () => ({
   useFrame(callback: (state: unknown, deltaSeconds: number) => void) {
@@ -46,10 +56,7 @@ vi.mock("@react-three/fiber", () => ({
 
 vi.mock("./fixedStepBacklog", () => ({
   INITIAL_FIXED_STEP_BACKLOG: Object.freeze({ accumulatorSeconds: 0 }),
-  advanceFixedStepBacklog: vi.fn(() => ({
-    backlog: Object.freeze({ accumulatorSeconds: 0 }),
-    stepTimes: [4],
-  })),
+  advanceFixedStepBacklog: backlogRuntime.advance,
 }));
 
 vi.mock("./CourseRaceRuntime", () => ({
@@ -93,22 +100,26 @@ describe("CoursePhysics", () => {
     });
 
     render(
-      <CoursePhysics
-        course={{} as never}
-        onContact={vi.fn()}
-        onOutcome={onOutcome}
-        onSnapshot={onSnapshot}
-        request={{ seed: 7, roster: ["Avery"], selectionMode: "first" }}
-      />,
+      <StrictMode>
+        <CoursePhysics
+          course={{} as never}
+          onContact={vi.fn()}
+          onOutcome={onOutcome}
+          onSnapshot={onSnapshot}
+          request={{ seed: 7, roster: ["Avery"], selectionMode: "first" }}
+        />
+      </StrictMode>,
     );
 
     await waitFor(() => expect(onSnapshot).toHaveBeenCalledWith(runtime.initialSnapshot));
+    expect(rapierRuntime.init).toHaveBeenCalledOnce();
     if (runtime.frame === undefined) throw new Error("Expected a registered frame callback");
 
     act(() => {
       runtime.frame?.({}, 1 / 60);
     });
 
+    expect(backlogRuntime.advance).toHaveBeenCalledWith(expect.anything(), (1 / 60) * 0.72, 8);
     expect(events).toEqual(["snapshot:0", "snapshot:4", "outcome"]);
   });
 });

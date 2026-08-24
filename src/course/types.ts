@@ -26,6 +26,7 @@ export interface FixedArcSlot extends ArcSlotBase {
 export interface ModuleArcSlot extends ArcSlotBase {
   readonly kind: "module";
   readonly role: Role;
+  readonly fixedModuleId?: string;
 }
 
 export type ArcSlot = FixedArcSlot | ModuleArcSlot;

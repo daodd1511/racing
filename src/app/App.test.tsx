@@ -194,7 +194,7 @@ describe("App", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Release the marbles" }));
 
     expect(createCourse).toHaveBeenCalledWith(93);
     expect(screen.getByText("Race seed 93")).toBeTruthy();
@@ -215,7 +215,7 @@ describe("App", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Release the marbles" }));
     expect(screen.getByRole("switch", { name: "Race audio" })).toBeTruthy();
     expect(screen.getByText("Race snapshot pending")).toBeTruthy();
 
@@ -246,7 +246,7 @@ describe("App", () => {
       </StrictMode>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Start race" }));
+    fireEvent.click(screen.getByRole("button", { name: "Release the marbles" }));
     fireEvent.click(screen.getByRole("button", { name: "Emit race snapshot" }));
     fireEvent.click(screen.getByRole("button", { name: "Emit race contact" }));
     fireEvent.click(screen.getByRole("button", { name: "Emit duplicate outcomes" }));
@@ -291,7 +291,7 @@ describe("App", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Release the marbles" }));
     await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
     await user.click(screen.getByRole("button", { name: "Emit watchdog" }));
 
@@ -316,7 +316,7 @@ describe("App", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Start race" }));
+    await user.click(screen.getByRole("button", { name: "Release the marbles" }));
     await user.click(screen.getByRole("button", { name: "Emit race snapshot" }));
     await user.click(screen.getByRole("button", { name: "Emit watchdog" }));
     await user.click(screen.getByRole("button", { name: "Back to setup" }));
@@ -336,7 +336,7 @@ describe("App", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Start race" }));
+    fireEvent.click(screen.getByRole("button", { name: "Release the marbles" }));
     fireEvent.click(screen.getByRole("button", { name: "Emit race snapshot" }));
     fireEvent.click(screen.getByRole("button", { name: "Emit race outcome" }));
     expect(vi.getTimerCount()).toBe(1);

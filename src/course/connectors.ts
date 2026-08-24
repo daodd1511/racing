@@ -15,8 +15,11 @@ import type { CourseConnector } from "./types";
 const GRAVITY_MAGNITUDE = Math.hypot(...SCALE.gravity);
 const JOINT_OVERLAP = SCALE.marbleRadius;
 const MINIMUM_HAIRPIN_REACH = SCALE.channelWidth / 2 + SCALE.marbleRadius * 4;
-export const HAIRPIN_REACH_PER_DROP = 1.5;
-const LINK_SAMPLES = 3;
+// A row turn should read as part of the raceway, not a drop chute. The
+// centreline gains at least ten metres of horizontal travel per metre of
+// vertical drop, which caps the average turn grade at roughly 10%.
+export const HAIRPIN_REACH_PER_DROP = 5;
+const LINK_SAMPLES = 16;
 const HAIRPIN_SAMPLES = 32;
 export const CONNECTOR_EDGE_CLEARANCE =
   MINIMUM_HAIRPIN_REACH + SCALE.channelWidth / 2 + RAIL_THICKNESS;
@@ -107,16 +110,35 @@ function routePoints(request: ConnectorRequest): readonly Vector3[] {
   const turnReach = Math.max(MINIMUM_HAIRPIN_REACH, drop * HAIRPIN_REACH_PER_DROP);
   const outwardSign = Math.sign(startDirection.x) || 1;
   const depthReach = drop * 0.75;
-  return Array.from({ length: HAIRPIN_SAMPLES + 1 }, (_, index): Vector3 => {
+  const planarRoute = Array.from({ length: HAIRPIN_SAMPLES + 1 }, (_, index): Vector3 => {
     const t = index / HAIRPIN_SAMPLES;
     return [
       start.x + (end.x - start.x) * t + outwardSign * turnReach * Math.sin(Math.PI * t),
-      start.y + (end.y - start.y) * t,
+      0,
       start.z +
         (end.z - start.z) * t +
         depthReach * Math.sin(2 * Math.PI * t) * Math.sin(Math.PI * t) ** 2,
     ];
   });
+  const planarDistances = [0];
+  for (let index = 1; index < planarRoute.length; index += 1) {
+    const previous = planarRoute[index - 1];
+    const current = planarRoute[index];
+    planarDistances.push(
+      planarDistances[index - 1] +
+        Math.hypot(current[0] - previous[0], current[2] - previous[2]),
+    );
+  }
+  const planarLength = planarDistances.at(-1)!;
+
+  // Tie descent to distance travelled along the curve. The old linear-t
+  // descent became steep around the turn apex, where horizontal motion per
+  // sample is smallest even though t keeps advancing at the same rate.
+  return planarRoute.map((point, index): Vector3 => [
+    point[0],
+    start.y - drop * (planarDistances[index] / planarLength),
+    point[2],
+  ]);
 }
 
 function physicalSegments(
@@ -156,22 +178,89 @@ interface TunnelCollider {
   readonly bounds: ShaftPart["bounds"];
 }
 
-function hairpinTunnel(route: readonly Vector3[], id: string): TunnelCollider {
-  const tunnelRoute = route.map((point): Vector3 => [...point]);
-  const entryDirection = new ThreeVector3(...route[1])
-    .sub(new ThreeVector3(...route[0]))
-    .normalize();
-  const exitDirection = new ThreeVector3(...route.at(-1)!)
-    .sub(new ThreeVector3(...route.at(-2)!))
-    .normalize();
-  tunnelRoute[0] = vector(
-    new ThreeVector3(...tunnelRoute[0]).sub(entryDirection.multiplyScalar(JOINT_OVERLAP)),
-  );
-  tunnelRoute[tunnelRoute.length - 1] = vector(
-    new ThreeVector3(...tunnelRoute.at(-1)!).add(
-      exitDirection.multiplyScalar(SCALE.marbleRadius * 4),
+function smoothFloorCollider(
+  route: readonly Vector3[],
+  start: Anchor,
+  end: Anchor,
+  id: string,
+): TunnelCollider {
+  const floorRoute: readonly Vector3[] = [
+    vector(
+      new ThreeVector3(...route[0]).sub(
+        direction(start).multiplyScalar(JOINT_OVERLAP),
+      ),
     ),
-  );
+    ...route.map((point): Vector3 => [...point]),
+    vector(
+      new ThreeVector3(...route.at(-1)!).add(
+        direction(end).multiplyScalar(JOINT_OVERLAP),
+      ),
+    ),
+  ];
+
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  floorRoute.forEach((point, index) => {
+    const before = new ThreeVector3(...floorRoute[Math.max(0, index - 1)]);
+    const after = new ThreeVector3(...floorRoute[Math.min(floorRoute.length - 1, index + 1)]);
+    const tangent = after.sub(before).normalize();
+    const worldUp = new ThreeVector3(0, 1, 0);
+    const up =
+      index <= 1
+        ? new ThreeVector3(...start.up).normalize()
+        : index >= floorRoute.length - 2
+          ? new ThreeVector3(...end.up).normalize()
+          : worldUp
+              .clone()
+              .sub(tangent.clone().multiplyScalar(worldUp.dot(tangent)))
+              .normalize();
+    const lateral = up.clone().cross(tangent).normalize();
+    const center = new ThreeVector3(...point).add(up.multiplyScalar(FLOOR_THICKNESS / 2));
+    const left = center.clone().sub(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
+    const right = center.clone().add(lateral.multiplyScalar(SCALE.channelWidth / 2));
+    vertices.push(left.x, left.y, left.z, right.x, right.y, right.z);
+  });
+  for (let index = 0; index < floorRoute.length - 1; index += 1) {
+    const current = index * 2;
+    const next = current + 2;
+    indices.push(current, next, current + 1, current + 1, next, next + 1);
+  }
+  const coordinates = (axis: 0 | 1 | 2) =>
+    vertices.filter((_, index) => index % 3 === axis);
+  return {
+    collider: {
+      id,
+      shape: { kind: "trimesh", vertices, indices },
+      position: [0, 0, 0],
+      rotation: [0, 0, 0, 1],
+      material: CONNECTOR_MATERIAL,
+    },
+    bounds: {
+      min: [Math.min(...coordinates(0)), Math.min(...coordinates(1)), Math.min(...coordinates(2))],
+      max: [Math.max(...coordinates(0)), Math.max(...coordinates(1)), Math.max(...coordinates(2))],
+    },
+  };
+}
+
+function hairpinTunnel(
+  route: readonly Vector3[],
+  start: Anchor,
+  end: Anchor,
+  id: string,
+): TunnelCollider {
+  const tunnelRoute: readonly Vector3[] = [
+    vector(
+      new ThreeVector3(...route[0]).sub(
+        direction(start).multiplyScalar(JOINT_OVERLAP),
+      ),
+    ),
+    ...route.map((point): Vector3 => [...point]),
+    vector(
+      new ThreeVector3(...route.at(-1)!).add(
+        direction(end).multiplyScalar(SCALE.marbleRadius * 4),
+      ),
+    ),
+  ];
   const vertices: number[] = [];
   const indices: number[] = [];
 
@@ -187,14 +276,17 @@ function hairpinTunnel(route: readonly Vector3[], id: string): TunnelCollider {
               .sub(new ThreeVector3(...tunnelRoute[index - 1]))
               .normalize();
     const worldUp = new ThreeVector3(0, 1, 0);
-    const up = worldUp
-      .clone()
-      .sub(tangent.clone().multiplyScalar(worldUp.dot(tangent)))
-      .normalize();
+    const up =
+      index <= 1
+        ? new ThreeVector3(...start.up).normalize()
+        : index >= tunnelRoute.length - 2
+          ? new ThreeVector3(...end.up).normalize()
+          : worldUp
+              .clone()
+              .sub(tangent.clone().multiplyScalar(worldUp.dot(tangent)))
+              .normalize();
     const lateral = up.clone().cross(tangent).normalize();
-    const center = new ThreeVector3(...point).add(
-      up.clone().multiplyScalar(FLOOR_THICKNESS / 2),
-    );
+    const center = new ThreeVector3(...point).add(up.clone().multiplyScalar(FLOOR_THICKNESS / 2));
     const floorLeft = center.clone().sub(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
     const floorRight = center.clone().add(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
     const roofOffset = up.clone().multiplyScalar(GOVERNOR_CLEARANCE);
@@ -410,17 +502,24 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
     isHairpin ? HAIRPIN_MATERIAL : CONNECTOR_MATERIAL,
     request.id,
   );
-  const governor = request.speedGovernor
-    ? speedGovernor(channel.colliders, request.id, isHairpin, !isHairpin)
-    : [];
+  // The rotating cross-channel paddles read as arbitrary black barriers and
+  // stop the race pack. Containment comes from the speed-derived rail height;
+  // the Course should not add invisible pacing machinery to the racing line.
+  const governor: readonly ShaftPart[] = [];
   const entranceGuard = isHairpin ? [] : entranceRailOverlaps(channel.colliders, request.id);
   const roof = isHairpin ? channelRoof(channel.colliders, request.id) : [];
-  const tunnel = isHairpin ? hairpinTunnel(route, `${request.id}-tunnel`) : null;
+  const tunnel = isHairpin
+    ? hairpinTunnel(route, request.start, request.end, `${request.id}-tunnel`)
+    : null;
+  const smoothFloor = isHairpin
+    ? null
+    : smoothFloorCollider(route, request.start, request.end, `${request.id}-continuous-floor`);
   const extraBounds = [
     ...governor.map(({ bounds }) => bounds),
     ...entranceGuard.map(({ bounds }) => bounds),
     ...roof.map(({ bounds }) => bounds),
     ...(tunnel ? [tunnel.bounds] : []),
+    ...(smoothFloor ? [smoothFloor.bounds] : []),
   ];
   const bounds = extraBounds.reduce(
     (current, partBounds) => ({
@@ -435,7 +534,12 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
   );
   const spec: Spec = {
     colliders: [
-      ...(tunnel ? [tunnel.collider] : channel.colliders),
+      ...(tunnel
+        ? [tunnel.collider]
+        : [
+            smoothFloor!.collider,
+            ...channel.colliders.filter((collider) => !collider.id.includes("-floor-")),
+          ]),
       ...entranceGuard.map(({ collider }) => collider),
       ...governor.map(({ collider }) => collider),
     ],

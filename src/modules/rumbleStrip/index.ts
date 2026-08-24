@@ -28,6 +28,8 @@ export interface RumbleStripParams {
    * internally (see `BAR_FRICTION`), since the disruption is about bounce,
    * not grip. */
   readonly restitution: number;
+  /** Course-only placement grade; the Showcase keeps its isolated tuning. */
+  readonly courseGrade?: number;
 }
 
 const MARBLE_DIAMETER = SCALE.marbleRadius * 2;
@@ -192,7 +194,7 @@ function cuboidCorners(
 function buildSpec(params: RumbleStripParams): Spec {
   const { barCount, barSpacing, barHeight, restitution } = params;
   const totalRun = LEAD_IN + Math.max(0, barCount - 1) * barSpacing + LEAD_OUT;
-  const drop = totalRun * effectiveFloorGrade(barHeight, restitution);
+  const drop = totalRun * (params.courseGrade ?? effectiveFloorGrade(barHeight, restitution));
   const channelMaterial = {
     restitution: SCALE.defaultRestitution,
     friction: SCALE.defaultFriction,
@@ -218,11 +220,10 @@ function buildSpec(params: RumbleStripParams): Spec {
   );
   const floorCenter = startVector.clone().add(endVector).multiplyScalar(0.5);
   const barMaterial = { restitution, friction: BAR_FRICTION };
-  // Leave a three-radius bypass beside each rail. A narrower gap lets a
-  // packed marble bridge the bar end and rail, creating a stable concave
-  // pocket even though isolated validation clears the same bar.
+  // Span the complete channel so every racing line crosses the strip. The
+  // Course-specific grade supplies the energy needed to clear each bar.
   const barHalfExtents: Vector3 = [
-    SCALE.channelWidth / 2 - SCALE.marbleRadius * 3,
+    SCALE.channelWidth / 2,
     barHeight / 2,
     BAR_THICKNESS / 2,
   ];

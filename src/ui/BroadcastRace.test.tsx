@@ -1,7 +1,6 @@
 /** @vitest-environment happy-dom */
 
-import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -102,11 +101,14 @@ const course = Object.freeze({
   checkpoints: Object.freeze([Object.freeze({}), Object.freeze({})]),
 }) as Course;
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("BroadcastRace", () => {
-  it("renders the Course, camera, minimap, and standings from one live snapshot", async () => {
-    const user = userEvent.setup();
+  it("renders the Course, camera, minimap, and standings from one live snapshot", () => {
+    vi.useFakeTimers();
     render(
       <BroadcastRace
         course={course}
@@ -115,16 +117,20 @@ describe("BroadcastRace", () => {
     );
 
     expect(screen.getByTestId("canvas")).toBeTruthy();
+    expect(screen.getByText("3")).toBeTruthy();
+    expect(screen.getByText("Course scene pending")).toBeTruthy();
+    act(() => vi.advanceTimersByTime(2_250));
+    expect(screen.getByText("GO!")).toBeTruthy();
     expect(screen.getByText("Course scene 4.2")).toBeTruthy();
     expect(screen.getByText("Camera 1")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Emit snapshot" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit snapshot" }));
 
     expect(screen.getByText("Minimap 4.2")).toBeTruthy();
     expect(screen.getAllByRole("listitem")[0].textContent).toContain("Blake");
   });
 
-  it("forwards contact and outcome callbacks without deriving runtime state", async () => {
-    const user = userEvent.setup();
+  it("forwards contact and outcome callbacks without deriving runtime state", () => {
+    vi.useFakeTimers();
     const onContact = vi.fn();
     const onOutcome = vi.fn();
     render(
@@ -135,12 +141,28 @@ describe("BroadcastRace", () => {
         request={{ seed: 11, roster: ["Avery", "Blake"], selectionMode: "first" }}
       />,
     );
+    act(() => vi.advanceTimersByTime(2_250));
 
-    await user.click(screen.getByRole("button", { name: "Emit contact" }));
-    await user.click(screen.getByRole("button", { name: "Emit outcome" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit contact" }));
+    fireEvent.click(screen.getByRole("button", { name: "Emit outcome" }));
 
     expect(onContact).toHaveBeenCalledWith(runtime.contact);
     expect(onOutcome).toHaveBeenCalledWith(runtime.outcome);
+  });
+
+  it("labels the mode-aware decisive marble as the tracked leader or trailer", () => {
+    render(
+      <BroadcastRace
+        course={course}
+        frozen
+        request={{ seed: 11, roster: ["Avery", "Blake"], selectionMode: "last" }}
+        snapshot={runtime.snapshot}
+      />,
+    );
+
+    expect(screen.getByText("Tracking trailer")).toBeTruthy();
+    expect(screen.getAllByText("Blake")).toHaveLength(2);
+    expect(screen.getByText("Last pick")).toBeTruthy();
   });
 
   it("uses the immutable app-owned snapshot for broadcast telemetry and chrome", () => {

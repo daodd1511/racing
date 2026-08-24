@@ -1,6 +1,7 @@
 import type { Course } from "../course/types";
 import { createMarbleStyles, type MarbleStyle } from "../render/marbleStyles";
 import type { RaceSnapshot } from "../race/liveTypes";
+import type { SelectionMode } from "../race/types";
 
 export interface StandingsProps {
   readonly course: Course;
@@ -8,6 +9,7 @@ export interface StandingsProps {
   readonly snapshot: RaceSnapshot | null;
   readonly finalRanking?: readonly number[];
   readonly marbleStyles?: readonly MarbleStyle[];
+  readonly selectionMode?: SelectionMode;
 }
 
 export interface StandingRow {
@@ -63,9 +65,17 @@ export function createStandingsRows({
   );
 }
 
-export function Standings({ course, roster, snapshot, finalRanking, marbleStyles }: StandingsProps) {
+export function Standings({
+  course,
+  roster,
+  snapshot,
+  finalRanking,
+  marbleStyles,
+  selectionMode = "first",
+}: StandingsProps) {
   const rows = createStandingsRows({ roster, snapshot, finalRanking, marbleStyles });
   const checkpointCount = course.checkpoints.length;
+  const decisiveLabel = selectionMode === "first" ? "Leader pick" : "Last pick";
 
   return (
     <section aria-labelledby="standings-title" className="standings">
@@ -80,13 +90,20 @@ export function Standings({ course, roster, snapshot, finalRanking, marbleStyles
           const split =
             row.latestSplitSeconds === null ? "—" : formatRaceTime(row.latestSplitSeconds);
           return (
-            <li className="standings__row" key={row.marbleIndex}>
+            <li
+              className={`standings__row${row.decisive ? " standings__row--decisive" : ""}`}
+              key={row.marbleIndex}
+            >
               <span aria-label={`Position ${row.position}`} className="standings__position">
                 {String(row.position).padStart(2, "0")}
               </span>
-              <span aria-hidden="true" className="standings__marble" style={{ background: row.color }} />
+              <span
+                aria-hidden="true"
+                className="standings__marble"
+                style={{ background: row.color }}
+              />
               <span className="standings__name">{row.name}</span>
-              {row.decisive ? <span className="standings__decisive">Decisive</span> : null}
+              {row.decisive ? <span className="standings__decisive">{decisiveLabel}</span> : null}
               <span className="standings__checkpoint">{checkpoint}</span>
               <span aria-label={`Latest split ${split}`} className="standings__split">
                 {split}

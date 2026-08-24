@@ -49,9 +49,11 @@ describe("createStandingsRows", () => {
     const rows = createStandingsRows({ roster: ["Avery", "Blake"], snapshot: null });
 
     expect(rows.map(({ marbleIndex }) => marbleIndex)).toEqual([0, 1]);
-    expect(rows.every(({ checkpoint, latestSplitSeconds }) => checkpoint === null && latestSplitSeconds === null)).toBe(
-      true,
-    );
+    expect(
+      rows.every(
+        ({ checkpoint, latestSplitSeconds }) => checkpoint === null && latestSplitSeconds === null,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -62,7 +64,7 @@ describe("Standings", () => {
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(3);
     expect(items[0].textContent).toContain("Blake");
-    expect(items[0].textContent).toContain("Decisive");
+    expect(items[0].textContent).toContain("Leader pick");
     expect(items[0].textContent).toContain("CP 3 / 3");
     expect(items[0].textContent).toContain("00:03.40");
   });

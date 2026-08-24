@@ -34,10 +34,10 @@ describe("ARC", () => {
 });
 
 describe("Role selections", () => {
-  it("enumerates exactly 32 unique combinations and reuses one accel choice", () => {
+  it("enumerates the single active Module combination and reuses one accel choice", () => {
     const selections = enumerateRoleSelections();
-    expect(selections).toHaveLength(32);
-    expect(new Set(selections.map((selection) => JSON.stringify(selection))).size).toBe(32);
+    expect(selections).toHaveLength(1);
+    expect(new Set(selections.map((selection) => JSON.stringify(selection))).size).toBe(1);
 
     for (const selection of selections) {
       const buildChoices = ARC.filter(

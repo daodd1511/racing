@@ -36,7 +36,7 @@ const ARC_SLOTS = [
     slotIndex: 4,
     kind: "module",
     role: "queue",
-    fixedModuleId: "funnel-choke",
+    fixedModuleId: "staircase",
     column: 4,
     row: 0,
     direction: "right",
@@ -117,7 +117,7 @@ const ARC_SLOTS = [
     slotIndex: 13,
     kind: "module",
     role: "queue",
-    fixedModuleId: "funnel-choke",
+    fixedModuleId: "whoops",
     column: 2,
     row: 1,
     direction: "left",
@@ -216,20 +216,51 @@ export const COURSE_OBSTACLE_INVENTORY: readonly string[] = Object.freeze([
   "pin-field",
   "whoops",
   "whoops",
+  "whoops",
   "staircase",
-  "funnel-choke",
-  "funnel-choke",
+  "staircase",
   "windmill",
   "windmill",
 ]);
 
+function shuffleObstaclesWithoutRepeats(random: () => number): string[] {
+  const remaining = new Map<string, number>();
+  for (const moduleId of COURSE_OBSTACLE_INVENTORY) {
+    remaining.set(moduleId, (remaining.get(moduleId) ?? 0) + 1);
+  }
+
+  const shuffled: string[] = [];
+  function placeNext(): boolean {
+    if (shuffled.length === COURSE_OBSTACLE_INVENTORY.length) return true;
+
+    const previous = shuffled.at(-1);
+    const candidates = [...remaining.entries()]
+      .filter(([moduleId, count]) => count > 0 && moduleId !== previous)
+      .map(([moduleId]) => moduleId);
+    for (let index = candidates.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(random() * (index + 1));
+      [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
+    }
+
+    for (const moduleId of candidates) {
+      remaining.set(moduleId, remaining.get(moduleId)! - 1);
+      shuffled.push(moduleId);
+      if (placeNext()) return true;
+      shuffled.pop();
+      remaining.set(moduleId, remaining.get(moduleId)! + 1);
+    }
+    return false;
+  }
+
+  if (!placeNext()) {
+    throw new Error("Course obstacle inventory cannot be arranged without adjacent repeats");
+  }
+  return shuffled;
+}
+
 export function randomizedArc(seed: number): readonly ArcSlot[] {
   const random = createSeededRandom(deriveRaceSeed(seed, "course-obstacles"));
-  const shuffled = [...COURSE_OBSTACLE_INVENTORY];
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
+  const shuffled = shuffleObstaclesWithoutRepeats(random);
 
   let obstacleIndex = 0;
   return Object.freeze(

@@ -8,24 +8,61 @@ import type { CameraMode } from "./types";
 import { decisiveMarbleTarget } from "./cameraTarget";
 
 const BROADCAST_FOV = 45;
-const CLOSE_UP_FOV = 52;
+const CLOSE_UP_FOV = 58;
 const FRAMING_MARGIN = 1.25;
-const CHASE_ABOVE_CELLS = 12;
-const CHASE_OUTWARD_CELLS = 8;
-const CHASE_TRAIL_CELLS = 20;
-const CHASE_LOOK_AHEAD_CELLS = 3;
-const CLOSE_UP_TRAIL_CELLS = 0;
-const CLOSE_UP_OUTWARD_CELLS = 3;
-const CLOSE_UP_LOOK_AHEAD_CELLS = 12;
+// Broadcast keeps its elevated three-quarter framing: well behind, high
+// above, and offset toward the viewer so the Course reads as a whole.
+const BROADCAST_TRAIL_CELLS = 20;
+const BROADCAST_ABOVE_CELLS = 12;
+const BROADCAST_OUTWARD_CELLS = 8;
+const BROADCAST_LOOK_AHEAD_CELLS = 3;
+// Close up is a racing-game chase camera: just behind the marble, barely
+// above it, no lateral offset at all, looking down the track ahead. The
+// lateral offset is what made the old Close up read as a side-on view --
+// with zero trail it sat beside the marble rather than behind it.
+const CLOSE_UP_TRAIL_CELLS = 3.5;
+const CLOSE_UP_ABOVE_CELLS = 1.6;
+const CLOSE_UP_LOOK_AHEAD_CELLS = 10;
 const TARGET_DAMPING = 3;
-const HEADING_DAMPING = 2;
+const FORWARD_DAMPING = 2;
 const CAMERA_DAMPING = 2.5;
 const LOOK_AT_DAMPING = 2.5;
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
+const DEPTH_AXIS = new THREE.Vector3(0, 0, 1);
+/** Above this the view is close enough to vertical that a world-up camera
+ * roll is undefined, so the up vector falls back to the Course heading. */
+const VERTICAL_VIEW_LIMIT = 0.999;
 
 export interface DecisiveCameraProps {
   readonly course: Course;
   readonly snapshot: RaceSnapshot | null;
   readonly mode?: CameraMode;
+}
+
+interface ChaseFraming {
+  readonly fov: number;
+  readonly trailCells: number;
+  readonly aboveCells: number;
+  readonly outwardCells: number;
+  readonly lookAheadCells: number;
+}
+
+function framingForMode(mode: CameraMode): ChaseFraming {
+  return mode === "close-up"
+    ? {
+        fov: CLOSE_UP_FOV,
+        trailCells: CLOSE_UP_TRAIL_CELLS,
+        aboveCells: CLOSE_UP_ABOVE_CELLS,
+        outwardCells: 0,
+        lookAheadCells: CLOSE_UP_LOOK_AHEAD_CELLS,
+      }
+    : {
+        fov: BROADCAST_FOV,
+        trailCells: BROADCAST_TRAIL_CELLS,
+        aboveCells: BROADCAST_ABOVE_CELLS,
+        outwardCells: BROADCAST_OUTWARD_CELLS,
+        lookAheadCells: BROADCAST_LOOK_AHEAD_CELLS,
+      };
 }
 
 function centerForBoard(board: BoardSpec): THREE.Vector3 {
@@ -54,9 +91,13 @@ export function DecisiveCamera({ course, snapshot, mode = "broadcast" }: Decisiv
   const lookAtRef = useRef(centerForBoard(board));
   const desiredPositionRef = useRef(centerForBoard(board));
   const desiredLookAtRef = useRef(centerForBoard(board));
-  const headingRef = useRef(-Math.PI / 2);
-  const desiredHeadingRef = useRef(-Math.PI / 2);
+  // A damped three-dimensional heading, not a planar angle. The angle form
+  // could only express directions in the Board's face, so a Course that
+  // turned through depth placed the camera off to one side of the marble.
   const forwardRef = useRef(new THREE.Vector3(0, -1, 0));
+  const desiredForwardRef = useRef(new THREE.Vector3(0, -1, 0));
+  const viewDirectionRef = useRef(new THREE.Vector3());
+  const cameraUpRef = useRef(new THREE.Vector3(0, 1, 0));
   const followingRef = useRef(false);
   const snapshotRef = useRef<RaceSnapshot | null>(null);
   const courseRef = useRef(course);
@@ -84,8 +125,8 @@ export function DecisiveCamera({ course, snapshot, mode = "broadcast" }: Decisiv
         followingRef.current = false;
       } else {
         desiredTargetRef.current.set(...marble.position);
-        desiredHeadingRef.current = Math.atan2(marble.forward[1], marble.forward[0]);
-        if (!followingRef.current) headingRef.current = desiredHeadingRef.current;
+        desiredForwardRef.current.set(...marble.forward).normalize();
+        if (!followingRef.current) forwardRef.current.copy(desiredForwardRef.current);
         followingRef.current = true;
       }
     }
@@ -94,35 +135,26 @@ export function DecisiveCamera({ course, snapshot, mode = "broadcast" }: Decisiv
       desiredTargetRef.current,
       frameDamping(TARGET_DAMPING, deltaSeconds),
     );
-    const fov = mode === "close-up" ? CLOSE_UP_FOV : BROADCAST_FOV;
-    const distance = cameraDistance(board, fov);
+    const framing = framingForMode(mode);
+    const { fov } = framing;
     const desiredPosition = desiredPositionRef.current.copy(targetRef.current);
     if (followingRef.current) {
-      const headingDamping = frameDamping(HEADING_DAMPING, deltaSeconds);
-      const headingDelta = Math.atan2(
-        Math.sin(desiredHeadingRef.current - headingRef.current),
-        Math.cos(desiredHeadingRef.current - headingRef.current),
-      );
-      headingRef.current += headingDelta * headingDamping;
-      const forwardX = Math.cos(headingRef.current);
-      const forwardY = Math.sin(headingRef.current);
-      forwardRef.current.set(forwardX, forwardY, 0);
-      const trailCells = mode === "close-up" ? CLOSE_UP_TRAIL_CELLS : CHASE_TRAIL_CELLS;
-      const outwardCells =
-        mode === "close-up" ? CLOSE_UP_OUTWARD_CELLS : CHASE_OUTWARD_CELLS;
-      const lookAheadCells =
-        mode === "close-up" ? CLOSE_UP_LOOK_AHEAD_CELLS : CHASE_LOOK_AHEAD_CELLS;
-      desiredPosition.x -= forwardX * board.cellPitch * trailCells;
-      desiredPosition.y -= forwardY * board.cellPitch * trailCells;
-      if (mode === "broadcast") {
-        desiredPosition.y += board.cellPitch * CHASE_ABOVE_CELLS;
-      }
-      desiredPosition.z += board.cellPitch * outwardCells;
+      forwardRef.current
+        .lerp(desiredForwardRef.current, frameDamping(FORWARD_DAMPING, deltaSeconds))
+        .normalize();
+      const forward = forwardRef.current;
+      // Behind the marble along the Course, then straight up. Both offsets
+      // are pure: nothing shifts the camera sideways in Close up, which is
+      // what makes it read as a view from the track rather than beside it.
+      desiredPosition
+        .addScaledVector(forward, -board.cellPitch * framing.trailCells)
+        .addScaledVector(WORLD_UP, board.cellPitch * framing.aboveCells);
+      desiredPosition.z += board.cellPitch * framing.outwardCells;
       desiredLookAtRef.current
         .copy(targetRef.current)
-        .addScaledVector(forwardRef.current, board.cellPitch * lookAheadCells);
+        .addScaledVector(forward, board.cellPitch * framing.lookAheadCells);
     } else {
-      desiredPosition.z += distance;
+      desiredPosition.z += cameraDistance(board, fov);
       desiredLookAtRef.current.copy(targetRef.current);
     }
     const desiredLookAt = desiredLookAtRef.current;
@@ -146,7 +178,22 @@ export function DecisiveCamera({ course, snapshot, mode = "broadcast" }: Decisiv
       camera.fov = fov;
       camera.updateProjectionMatrix();
     }
-    camera.up.set(0, 1, 0);
+    // World up everywhere except a near-vertical view, where up and the view
+    // direction are parallel and `lookAt` has no roll left to resolve. There
+    // the Course heading's horizontal part stands in, so a steep drop tips
+    // the frame instead of collapsing it.
+    const viewDirection = viewDirectionRef.current
+      .copy(lookAtRef.current)
+      .sub(camera.position);
+    const vertical =
+      viewDirection.lengthSq() > 0 &&
+      Math.abs(viewDirection.normalize().dot(WORLD_UP)) > VERTICAL_VIEW_LIMIT;
+    if (vertical) {
+      const fallback = cameraUpRef.current.set(forwardRef.current.x, 0, forwardRef.current.z);
+      camera.up.copy(fallback.lengthSq() > 0 ? fallback.normalize() : DEPTH_AXIS);
+    } else {
+      camera.up.copy(WORLD_UP);
+    }
     camera.lookAt(lookAtRef.current);
   });
 

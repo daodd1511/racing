@@ -127,20 +127,29 @@ function routeForward(
   );
   if (projection === null) return [0, -1, 0] as const;
 
+  // The full three-dimensional tangent, depth included. Dropping the z
+  // component used to be harmless while the camera only panned across the
+  // Board's face, but a chase camera places itself along -forward: on a
+  // hairpin connector, which swings through depth, a planar forward put the
+  // camera beside the marble instead of behind it.
   const sampleRadius = course.board.cellPitch * 4;
   const before = pointAtDistance(course.route, cumulative, projection.distance - sampleRadius);
   const after = pointAtDistance(course.route, cumulative, projection.distance + sampleRadius);
   let dx = after[0] - before[0];
   let dy = after[1] - before[1];
-  let length = Math.hypot(dx, dy);
+  let dz = after[2] - before[2];
+  let length = Math.hypot(dx, dy, dz);
   if (length <= EPSILON) {
     const start = course.route[projection.segmentIndex - 1];
     const end = course.route[projection.segmentIndex];
     dx = end[0] - start[0];
     dy = end[1] - start[1];
-    length = Math.hypot(dx, dy);
+    dz = end[2] - start[2];
+    length = Math.hypot(dx, dy, dz);
   }
-  return length <= EPSILON ? ([0, -1, 0] as const) : ([dx / length, dy / length, 0] as const);
+  return length <= EPSILON
+    ? ([0, -1, 0] as const)
+    : ([dx / length, dy / length, dz / length] as const);
 }
 
 /** Returns the decisive marble transform and the local forward Course direction. */

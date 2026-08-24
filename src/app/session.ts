@@ -76,7 +76,12 @@ function setupSession(roster: readonly string[], selectionMode: SelectionMode): 
 }
 
 function racingSession(request: RaceRequest, course: Course): RacingSession {
-  return Object.freeze({ kind: "racing", request: immutableRequest(request), course, snapshot: null });
+  return Object.freeze({
+    kind: "racing",
+    request: immutableRequest(request),
+    course,
+    snapshot: null,
+  });
 }
 
 function sameRace(session: RacingSession, seed: number): boolean {

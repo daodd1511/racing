@@ -57,7 +57,11 @@ export function BroadcastRace({
 }: BroadcastRaceProps) {
   const [latestSnapshot, setLatestSnapshot] = useState<RaceSnapshot | null>(null);
   const [marbleStyles] = useState(() => createMarbleStyles(request.roster.length));
-  const stagedMarbleTransforms = startingGridTransforms(course, request.seed, request.roster.length);
+  const stagedMarbleTransforms = startingGridTransforms(
+    course,
+    request.seed,
+    request.roster.length,
+  );
   const snapshot = externalSnapshot ?? latestSnapshot;
   const countdown = useRaceCountdown(request.seed, frozen);
   const raceStarted = frozen || countdown <= 0;

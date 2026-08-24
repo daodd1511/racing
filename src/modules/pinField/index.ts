@@ -194,11 +194,7 @@ function cuboidCorners(
  * channel. Physics uses a full cylinder centered on that plane; the rail
  * makes its hidden outer half unreachable while preserving a smooth contact
  * surface on the racing side. */
-function semicylinderShape(
-  radius: number,
-  halfHeight: number,
-  inwardDirection: -1 | 1,
-): Shape {
+function semicylinderShape(radius: number, halfHeight: number, inwardDirection: -1 | 1): Shape {
   const vertices: number[] = [0, -halfHeight, 0, 0, halfHeight, 0];
   const indices: number[] = [];
   const pushTriangle = (a: number, b: number, c: number) => {
@@ -315,12 +311,7 @@ function buildSpec(params: PinFieldParams): Spec {
   for (let row = 0; row < rowCount; row += 1) {
     const rowZ = LEAD_IN + row * rowPitch;
     const rowIsOffset = row % 2 === 1;
-    const offsets = postLateralOffsets(
-      rowIsOffset,
-      postSpacing,
-      postWidth,
-      SCALE.channelWidth,
-    );
+    const offsets = postLateralOffsets(rowIsOffset, postSpacing, postWidth, SCALE.channelWidth);
     offsets.forEach((lateralOffset, col) => {
       const localPoint = new ThreeVector3(
         lateralOffset,
@@ -365,9 +356,7 @@ function buildSpec(params: PinFieldParams): Spec {
       FLOOR_THICKNESS / 2 + postHeight / 2,
       rowZ - totalRun / 2,
     );
-    const bumperPosition = floorCenter
-      .clone()
-      .add(bumperLocalPoint.clone().applyQuaternion(pitch));
+    const bumperPosition = floorCenter.clone().add(bumperLocalPoint.clone().applyQuaternion(pitch));
     const bumperId = `rail-bumper-${row}`;
     const bumperInwardDirection: -1 | 1 = bumperSide < 0 ? 1 : -1;
     const bumperColliderShape = {

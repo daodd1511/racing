@@ -170,13 +170,14 @@ function KinematicCollider({
   const bodyRef = useRef<RapierRigidBody>(null);
 
   useEffect(() => {
+    const bodyMap = bodies.current;
     const body = bodyRef.current;
     if (body === null) {
       return;
     }
-    bodies.current.set(collider.id, body);
+    bodyMap.set(collider.id, body);
     return () => {
-      bodies.current.delete(collider.id);
+      bodyMap.delete(collider.id);
     };
   }, [bodies, collider.id]);
 
@@ -203,13 +204,14 @@ function KinematicVisualMesh({
   const meshRef = useRef<THREE.Mesh>(null);
 
   useEffect(() => {
+    const meshMap = meshes.current;
     const mesh = meshRef.current;
     if (mesh === null) {
       return;
     }
-    meshes.current.set(visual.id, mesh);
+    meshMap.set(visual.id, mesh);
     return () => {
-      meshes.current.delete(visual.id);
+      meshMap.delete(visual.id);
     };
   }, [meshes, visual.id]);
 

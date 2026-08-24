@@ -121,10 +121,7 @@ describe("kinematic renderer and Validator agreement", () => {
 
   it("applies Start and connector transforms identically at fixed Course steps", () => {
     const course = assembleCourse(29);
-    const builtWorld = buildWorld([
-      course.start,
-      ...course.connectors.map(({ spec }) => spec),
-    ]);
+    const builtWorld = buildWorld([course.start, ...course.connectors.map(({ spec }) => spec)]);
     for (const stepCount of [0, 1, 6, 30]) {
       const tSeconds = stepCount * KINEMATIC_FIXED_STEP_SECONDS;
       const liveTransforms = [

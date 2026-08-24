@@ -49,7 +49,7 @@ interface RouteFrame {
 
 function routeFrames(route: readonly Vector3[]): readonly RouteFrame[] {
   let previousLateral: Vector3 | null = null;
-  return route.map((point, index) => {
+  return route.map((_, index) => {
     const before = route[Math.max(0, index - 1)];
     const after = route[Math.min(route.length - 1, index + 1)];
     const tangent = normalize(subtract(after, before));

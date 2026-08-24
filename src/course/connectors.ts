@@ -119,8 +119,7 @@ function routePoints(request: ConnectorRequest): readonly Vector3[] {
     const previous = planarRoute[index - 1];
     const current = planarRoute[index];
     planarDistances.push(
-      planarDistances[index - 1] +
-        Math.hypot(current[0] - previous[0], current[2] - previous[2]),
+      planarDistances[index - 1] + Math.hypot(current[0] - previous[0], current[2] - previous[2]),
     );
   }
   const planarLength = planarDistances.at(-1)!;
@@ -176,17 +175,9 @@ function smoothOpenChannelCollider(
   endOverlap: number = JOINT_OVERLAP,
 ): ChannelCollider {
   const floorRoute: readonly Vector3[] = [
-    vector(
-      new ThreeVector3(...route[0]).sub(
-        direction(start).multiplyScalar(JOINT_OVERLAP),
-      ),
-    ),
+    vector(new ThreeVector3(...route[0]).sub(direction(start).multiplyScalar(JOINT_OVERLAP))),
     ...route.map((point): Vector3 => [...point]),
-    vector(
-      new ThreeVector3(...route.at(-1)!).add(
-        direction(end).multiplyScalar(endOverlap),
-      ),
-    ),
+    vector(new ThreeVector3(...route.at(-1)!).add(direction(end).multiplyScalar(endOverlap))),
   ];
 
   const vertices: number[] = [];
@@ -206,9 +197,7 @@ function smoothOpenChannelCollider(
               .sub(tangent.clone().multiplyScalar(worldUp.dot(tangent)))
               .normalize();
     const lateral = up.clone().cross(tangent).normalize();
-    const center = new ThreeVector3(...point).add(
-      up.clone().multiplyScalar(FLOOR_THICKNESS / 2),
-    );
+    const center = new ThreeVector3(...point).add(up.clone().multiplyScalar(FLOOR_THICKNESS / 2));
     const floorLeft = center.clone().sub(lateral.clone().multiplyScalar(SCALE.channelWidth / 2));
     const floorRight = center.clone().add(lateral.multiplyScalar(SCALE.channelWidth / 2));
     const wallOffset = up.clone().multiplyScalar(railHeight);
@@ -229,8 +218,7 @@ function smoothOpenChannelCollider(
     addQuad(current + 1, current + 3, next + 1, next + 3);
     addQuad(current + 2, current, next + 2, next);
   }
-  const coordinates = (axis: 0 | 1 | 2) =>
-    vertices.filter((_, index) => index % 3 === axis);
+  const coordinates = (axis: 0 | 1 | 2) => vertices.filter((_, index) => index % 3 === axis);
   return {
     collider: {
       id,

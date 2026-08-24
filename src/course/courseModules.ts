@@ -8,12 +8,7 @@ import { SCALE } from "../race/scale";
 // same gentle downhill grade instead of inheriting its Showcase drop.
 export const COURSE_GRADE = 0.12;
 
-const COURSE_MODULE_IDS = new Set([
-  "chute",
-  "pin-field",
-  "whoops",
-  "staircase",
-]);
+const COURSE_MODULE_IDS = new Set(["chute", "pin-field", "whoops", "staircase"]);
 
 export const COURSE_MODULES: readonly RegisteredModule[] = ALL_MODULES.filter(({ id }) =>
   COURSE_MODULE_IDS.has(id),

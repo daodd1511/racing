@@ -44,9 +44,9 @@ describe("assembleCourse", () => {
         course.modules.filter(({ role }) => role === "accel").map(({ moduleId }) => moduleId),
       ).toEqual([selection.accel, selection.accel, selection.accel]);
       expect(course.checkpoints.map(({ routeDistance }) => routeDistance)).toEqual(
-        [...course.checkpoints.map(({ routeDistance }) => routeDistance)].sort(
-          (left, right) => left - right,
-        ),
+        course.checkpoints
+          .map(({ routeDistance }) => routeDistance)
+          .sort((left, right) => left - right),
       );
       for (const spec of [
         course.start,

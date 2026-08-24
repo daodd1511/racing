@@ -2,12 +2,7 @@ import { ALL_MODULES } from "../modules/registry";
 import type { Role, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
-import {
-  ARC,
-  COURSE_OBSTACLE_INVENTORY,
-  enumerateRoleSelections,
-  type RoleSelection,
-} from "./arc";
+import { ARC, COURSE_OBSTACLE_INVENTORY, enumerateRoleSelections, type RoleSelection } from "./arc";
 import { CONNECTOR_EDGE_CLEARANCE, HAIRPIN_REACH_PER_DROP } from "./connectors";
 import { COURSE_MODULES, courseModulesByRole, courseParamValues } from "./courseModules";
 import { buildFinishSpec, buildStartSpec } from "./startFinish";
@@ -59,10 +54,7 @@ function projectedDefaultSize(moduleId: string): ProjectedSize {
     throw new Error(`Unknown Module ${moduleId}`);
   }
 
-  const size = projectedSpecSize(
-    module.buildSpec(courseParamValues(module)),
-    module.id,
-  );
+  const size = projectedSpecSize(module.buildSpec(courseParamValues(module)), module.id);
   projectedSizeCache.set(moduleId, size);
   return size;
 }

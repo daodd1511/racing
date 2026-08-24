@@ -113,7 +113,7 @@ function railContactShape(
   railHeight: number,
   halfLength: number,
 ): Shape {
-  const x = side * width / 2;
+  const x = (side * width) / 2;
   return {
     kind: "trimesh",
     vertices: [

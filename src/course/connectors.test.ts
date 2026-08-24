@@ -22,7 +22,9 @@ describe("buildCourseConnector", () => {
 
     expect(connector.spec.footprint.route).toHaveLength(4);
     expect(connector.spec.colliders).toHaveLength(11);
-    expect(connector.spec.colliders.filter(({ id }) => id.includes("-entrance-rail-"))).toHaveLength(2);
+    expect(
+      connector.spec.colliders.filter(({ id }) => id.includes("-entrance-rail-")),
+    ).toHaveLength(2);
     expect(connector.spec.footprint.entry.position).toEqual([0, 0, 0]);
     expect(connector.spec.footprint.exit.position).toEqual([0.4, -0.05, 0]);
   });

@@ -33,7 +33,7 @@ Fresh review: required — validation and threshold code defines the spec's test
 - [x] (amended 2026-08-25) Extend `scripts/validate-modules.ts` and `src/validator/validateModulesCli.test.ts` with invalid-legacy before/corrected-after comparison, seed-level distributions, deterministic bootstrap 95% mean intervals, and explicit exclusion counts required by the calibration report.
 - [x] (amended 2026-08-25) Add matched-control stalls and Dwell evidence to `FeedProfileValidation` in `src/validator/validateModule.ts`, the calibration table in `scripts/validate-modules.ts`, and their focused tests so the proposed safety ratio is evidence-backed.
 - [x] Run `npm run validate:modules -- --matrix full --report specs/module-candidate-expansion/reports/calibration-v1.md`; record distributions, confidence evidence, exclusions, compute cost, Rapier version, proposed Accel/Scatter/Shuffle/Sort/Dwell/cohort thresholds, the calibrated Break table identity ratio, and before/after evidence for Chute, Pin field, Whoops, and Staircase without changing their Roles or geometry.
-- [ ] After explicit user approval of the complete `specs/module-candidate-expansion/reports/calibration-v1.md`, freeze the approved `RoleThresholdTable` as `ROLE_THRESHOLDS` in `src/validator/roleThresholds.ts`, record its version in the report, and stop rather than advancing Phase 2 without that approval.
+- [x] After explicit user approval of the complete `specs/module-candidate-expansion/reports/calibration-v1.md`, freeze the approved `RoleThresholdTable` as `ROLE_THRESHOLDS` in `src/validator/roleThresholds.ts`, record its version in the report, and stop rather than advancing Phase 2 without that approval.
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

@@ -1,22 +1,22 @@
 # Module calibration report
 
-Matrix: `full`. Threshold table version: proposed `v1` (unfrozen pending explicit approval).
+Matrix: `full`. Threshold table version: `v1` (approved and frozen on 2026-08-25).
 Rapier version: `0.19.2`.
 Compute seconds: 14.683.
 
 ## Calibration decision
 
-This report proposes the complete `v1` threshold table below. It does not approve or freeze
-it. Chute, Whoops, and Staircase fail their claimed Role under the corrected evidence; Pin
-field passes wide-entry Scatter. Those failures are findings, not reasons to lower a gate.
-Phase 2 must remediate them under the plan's correction limits after the user explicitly
-approves this report and table.
+The user approved the complete `v1` threshold table below on 2026-08-25. It is frozen as
+`ROLE_THRESHOLDS` in `src/validator/roleThresholds.ts`. Chute, Whoops, and Staircase fail
+their claimed Role under the corrected evidence; Pin field passes wide-entry Scatter. Those
+failures are findings, not reasons to lower a gate. Phase 2 must remediate them under the
+plan's correction limits.
 
 All behavioral gates are conjunctive. Improvement in one statistic never offsets failure in
 another. Safety is also conjunctive: any stall or 15-second timeout fails the configuration,
 even when enough completions remain to calculate diagnostic behavior statistics.
 
-## Proposed Role threshold table — `v1`
+## Approved Role threshold table — `v1`
 
 | Contract | Proposed gate | Calibration basis |
 |---|---|---|

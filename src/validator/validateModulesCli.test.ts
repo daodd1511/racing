@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  UNFROZEN_THRESHOLD_VERSION,
   parseValidateModulesArgs,
   renderCalibrationReport,
   type ConfigurationValidation,
 } from "../../scripts/validate-modules";
+import { ROLE_THRESHOLDS } from "./roleThresholds";
 import type { ModuleValidationReport } from "./validateModule";
 
 describe("validate-modules arguments", () => {
@@ -104,7 +104,7 @@ describe("calibration report", () => {
     };
     const markdown = renderCalibrationReport("pr", [validation]);
 
-    expect(markdown).toContain(`Threshold table version: \`${UNFROZEN_THRESHOLD_VERSION}\``);
+    expect(markdown).toContain(`Threshold table version: \`${ROLE_THRESHOLDS.version}\``);
     expect(markdown).toContain("Rapier version: `0.19.2`");
     expect(markdown).toContain("Parameters: `{");
     expect(markdown).toContain("Legacy pre-correction comparison");

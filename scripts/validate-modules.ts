@@ -11,8 +11,7 @@ import {
   type ModuleValidationReport,
   type ValidationMatrix,
 } from "../src/validator/validateModule";
-
-export const UNFROZEN_THRESHOLD_VERSION = "unfrozen";
+import { ROLE_THRESHOLDS } from "../src/validator/roleThresholds";
 
 export interface ValidateModulesCliOptions {
   readonly matrix: ValidationMatrix;
@@ -145,7 +144,7 @@ export function renderCalibrationReport(
   const lines = [
     "# Module calibration report",
     "",
-    `Matrix: \`${matrix}\`. Threshold table version: \`${UNFROZEN_THRESHOLD_VERSION}\`.`,
+    `Matrix: \`${matrix}\`. Threshold table version: \`${ROLE_THRESHOLDS.version}\`.`,
     `Rapier version: \`${rapierVersions.join(", ")}\`.`,
     `Compute seconds: ${validations.reduce((total, value) => total + value.computeSeconds, 0).toFixed(3)}.`,
     "",
@@ -201,7 +200,7 @@ export async function runValidateModules(
   options: ValidateModulesCliOptions,
 ): Promise<readonly ConfigurationValidation[]> {
   if (options.verifyThresholds) {
-    throw new Error("Role thresholds are not frozen; complete the calibration approval checkpoint");
+    throw new Error("Role threshold evaluation requires the existing Module remediation phase");
   }
   const validations: ConfigurationValidation[] = [];
   for (const module of modulesFor(options.moduleId)) {

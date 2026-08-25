@@ -20,8 +20,9 @@ import {
   type KinematicStep,
   type ModuleAnchor,
 } from "../kinematics";
-import type { ColliderSpec, KinematicTransform, Shape, Spec, VisualSpec } from "../types";
+import type { ColliderSpec, KinematicTransform, Spec, VisualSpec } from "../types";
 import { applyStep } from "../../validator/applyStep";
+import { geometryForShape } from "./visualGeometry";
 
 const ORIGIN: [number, number, number] = [0, 0, 0];
 const IDENTITY_ROTATION: [number, number, number, number] = [0, 0, 0, 1];
@@ -95,28 +96,6 @@ function ColliderPrimitive({
           friction={material.friction}
         />
       );
-  }
-}
-
-function geometryForShape(shape: Shape): THREE.BufferGeometry {
-  switch (shape.kind) {
-    case "cuboid":
-      return new THREE.BoxGeometry(
-        shape.halfExtents[0] * 2,
-        shape.halfExtents[1] * 2,
-        shape.halfExtents[2] * 2,
-      );
-    case "cylinder":
-      return new THREE.CylinderGeometry(shape.radius, shape.radius, shape.halfHeight * 2, 24);
-    case "ball":
-      return new THREE.SphereGeometry(shape.radius, 24, 16);
-    case "trimesh": {
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.Float32BufferAttribute(shape.vertices, 3));
-      geometry.setIndex(shape.indices as number[]);
-      geometry.computeVertexNormals();
-      return geometry;
-    }
   }
 }
 

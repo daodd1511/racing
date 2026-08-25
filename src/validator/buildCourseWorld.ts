@@ -102,6 +102,7 @@ export interface BuiltCourseWorld {
 export function buildCourseWorld(
   course: Course,
   assignments: readonly StartAssignment[],
+  collectContactEvents = true,
 ): BuiltCourseWorld {
   if (
     assignments.length < 1 ||
@@ -145,7 +146,8 @@ export function buildCourseWorld(
         .setFriction(SCALE.defaultFriction)
         .setDensity(2.4)
         .setActiveEvents(
-          RAPIER.ActiveEvents.COLLISION_EVENTS | RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS,
+          RAPIER.ActiveEvents.COLLISION_EVENTS |
+            (collectContactEvents ? RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS : 0),
         )
         .setContactForceEventThreshold(0),
       body,

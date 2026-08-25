@@ -37,10 +37,6 @@ export function LiveRace({
     onSnapshot?.(snapshot);
   }
 
-  function handleContact(event: RaceContactEvent): void {
-    onContact?.(event);
-  }
-
   function handleOutcome(outcome: RaceOutcome): void {
     setState((previous) => Object.freeze({ ...previous, outcome }));
     onOutcome?.(outcome);
@@ -52,7 +48,7 @@ export function LiveRace({
         key={`${request.seed}:${request.selectionMode}:${request.roster.join("\u0000")}`}
         course={course}
         request={request}
-        onContact={handleContact}
+        onContact={onContact}
         onOutcome={handleOutcome}
         onSnapshot={handleSnapshot}
       />

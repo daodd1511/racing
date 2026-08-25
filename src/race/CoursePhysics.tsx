@@ -20,13 +20,13 @@ export interface CoursePhysicsProps {
   readonly course: Course;
   readonly request: RaceRequest;
   readonly onSnapshot: (snapshot: RaceSnapshot) => void;
-  readonly onContact: (event: RaceContactEvent) => void;
+  readonly onContact?: (event: RaceContactEvent) => void;
   readonly onOutcome: (outcome: RaceOutcome) => void;
 }
 
 interface CallbackRefs {
   readonly onSnapshot: (snapshot: RaceSnapshot) => void;
-  readonly onContact: (event: RaceContactEvent) => void;
+  readonly onContact?: (event: RaceContactEvent) => void;
   readonly onOutcome: (outcome: RaceOutcome) => void;
 }
 
@@ -43,6 +43,7 @@ export function CoursePhysics({
   const runtimeRef = useRef<CourseRaceRuntime | null>(null);
   const backlogRef = useRef(INITIAL_FIXED_STEP_BACKLOG);
   const emittedOutcomeRef = useRef<RaceOutcome | null>(null);
+  const collectContactEvents = onContact !== undefined;
   const callbacksRef = useRef<CallbackRefs>({ onSnapshot, onContact, onOutcome });
   callbacksRef.current = { onSnapshot, onContact, onOutcome };
 
@@ -50,7 +51,7 @@ export function CoursePhysics({
     let active = true;
     void initializeRapier().then(() => {
       if (!active) return;
-      const runtime = new CourseRaceRuntime(course, request);
+      const runtime = new CourseRaceRuntime(course, request, { collectContactEvents });
       runtimeRef.current = runtime;
       backlogRef.current = INITIAL_FIXED_STEP_BACKLOG;
       emittedOutcomeRef.current = null;
@@ -61,7 +62,7 @@ export function CoursePhysics({
       runtimeRef.current?.dispose();
       runtimeRef.current = null;
     };
-  }, [course, request]);
+  }, [collectContactEvents, course, request]);
 
   useFrame((_, deltaSeconds) => {
     const runtime = runtimeRef.current;
@@ -78,7 +79,7 @@ export function CoursePhysics({
     for (const elapsedSeconds of advance.stepTimes) {
       const step = runtime.step(elapsedSeconds);
       latestSnapshot = step.snapshot;
-      step.contactEvents.forEach(callbacksRef.current.onContact);
+      step.contactEvents.forEach((event) => callbacksRef.current.onContact?.(event));
       if (step.outcome && emittedOutcomeRef.current === null) {
         emittedOutcomeRef.current = step.outcome;
         terminalOutcome = step.outcome;

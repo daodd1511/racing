@@ -109,6 +109,10 @@ export interface CourseRaceStep {
   readonly outcome: RaceOutcome | null;
 }
 
+export interface CourseRaceRuntimeOptions {
+  readonly collectContactEvents?: boolean;
+}
+
 /** Shared fixed-step live runtime. `RAPIER.init()` must complete before constructing it. */
 export class CourseRaceRuntime {
   readonly #course: Course;
@@ -118,14 +122,16 @@ export class CourseRaceRuntime {
   };
   #progress: RaceProgressState;
   #previousPositions: Map<number, Vector3>;
+  readonly #collectContactEvents: boolean;
   #finished = new Set<number>();
   #disposed = false;
 
-  constructor(course: Course, request: RaceRequest) {
+  constructor(course: Course, request: RaceRequest, options: CourseRaceRuntimeOptions = {}) {
     const assignments = assignStartPositions(request.seed, request.roster.length);
+    this.#collectContactEvents = options.collectContactEvents ?? true;
     this.#course = course;
     this.#progress = createRaceProgress(request, course);
-    this.#built = buildCourseWorld(course, assignments);
+    this.#built = buildCourseWorld(course, assignments, this.#collectContactEvents);
     const finishSensor = course.finish.colliders.find(
       (
         collider,
@@ -170,7 +176,9 @@ export class CourseRaceRuntime {
     applyStep(stepCourse(this.#course, elapsedSeconds), this.#built.kinematicBodies);
     this.#built.world.step(this.#built.eventQueue);
     this.#processSensorEvents(elapsedSeconds);
-    const contactEvents = this.#drainContactEvents(elapsedSeconds);
+    const contactEvents = this.#collectContactEvents
+      ? this.#drainContactEvents(elapsedSeconds)
+      : Object.freeze([]);
     for (const [marbleIndex, body] of this.#built.marbleBodies) {
       const position = body.translation();
       const current: Vector3 = [position.x, position.y, position.z];

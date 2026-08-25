@@ -50,4 +50,17 @@ describe("buildCourseWorld", () => {
       /assignments/,
     );
   });
+
+  it("does not subscribe marbles to contact-force events when collection is disabled", () => {
+    const built = buildCourseWorld(assembleCourse(17), assignStartPositions(29, 2), false);
+
+    for (const handle of built.marbleIndicesByColliderHandle.keys()) {
+      expect(built.world.getCollider(handle)?.activeEvents()).toBe(
+        RAPIER.ActiveEvents.COLLISION_EVENTS,
+      );
+    }
+
+    built.eventQueue.free();
+    built.world.free();
+  });
 });

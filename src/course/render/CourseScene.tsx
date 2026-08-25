@@ -5,6 +5,7 @@ import * as THREE from "three";
 
 import type { Course } from "../types";
 import { SpecVisuals } from "../../modules/render/ModuleColliders";
+import { StaticSpecVisuals } from "../../modules/render/StaticSpecVisuals";
 import { stepCourse } from "../stepCourse";
 import { createMarbleStyles, type MarbleStyle } from "../../render/marbleStyles";
 import { marbleStripeTexture } from "../../render/marbleSkin";
@@ -57,9 +58,7 @@ const StaticCourse = memo(function StaticCourse({ course }: { readonly course: C
   return (
     <>
       <Board board={course.board} />
-      {visibleSpecs.map(({ id, spec }) => (
-        <SpecVisuals key={id} spec={spec} />
-      ))}
+      <StaticSpecVisuals specs={visibleSpecs.map(({ spec }) => spec)} />
     </>
   );
 });

@@ -26,11 +26,16 @@ vi.mock("@react-three/drei", () => ({
 
 vi.mock("../../modules/render/ModuleColliders", () => ({
   SpecVisuals({ transforms }: { readonly transforms?: readonly unknown[] }) {
-    if (transforms === undefined) {
-      renderCounts.staticSpecs += 1;
-    } else {
+    if (transforms !== undefined) {
       renderCounts.movingSpecs += 1;
     }
+    return null;
+  },
+}));
+
+vi.mock("../../modules/render/StaticSpecVisuals", () => ({
+  StaticSpecVisuals() {
+    renderCounts.staticSpecs += 1;
     return null;
   },
 }));

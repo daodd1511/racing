@@ -92,7 +92,7 @@ export function BroadcastRace({
   ) : raceStarted ? (
     <LiveRace
       course={course}
-      onContact={handleContact}
+      onContact={onContact}
       onOutcome={handleOutcome}
       onSnapshot={handleSnapshot}
       request={request}
@@ -142,10 +142,6 @@ export function BroadcastRace({
       telemetrySnapshotRef.current = nextSnapshot;
       setLatestSnapshot(nextSnapshot);
     }
-  }
-
-  function handleContact(event: RaceContactEvent): void {
-    onContact?.(event);
   }
 
   function handleOutcome(outcome: RaceOutcome): void {

@@ -18,6 +18,12 @@ export interface RaceProgressState {
   readonly outcome: RaceOutcome | null;
 }
 
+export interface MarbleRouteProjection {
+  readonly routeDistance: number;
+  readonly distanceSquared: number;
+  readonly point: Vector3;
+}
+
 function assertMarbleIndex(state: RaceProgressState, marbleIndex: number): void {
   if (
     !Number.isSafeInteger(marbleIndex) ||
@@ -63,10 +69,11 @@ function projectOntoRoute(
   route: readonly Vector3[],
   position: Vector3,
   interval: readonly [number, number],
-): number {
+): MarbleRouteProjection {
   let cumulative = 0;
   let closestDistanceSquared = Infinity;
   let closestRouteDistance = interval[0];
+  let closestPoint: Vector3 = route[0] ?? [0, 0, 0];
   for (let index = 1; index < route.length; index += 1) {
     const start = route[index - 1];
     const end = route[index];
@@ -93,9 +100,23 @@ function projectOntoRoute(
     if (distanceSquared < closestDistanceSquared) {
       closestDistanceSquared = distanceSquared;
       closestRouteDistance = segmentStart + segmentLength * t;
+      closestPoint = [start[0] + delta[0] * t, start[1] + delta[1] * t, start[2] + delta[2] * t];
     }
   }
-  return closestRouteDistance;
+  return Object.freeze({
+    routeDistance: closestRouteDistance,
+    distanceSquared: closestDistanceSquared,
+    point: closestPoint,
+  });
+}
+
+export function projectMarbleOntoCourse(
+  state: RaceProgressState,
+  marbleIndex: number,
+  position: Vector3,
+): MarbleRouteProjection {
+  assertMarbleIndex(state, marbleIndex);
+  return projectOntoRoute(state.course.route, position, projectionInterval(state, marbleIndex));
 }
 
 function rankedIndices(
@@ -174,18 +195,27 @@ export function recordMarbleProgress(
   position: Vector3,
   elapsedSeconds: number,
 ): RaceProgressState {
+  return recordProjectedMarbleProgress(
+    state,
+    marbleIndex,
+    projectMarbleOntoCourse(state, marbleIndex, position),
+    elapsedSeconds,
+  );
+}
+
+export function recordProjectedMarbleProgress(
+  state: RaceProgressState,
+  marbleIndex: number,
+  projection: MarbleRouteProjection,
+  elapsedSeconds: number,
+): RaceProgressState {
   assertMarbleIndex(state, marbleIndex);
   assertElapsed(state, elapsedSeconds);
   if (state.outcome || state.finishOrder.includes(marbleIndex)) {
     return state;
   }
-  const projected = projectOntoRoute(
-    state.course.route,
-    position,
-    projectionInterval(state, marbleIndex),
-  );
   const routeDistances = [...state.routeDistances];
-  routeDistances[marbleIndex] = Math.max(routeDistances[marbleIndex], projected);
+  routeDistances[marbleIndex] = Math.max(routeDistances[marbleIndex], projection.routeDistance);
   return immutableState({
     ...state,
     elapsedSeconds,

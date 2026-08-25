@@ -6,6 +6,7 @@ import type { RaceRequest } from "./liveTypes";
 import {
   advanceWatchdog,
   createRaceProgress,
+  projectMarbleOntoCourse,
   recordCheckpoint,
   recordFinish,
   recordMarbleProgress,
@@ -48,6 +49,27 @@ describe("Race progress", () => {
     expect(afterCheckpoint.routeDistances[0]).toBeLessThanOrEqual(
       COURSE.checkpoints[1].routeDistance,
     );
+  });
+
+  it("reports the marble's distance and closest point on its active route interval", () => {
+    const state = createRaceProgress(request("first"), COURSE);
+    const routeStart = COURSE.route[0];
+    const tangent = COURSE.entry.tangent;
+    const up = COURSE.entry.up;
+    const lateral = [
+      up[1] * tangent[2] - up[2] * tangent[1],
+      up[2] * tangent[0] - up[0] * tangent[2],
+      up[0] * tangent[1] - up[1] * tangent[0],
+    ] as const;
+    const projection = projectMarbleOntoCourse(state, 0, [
+      routeStart[0] + lateral[0] * 0.1,
+      routeStart[1] + lateral[1] * 0.1,
+      routeStart[2] + lateral[2] * 0.1,
+    ]);
+
+    expect(projection.routeDistance).toBe(0);
+    expect(projection.distanceSquared).toBeCloseTo(0.01);
+    expect(projection.point).toEqual(routeStart);
   });
 
   it("completes first with partial-progress ranking and freezes one outcome", () => {

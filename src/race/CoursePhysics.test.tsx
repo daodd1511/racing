@@ -76,6 +76,7 @@ vi.mock("./CourseRaceRuntime", () => ({
       return Object.freeze({
         snapshot: runtime.terminalSnapshot,
         contactEvents: Object.freeze([]),
+        recoveredMarbleIndices: Object.freeze([]),
         outcome: runtime.outcome,
       });
     }

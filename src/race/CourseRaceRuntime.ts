@@ -10,14 +10,38 @@ import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from ".
 import {
   advanceWatchdog,
   createRaceProgress,
+  projectMarbleOntoCourse,
   recordCheckpoint,
   recordFinish,
-  recordMarbleProgress,
+  recordProjectedMarbleProgress,
+  type MarbleRouteProjection,
   type RaceProgressState,
 } from "./progress";
 import { SCALE } from "./scale";
 import { assignStartPositions } from "./startAssignment";
-import type { Vector3 } from "./types";
+import type { Quaternion, Vector3 } from "./types";
+
+// A safe transform keeps the marble center inside both rails. Recovery waits
+// two radii beyond the rail line so ordinary wall contacts and short hops do
+// not teleport a marble that remains contained by the Course.
+const LAST_SAFE_CORRIDOR_RADIUS = SCALE.channelWidth / 2 - SCALE.marbleRadius;
+const OFF_TRACK_RECOVERY_RADIUS = SCALE.channelWidth / 2 + SCALE.marbleRadius * 2;
+const BELOW_TRACK_RECOVERY_DISTANCE = SCALE.marbleRadius * 2;
+// Lift the restored transform clear of its previous contact surface before
+// Rapier resumes gravity on the next fixed step.
+const RESPAWN_CLEARANCE = SCALE.marbleRadius;
+
+interface SafeMarbleTransform {
+  readonly position: Vector3;
+  readonly rotation: Quaternion;
+  readonly projection: MarbleRouteProjection;
+}
+
+interface MarbleObservation {
+  readonly position: Vector3;
+  readonly projection: MarbleRouteProjection;
+  readonly recovered: boolean;
+}
 
 function dotVelocity(body: RAPIER.RigidBody, tangent: readonly number[]): number {
   const velocity = body.linvel();
@@ -106,6 +130,7 @@ function snapshot(built: BuiltCourseWorld, progress: RaceProgressState): RaceSna
 export interface CourseRaceStep {
   readonly snapshot: RaceSnapshot;
   readonly contactEvents: readonly RaceContactEvent[];
+  readonly recoveredMarbleIndices: readonly number[];
   readonly outcome: RaceOutcome | null;
 }
 
@@ -122,6 +147,7 @@ export class CourseRaceRuntime {
   };
   #progress: RaceProgressState;
   #previousPositions: Map<number, Vector3>;
+  #lastSafeTransforms: Map<number, SafeMarbleTransform>;
   readonly #collectContactEvents: boolean;
   #finished = new Set<number>();
   #disposed = false;
@@ -150,6 +176,21 @@ export class CourseRaceRuntime {
         return [marbleIndex, [position.x, position.y, position.z] as Vector3] as const;
       }),
     );
+    this.#lastSafeTransforms = new Map(
+      [...this.#built.marbleBodies].map(([marbleIndex, body]) => {
+        const position = body.translation();
+        const rotation = body.rotation();
+        const positionTuple: Vector3 = [position.x, position.y, position.z];
+        return [
+          marbleIndex,
+          Object.freeze({
+            position: positionTuple,
+            rotation: [rotation.x, rotation.y, rotation.z, rotation.w] as const,
+            projection: projectMarbleOntoCourse(this.#progress, marbleIndex, positionTuple),
+          }),
+        ] as const;
+      }),
+    );
   }
 
   get currentSnapshot(): RaceSnapshot {
@@ -169,22 +210,34 @@ export class CourseRaceRuntime {
       return Object.freeze({
         snapshot: this.currentSnapshot,
         contactEvents: Object.freeze([]),
+        recoveredMarbleIndices: Object.freeze([]),
         outcome: this.#progress.outcome,
       });
     }
 
     applyStep(stepCourse(this.#course, elapsedSeconds), this.#built.kinematicBodies);
     this.#built.world.step(this.#built.eventQueue);
-    this.#processSensorEvents(elapsedSeconds);
+    const observations = this.#recoverOffTrackMarbles();
+    const recoveredMarbleIndices = new Set<number>();
+    for (const [marbleIndex, observation] of observations) {
+      if (observation.recovered) recoveredMarbleIndices.add(marbleIndex);
+    }
+    this.#processSensorEvents(elapsedSeconds, recoveredMarbleIndices);
     const contactEvents = this.#collectContactEvents
-      ? this.#drainContactEvents(elapsedSeconds)
+      ? this.#drainContactEvents(elapsedSeconds, recoveredMarbleIndices)
       : Object.freeze([]);
-    for (const [marbleIndex, body] of this.#built.marbleBodies) {
-      const position = body.translation();
-      const current: Vector3 = [position.x, position.y, position.z];
-      const previous = this.#previousPositions.get(marbleIndex)!;
-      this.#progress = recordMarbleProgress(this.#progress, marbleIndex, current, elapsedSeconds);
+    for (const [marbleIndex] of this.#built.marbleBodies) {
+      const observation = observations.get(marbleIndex)!;
+      const current = observation.position;
+      const previous = observation.recovered ? current : this.#previousPositions.get(marbleIndex)!;
+      this.#progress = recordProjectedMarbleProgress(
+        this.#progress,
+        marbleIndex,
+        observation.projection,
+        elapsedSeconds,
+      );
       if (
+        !observation.recovered &&
         this.#progress.outcome === null &&
         !this.#finished.has(marbleIndex) &&
         sweptCuboidCrossing(previous, current, this.#finishSensor)
@@ -197,6 +250,7 @@ export class CourseRaceRuntime {
     return Object.freeze({
       snapshot: this.currentSnapshot,
       contactEvents,
+      recoveredMarbleIndices: Object.freeze([...recoveredMarbleIndices]),
       outcome: this.#progress.outcome,
     });
   }
@@ -208,11 +262,63 @@ export class CourseRaceRuntime {
     this.#built.world.free();
   }
 
-  #processSensorEvents(elapsedSeconds: number): void {
+  #recoverOffTrackMarbles(): ReadonlyMap<number, MarbleObservation> {
+    const observations = new Map<number, MarbleObservation>();
+    const recoveryDistanceSquared = OFF_TRACK_RECOVERY_RADIUS ** 2;
+    const safeDistanceSquared = LAST_SAFE_CORRIDOR_RADIUS ** 2;
+
+    for (const [marbleIndex, body] of this.#built.marbleBodies) {
+      const translation = body.translation();
+      let position: Vector3 = [translation.x, translation.y, translation.z];
+      let projection = projectMarbleOntoCourse(this.#progress, marbleIndex, position);
+      const heightAboveRoute = position[1] - projection.point[1];
+      const recovered =
+        projection.distanceSquared > recoveryDistanceSquared ||
+        heightAboveRoute < -BELOW_TRACK_RECOVERY_DISTANCE;
+
+      if (recovered) {
+        const safe = this.#lastSafeTransforms.get(marbleIndex)!;
+        position = [safe.position[0], safe.position[1] + RESPAWN_CLEARANCE, safe.position[2]];
+        projection = safe.projection;
+        body.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
+        body.setRotation(
+          {
+            x: safe.rotation[0],
+            y: safe.rotation[1],
+            z: safe.rotation[2],
+            w: safe.rotation[3],
+          },
+          true,
+        );
+        body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      } else if (
+        projection.distanceSquared <= safeDistanceSquared &&
+        heightAboveRoute >= SCALE.marbleRadius / 2
+      ) {
+        const rotation = body.rotation();
+        this.#lastSafeTransforms.set(
+          marbleIndex,
+          Object.freeze({
+            position,
+            rotation: [rotation.x, rotation.y, rotation.z, rotation.w] as const,
+            projection,
+          }),
+        );
+      }
+
+      observations.set(marbleIndex, Object.freeze({ position, projection, recovered }));
+    }
+
+    return observations;
+  }
+
+  #processSensorEvents(elapsedSeconds: number, recoveredMarbleIndices: ReadonlySet<number>): void {
     this.#built.eventQueue.drainCollisionEvents((firstHandle, secondHandle, started) => {
       if (!started || this.#progress.outcome) return;
       const pair = eventPair(this.#built, firstHandle, secondHandle);
       if (!pair) return;
+      if (recoveredMarbleIndices.has(pair.marbleIndex)) return;
       const body = this.#built.marbleBodies.get(pair.marbleIndex);
       if (!body) return;
 
@@ -238,11 +344,19 @@ export class CourseRaceRuntime {
     });
   }
 
-  #drainContactEvents(elapsedSeconds: number): readonly RaceContactEvent[] {
+  #drainContactEvents(
+    elapsedSeconds: number,
+    recoveredMarbleIndices: ReadonlySet<number>,
+  ): readonly RaceContactEvent[] {
     const events: RaceContactEvent[] = [];
     this.#built.eventQueue.drainContactForceEvents((event) => {
       const contact = contactEvent(this.#built, event, elapsedSeconds);
-      if (contact) events.push(contact);
+      if (
+        contact &&
+        contact.marbleIndices.every((marbleIndex) => !recoveredMarbleIndices.has(marbleIndex))
+      ) {
+        events.push(contact);
+      }
     });
     return Object.freeze(events);
   }

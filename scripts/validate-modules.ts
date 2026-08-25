@@ -27,6 +27,7 @@ export interface ConfigurationValidation {
   readonly params: ParamValues;
   readonly computeSeconds: number;
   readonly report: ModuleValidationReport;
+  readonly legacyReport: ModuleValidationReport;
 }
 
 function readValue(args: readonly string[], index: number, flag: string): string {
@@ -91,6 +92,51 @@ function formatNumber(value: number | null): string {
   return value === null ? "unavailable" : value.toFixed(6);
 }
 
+function quantile(values: readonly number[], fraction: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.min(sorted.length - 1, Math.floor(fraction * sorted.length))];
+}
+
+function distribution(values: readonly number[]): string {
+  return [quantile(values, 0.05), quantile(values, 0.5), quantile(values, 0.95)]
+    .map(formatNumber)
+    .join(" / ");
+}
+
+function deterministicRandom(): () => number {
+  let state = 0x9e3779b9;
+  return () => {
+    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
+    return state / 0x1_0000_0000;
+  };
+}
+
+function bootstrapMeanInterval(values: readonly number[]): string {
+  if (values.length < 2) return "unavailable";
+  const random = deterministicRandom();
+  const means = Array.from({ length: 2_000 }, () => {
+    let total = 0;
+    for (let index = 0; index < values.length; index += 1) {
+      total += values[Math.floor(random() * values.length)];
+    }
+    return total / values.length;
+  });
+  return `${formatNumber(quantile(means, 0.025))}–${formatNumber(quantile(means, 0.975))}`;
+}
+
+function seedMeans(
+  seeds: readonly number[],
+  values: readonly { readonly seed: number; readonly value: number }[],
+): readonly number[] {
+  return seeds.flatMap((seed) => {
+    const selected = values.filter((entry) => entry.seed === seed).map(({ value }) => value);
+    return selected.length === 0
+      ? []
+      : [selected.reduce((total, value) => total + value, 0) / selected.length];
+  });
+}
+
 export function renderCalibrationReport(
   matrix: ValidationMatrix,
   validations: readonly ConfigurationValidation[],
@@ -112,12 +158,31 @@ export function renderCalibrationReport(
       `Parameters: \`${JSON.stringify(validation.params)}\`.`,
       `Compute seconds: ${validation.computeSeconds.toFixed(3)}.`,
       "",
-      "| Profile | Seeds | Completed / total | Stalls | Timeouts | Dwell p95 | Maximum Dwell | Role evidence |",
-      "|---|---:|---:|---:|---:|---:|---:|---|",
+      "Legacy pre-correction comparison (invalid as acceptance authority): " +
+        `${validation.legacyReport.completedMarbles} / ${validation.legacyReport.totalMarbles} completed; ` +
+        `${validation.legacyReport.stalledMarbles} stalls; Dwell p50 ${formatNumber(validation.legacyReport.dwellSecondsP50)}; ` +
+        `Dwell p99 label ${formatNumber(validation.legacyReport.dwellSecondsP99)}.`,
+      "",
+      "| Profile | Seeds | Completed / total | Excluded | Stalls | Timeouts | Dwell p05 / p50 / p95 | Exit speed p05 / p50 / p95 | Dwell seed-mean 95% CI | Exit-speed seed-mean 95% CI | Maximum Dwell | Role evidence |",
+      "|---|---:|---:|---:|---:|---:|---|---|---|---|---:|---|",
     );
     for (const profile of validation.report.profiles) {
+      const dwellValues = profile.runs.flatMap(({ observation }) =>
+        observation.dwellSeconds === null ? [] : [observation.dwellSeconds],
+      );
+      const exitSpeedValues = profile.roleRuns.map(({ exitSpeed }) => exitSpeed);
+      const dwellSeedMeans = seedMeans(
+        profile.seeds,
+        profile.runs.flatMap(({ seed, observation }) =>
+          observation.dwellSeconds === null ? [] : [{ seed, value: observation.dwellSeconds }],
+        ),
+      );
+      const speedSeedMeans = seedMeans(
+        profile.seeds,
+        profile.roleRuns.map(({ seed, exitSpeed }) => ({ seed, value: exitSpeed })),
+      );
       lines.push(
-        `| ${profile.profile} | ${profile.seeds.join(", ")} | ${profile.completedMarbles} / ${profile.totalMarbles} | ${profile.stalledMarbles} | ${profile.timedOutMarbles} | ${formatNumber(profile.dwell.dwellSecondsP95)} | ${formatNumber(profile.dwell.maximumDwellSeconds)} | \`${JSON.stringify(profile.evidence)}\` |`,
+        `| ${profile.profile} | ${profile.seeds.join(", ")} | ${profile.completedMarbles} / ${profile.totalMarbles} | ${profile.totalMarbles - profile.completedMarbles} | ${profile.stalledMarbles} | ${profile.timedOutMarbles} | ${distribution(dwellValues)} | ${distribution(exitSpeedValues)} | ${bootstrapMeanInterval(dwellSeedMeans)} | ${bootstrapMeanInterval(speedSeedMeans)} | ${formatNumber(profile.dwell.maximumDwellSeconds)} | \`${JSON.stringify(profile.evidence)}\` |`,
       );
     }
     lines.push("");
@@ -136,13 +201,21 @@ export async function runValidateModules(
   for (const module of modulesFor(options.moduleId)) {
     for (const params of configurationsFor(module, options.allParams)) {
       const started = performance.now();
-      const report = await validateModule(module, params, { matrix: options.matrix });
+      const [report, legacyReport] = await Promise.all([
+        validateModule(module, params, { matrix: options.matrix }),
+        validateModule(module, params, {
+          seedCount: options.matrix === "full" ? 20 : 2,
+          marbleCount: 15,
+          maxSimulationSeconds: 15,
+        }),
+      ]);
       validations.push(
         Object.freeze({
           moduleId: module.id,
           params,
           computeSeconds: (performance.now() - started) / 1_000,
           report,
+          legacyReport,
         }),
       );
     }

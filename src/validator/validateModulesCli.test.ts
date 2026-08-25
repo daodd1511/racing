@@ -89,13 +89,16 @@ describe("calibration report", () => {
       params: { grade: 0.25 },
       computeSeconds: 2.5,
       report,
+      legacyReport: report,
     };
     const markdown = renderCalibrationReport("pr", [validation]);
 
     expect(markdown).toContain(`Threshold table version: \`${UNFROZEN_THRESHOLD_VERSION}\``);
     expect(markdown).toContain("Rapier version: `0.19.2`");
     expect(markdown).toContain("Parameters: `{");
-    expect(markdown).toContain("| single | 1, 2 | 2 / 2 | 0 | 0 |");
+    expect(markdown).toContain("Legacy pre-correction comparison");
+    expect(markdown).toContain("| single | 1, 2 | 2 / 2 | 0 | 0 | 0 |");
+    expect(markdown).toContain("95% CI");
     expect(markdown).toContain("Compute seconds: 2.500");
   });
 });

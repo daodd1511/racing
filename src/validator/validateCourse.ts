@@ -25,7 +25,7 @@ import {
   COURSE_SOLVER_SUBSTEPS,
   type BuiltCourseWorld,
 } from "./buildCourseWorld";
-import { shuffleCoefficient } from "./metrics";
+import { finishOrderInversionCoefficient } from "./metrics";
 
 const VALIDATION_START_SEEDS = 5;
 const VALIDATION_MARBLES = 15;
@@ -49,7 +49,7 @@ export interface CourseRaceValidation {
   readonly outcome: RaceOutcome;
   readonly finishTimes: readonly (number | null)[];
   readonly exitSpeeds: readonly (number | null)[];
-  readonly shuffleCoefficient: number;
+  readonly finishOrderInversionCoefficient: number;
   readonly finalPositions: readonly Vector3[];
   readonly passedCheckpoints: readonly number[];
 }
@@ -64,7 +64,7 @@ export interface CourseValidationReport {
   readonly durations: readonly number[];
   readonly dwellSeconds: readonly number[];
   readonly exitSpeeds: readonly number[];
-  readonly shuffleCoefficients: readonly number[];
+  readonly finishOrderInversionCoefficients: readonly number[];
   readonly races: readonly CourseRaceValidation[];
 }
 
@@ -242,7 +242,7 @@ export function runCourseRaceValidation(
     outcome: progress.outcome,
     finishTimes: Object.freeze(finishTimes),
     exitSpeeds: Object.freeze(exitSpeeds),
-    shuffleCoefficient: shuffleCoefficient(finishTimes),
+    finishOrderInversionCoefficient: finishOrderInversionCoefficient(finishTimes),
     finalPositions,
     passedCheckpoints: progress.passedCheckpoints,
   });
@@ -269,7 +269,9 @@ export async function validateCourseVariants(): Promise<CourseValidationReport> 
     durations: Object.freeze(races.map(({ outcome }) => outcome.elapsedSeconds)),
     dwellSeconds: Object.freeze(finishTimes.filter((time): time is number => time !== null)),
     exitSpeeds: Object.freeze(exitSpeeds.filter((speed): speed is number => speed !== null)),
-    shuffleCoefficients: Object.freeze(races.map((race) => race.shuffleCoefficient)),
+    finishOrderInversionCoefficients: Object.freeze(
+      races.map((race) => race.finishOrderInversionCoefficient),
+    ),
     races: Object.freeze(races),
   });
 }

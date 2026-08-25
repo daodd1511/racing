@@ -271,7 +271,9 @@ export function displacementPerSecond(run: MarbleRun): number[] {
  * dwell time), normalized by the maximum possible inversions for that many
  * marbles -- a marble that never exits doesn't participate in the ranking,
  * since it never took a position in the exit order. */
-export function shuffleCoefficient(dwellSecondsByMarbleIndex: readonly (number | null)[]): number {
+export function finishOrderInversionCoefficient(
+  dwellSecondsByMarbleIndex: readonly (number | null)[],
+): number {
   const exited = dwellSecondsByMarbleIndex
     .map((dwellSeconds, index) => ({ index, dwellSeconds }))
     .filter(
@@ -296,6 +298,10 @@ export function shuffleCoefficient(dwellSecondsByMarbleIndex: readonly (number |
   const maxInversions = (n * (n - 1)) / 2;
   return maxInversions === 0 ? 0 : inversions / maxInversions;
 }
+
+/** Compatibility alias for pre-calibration Module guardrails. New Module
+ * evidence uses Role metrics; only Course outcomes use inversion. */
+export const shuffleCoefficient = finishOrderInversionCoefficient;
 
 export interface StallCount {
   readonly stalled: number;

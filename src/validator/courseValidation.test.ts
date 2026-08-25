@@ -25,6 +25,6 @@ describe("validateCourseVariants", () => {
     expect(report.dwellSeconds.every(Number.isFinite)).toBe(true);
     expect(report.exitSpeeds).toHaveLength(75);
     expect(report.exitSpeeds.every(Number.isFinite)).toBe(true);
-    expect(report.shuffleCoefficients.every(Number.isFinite)).toBe(true);
+    expect(report.finishOrderInversionCoefficients.every(Number.isFinite)).toBe(true);
   }, 120_000);
 });

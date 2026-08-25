@@ -102,8 +102,10 @@ export interface FeedProfileValidation {
   readonly completedMarbles: number;
   readonly stalledMarbles: number;
   readonly timedOutMarbles: number;
+  readonly controlStalledMarbles: number;
   readonly controlTimedOutMarbles: number;
   readonly dwell: DwellEvidence;
+  readonly controlDwell: DwellEvidence;
   readonly evidence: RoleEvidence | null;
   readonly controlEvidence: RoleEvidence | null;
   readonly runs: readonly ValidatedRun[];
@@ -535,9 +537,14 @@ export async function validateModule<P>(
         completedMarbles: moduleRuns.filter(({ observation }) => observation.completed).length,
         stalledMarbles: moduleRuns.filter(({ stalled }) => stalled).length,
         timedOutMarbles: moduleRuns.filter(({ timedOut }) => timedOut).length,
+        controlStalledMarbles: controlValidatedRuns.filter(({ stalled }) => stalled).length,
         controlTimedOutMarbles: controlValidatedRuns.filter(({ timedOut }) => timedOut).length,
         dwell: dwellEvidence(
           moduleRuns.map(({ observation }) => observation),
+          minimumCompletedRuns,
+        ),
+        controlDwell: dwellEvidence(
+          controlValidatedRuns.map(({ observation }) => observation),
           minimumCompletedRuns,
         ),
         evidence: evidence.evidence,

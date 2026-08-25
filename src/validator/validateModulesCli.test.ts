@@ -53,6 +53,7 @@ describe("calibration report", () => {
           completedMarbles: 2,
           stalledMarbles: 0,
           timedOutMarbles: 0,
+          controlStalledMarbles: 0,
           controlTimedOutMarbles: 0,
           dwell: {
             validity: {
@@ -63,6 +64,16 @@ describe("calibration report", () => {
             },
             dwellSecondsP95: 1.2,
             maximumDwellSeconds: 1.3,
+          },
+          controlDwell: {
+            validity: {
+              totalRuns: 2,
+              completedRuns: 2,
+              minimumCompletedRuns: 1,
+              behaviorAvailable: true,
+            },
+            dwellSecondsP95: 1,
+            maximumDwellSeconds: 1.1,
           },
           evidence: null,
           controlEvidence: null,
@@ -98,6 +109,7 @@ describe("calibration report", () => {
     expect(markdown).toContain("Parameters: `{");
     expect(markdown).toContain("Legacy pre-correction comparison");
     expect(markdown).toContain("| single | 1, 2 | 2 / 2 | 0 | 0 | 0 |");
+    expect(markdown).toContain("| 1.000000 | 1.200000 |");
     expect(markdown).toContain("95% CI");
     expect(markdown).toContain("Compute seconds: 2.500");
   });

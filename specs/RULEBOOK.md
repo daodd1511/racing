@@ -1,15 +1,18 @@
 # Spec-Driven Execution Workflow
-<!-- rulebook v7 -->
+<!-- rulebook v8 -->
 
 Large/architectural changes flow: `/grill-me` → `specs/<feature>/PLAN.md` →
 `specs/<feature>/EXECUTION.md` (via the `spec-plan` skill) → phased implementation
 (via the `spec-phase` skill).
 
-This is the full rulebook, and the only workflow file added to this project. The spec
-skills read it when they run; it is deliberately kept out of `CLAUDE.md` so sessions doing
-ordinary work don't carry it and a shared repo's instructions stay clean. An agent that
-lands on a `<feature-slug>/phase-<n>-<desc>` branch without invoking a spec skill is caught
-by `spec-phase`'s skill description, which names that branch shape and points here.
+This is the full rulebook. The spec skills read it when they run; it is deliberately kept
+out of the project's context file (`CLAUDE.md` / `AGENTS.md`) so sessions doing ordinary
+work don't carry it. That file holds only the workflow's pointer section (marker
+`<!-- spec-workflow vN -->`): the specs-root mapping that tells a grill session where
+`PLAN.md` goes, plus a pointer back here. If that section is missing, plans land in the repo
+root — fix the section, don't move rules into it. An agent that lands on a
+`<feature-slug>/phase-<n>-<desc>` branch without invoking a spec skill is caught by
+`spec-phase`'s skill description, which names that branch shape and points here.
 
 ## State model
 - **Git is the authoritative state store**: branch name encodes spec+phase
@@ -30,16 +33,29 @@ by `spec-phase`'s skill description, which names that branch shape and points he
   Each phase is one branch on that stack, still named
   `<feature-slug>/phase-<n>-<desc>` — the CLI tracks the base chain, so no phase computes
   its own base or PR target.
-  - Spec start: `gh stack init -b main` (adopts existing branches, and **turns on
-    `git rerere` in the repo** — say so before running it on a repo that hasn't opted into
-    that).
-  - Phase start: `gh stack add <feature-slug>/phase-<n>-<desc>`, from the stack top. Pass
-    the name explicitly — the auto-generated date-slug form breaks the state model, which
-    reads spec and phase out of the branch name. Never `-m`/`-A`/`-u`; commits are ordinary
-    git commits at logical sub-steps.
-  - Push + PR: `gh stack submit --auto --open`. This submits every active branch in the
-    stack, not just the current phase's — already-submitted phases are no-ops — so the
-    phase's single remote-action ask is "push + update the stack on GitHub?".
+  - Spec start: `gh stack init --base main <feature-slug>/phase-1-<desc>` (adopts or creates
+    the first phase branch, and **turns on `git rerere` in the repo** — say so before running
+    it on a repo that hasn't opted into that). Pass the branch name explicitly: this CLI's
+    non-interactive `init` requires it.
+  - Later phase start: `gh stack add <feature-slug>/phase-<n>-<desc>`, from the stack top.
+    Pass the name explicitly — the auto-generated date-slug form breaks the state model,
+    which reads spec and phase out of the branch name. Never `-m`/`-A`/`-u`; commits are
+    ordinary git commits at logical sub-steps.
+  - Push + PR: two commands, because `gh stack submit` accepts a PR description only in
+    its full-screen editor, which an agent's non-interactive terminal never reaches.
+    1. `gh stack submit --auto` submits every active branch in the stack, not just the
+       current phase's — already-submitted phases are no-ops — so the phase's single
+       remote-action ask stays "push + update the stack on GitHub?". New PRs land as
+       drafts carrying auto-generated titles.
+    2. Map branch → PR number with `gh stack view --json`, then give **this phase's PR**
+       its real title and description: `gh pr edit <n> --title '<title>' --body-file
+       <path>`, then `gh pr ready <n>`. Pass `--body-file`, never `--body` — shell
+       quoting mangles a multi-line body. Leave every other PR in the stack alone —
+       earlier phases' descriptions may carry the user's own edits. A later phase's
+       `submit --auto` that regenerates an earlier PR's title has undone this step:
+       restore that title with `gh pr edit`.
+    Never pass `--open` to `submit`: it marks every PR in the stack ready, publishing
+    auto-generated titles and any draft the user left draft deliberately.
   - After a merge: `gh stack sync` (fetch, fast-forward trunk, cascade-rebase the
     remaining phases, push, sync PR state) — it replaces the manual pull-and-rebase. Add
     `--prune` only once the user has said yes to deleting merged phase branches.
@@ -100,5 +116,6 @@ by `spec-phase`'s skill description, which names that branch shape and points he
   the user's go-ahead: a `WIP: parked <date>` commit on the phase branch plus a STATUS note
   (never `git stash` — stashes are invisible to a cold agent and easy to orphan).
 
-Procedure lives in the skills — planning in the `spec-plan` skill and execution and resume
-in the `spec-phase` skill — invoke the relevant one rather than re-deriving it.
+Procedure lives in the skills — planning in the `spec-plan` skill, execution and resume in
+the `spec-phase` skill, baseline application in the `spec-archive` skill — invoke the
+relevant one rather than re-deriving it.

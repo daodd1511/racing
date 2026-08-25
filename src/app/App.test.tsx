@@ -52,7 +52,7 @@ vi.mock("../ui/BroadcastRace", () => ({
     readonly snapshot: RaceSnapshot | null;
     readonly frozen?: boolean;
     readonly onSnapshot: (snapshot: RaceSnapshot) => void;
-    readonly onContact: (event: RaceContactEvent) => void;
+    readonly onContact?: (event: RaceContactEvent) => void;
     readonly onOutcome: (outcome: RaceOutcome) => void;
   }) {
     broadcastRuntime.renderCount += 1;
@@ -61,7 +61,7 @@ vi.mock("../ui/BroadcastRace", () => ({
     }
 
     function emitContact(): void {
-      onContact(broadcastRuntime.contact);
+      onContact?.(broadcastRuntime.contact);
     }
 
     function emitOutcome(): void {
@@ -140,8 +140,8 @@ function createAudioMock(): RaceAudio {
   return {
     isMuted: vi.fn(() => true),
     setMuted: vi.fn(async () => undefined),
-    playContact: vi.fn(),
-    playFinish: vi.fn(),
+    startMusic: vi.fn(),
+    stopMusic: vi.fn(),
     dispose: vi.fn(),
   };
 }
@@ -219,7 +219,7 @@ describe("App", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Release the marbles" }));
-    expect(screen.getByRole("switch", { name: "Race audio" })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "Race music" })).toBeTruthy();
     expect(screen.getByText("Race snapshot pending")).toBeTruthy();
     const renderCountBeforeSnapshot = broadcastRuntime.renderCount;
 
@@ -256,7 +256,9 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Emit race contact" }));
     fireEvent.click(screen.getByRole("button", { name: "Emit duplicate outcomes" }));
 
-    expect(audio.playContact).toHaveBeenCalledWith({ impulse: 2 });
+    expect(audio.startMusic).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "arcade-style-game" }),
+    );
     expect(appendCommittedRace).toHaveBeenCalledOnce();
     expect(appendCommittedRace).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -266,7 +268,7 @@ describe("App", () => {
         finalRanking: [1, 0],
       }),
     );
-    expect(audio.playFinish).toHaveBeenCalledOnce();
+    expect(audio.stopMusic).toHaveBeenCalledOnce();
     expect(screen.getByText("Frozen race")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Blake" })).toBeNull();
 

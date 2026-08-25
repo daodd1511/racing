@@ -11,11 +11,11 @@ export function AudioToggle({ muted, onMutedChange }: AudioToggleProps) {
   return (
     <label className="audio-toggle">
       <span className="audio-toggle__copy">
-        <strong>Race sound</strong>
-        <span>{muted ? "Muted by default" : "Sound on"}</span>
+        <strong>Race music</strong>
+        <span>{muted ? "Muted by default" : "Music on"}</span>
       </span>
       <input
-        aria-label="Race audio"
+        aria-label="Race music"
         checked={!muted}
         onChange={handleChange}
         role="switch"

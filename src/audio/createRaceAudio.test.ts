@@ -1,102 +1,69 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createRaceAudio } from "./createRaceAudio";
+import type { RaceMusicTrack } from "./raceMusic";
 
-function createAudioContextMock(): AudioContext {
-  let currentTime = 1;
-  const oscillator = {
-    type: "sine",
-    frequency: { setValueAtTime: vi.fn() },
-    connect: vi.fn(),
-    start: vi.fn(),
-    stop: vi.fn(),
-  } as unknown as OscillatorNode;
-  const gain = {
-    gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
-    connect: vi.fn(),
-  } as unknown as GainNode;
+const TRACK: RaceMusicTrack = Object.freeze({
+  id: "gran-prix",
+  title: "Gran Prix",
+  artist: "melodyayresgriffiths",
+  url: "/gran-prix.mp3",
+});
 
+function createMusicPlayerMock(): HTMLAudioElement {
   return {
-    get currentTime() {
-      return currentTime;
-    },
-    set currentTime(value: number) {
-      currentTime = value;
-    },
-    state: "suspended",
-    destination: {} as AudioDestinationNode,
-    createOscillator: vi.fn(() => oscillator),
-    createGain: vi.fn(() => gain),
-    resume: vi.fn().mockResolvedValue(undefined),
-    close: vi.fn().mockResolvedValue(undefined),
-  } as unknown as AudioContext;
+    currentTime: 12,
+    loop: false,
+    pause: vi.fn(),
+    play: vi.fn().mockResolvedValue(undefined),
+    src: "",
+    volume: 1,
+  } as unknown as HTMLAudioElement;
 }
 
 describe("createRaceAudio", () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it("is silent until a user gesture unmutes it", async () => {
-    const context = createAudioContextMock();
-    const Constructor = vi.fn(function AudioContextMock() {
-      return context;
-    });
-    vi.stubGlobal("window", { AudioContext: Constructor });
-    const audio = createRaceAudio();
+  it("queues one looping track while muted and follows the existing mute lifecycle", async () => {
+    const player = createMusicPlayerMock();
+    const createMusicPlayer = vi.fn(() => player);
+    const audio = createRaceAudio({ createMusicPlayer });
 
-    audio.playContact({ impulse: 3 });
-    expect(Constructor).not.toHaveBeenCalled();
+    audio.startMusic(TRACK);
+
+    expect(createMusicPlayer).not.toHaveBeenCalled();
 
     await audio.setMuted(false);
+    expect(createMusicPlayer).toHaveBeenCalledOnce();
+    expect(player.src).toBe(TRACK.url);
+    expect(player.loop).toBe(true);
+    expect(player.volume).toBe(0.16);
+    expect(player.currentTime).toBe(0);
+    expect(player.play).toHaveBeenCalledOnce();
 
-    expect(audio.isMuted()).toBe(false);
-    expect(Constructor).toHaveBeenCalledOnce();
-    expect(context.resume).toHaveBeenCalledOnce();
-  });
-
-  it("modulates impacts, throttles dense contacts, and plays the finish sting", async () => {
-    const context = createAudioContextMock();
-    vi.stubGlobal("window", {
-      AudioContext: vi.fn(function AudioContextMock() {
-        return context;
-      }),
-    });
-    const audio = createRaceAudio();
-    await audio.setMuted(false);
-
-    audio.playContact({ impulse: 1 });
-    audio.playContact({ impulse: 5 });
-    audio.playFinish();
-
-    expect(context.createOscillator).toHaveBeenCalledTimes(3);
-    expect(context.createGain).toHaveBeenCalledTimes(3);
-    const firstOscillator = vi.mocked(context.createOscillator).mock.results[0]?.value;
-    const firstGain = vi.mocked(context.createGain).mock.results[0]?.value;
-
-    if (firstOscillator === undefined || firstGain === undefined) {
-      throw new Error("Expected the first collision tone");
-    }
-    expect(firstOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(262, 1);
-    expect(vi.mocked(firstGain.gain.setValueAtTime).mock.calls[0]?.[0]).toBeCloseTo(0.037);
-  });
-
-  it("mutes immediately and closes a created context on disposal", async () => {
-    const context = createAudioContextMock();
-    vi.stubGlobal("window", {
-      AudioContext: vi.fn(function AudioContextMock() {
-        return context;
-      }),
-    });
-    const audio = createRaceAudio();
-    await audio.setMuted(false);
     await audio.setMuted(true);
-    audio.playFinish();
+    expect(player.pause).toHaveBeenCalledTimes(2);
 
-    expect(context.createOscillator).not.toHaveBeenCalled();
+    audio.stopMusic();
+    expect(player.currentTime).toBe(0);
+    expect(player.pause).toHaveBeenCalledTimes(3);
+  });
+
+  it("pauses music and ignores further work after disposal", async () => {
+    const player = createMusicPlayerMock();
+    const audio = createRaceAudio({ createMusicPlayer: () => player });
+
+    audio.startMusic(TRACK);
+    await audio.setMuted(false);
     audio.dispose();
+    audio.dispose();
+    await audio.setMuted(false);
+    audio.startMusic(TRACK);
 
-    expect(context.close).toHaveBeenCalledOnce();
+    expect(player.pause).toHaveBeenCalledTimes(2);
+    expect(player.play).toHaveBeenCalledOnce();
+    expect(audio.isMuted()).toBe(true);
   });
 });

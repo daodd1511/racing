@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 
 import { createRaceAudio, type RaceAudio } from "../audio/createRaceAudio";
+import { selectRaceMusicTrack } from "../audio/raceMusic";
 import { assembleCourse } from "../course/assembleCourse";
 import type { Course } from "../course/types";
 import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "../race/liveTypes";
@@ -160,6 +161,7 @@ export function App({
     store.saveRoster(request.roster);
     store.saveSettings({ selectionMode: request.selectionMode });
     resetRaceReferences();
+    audioRef.current?.startMusic(selectRaceMusicTrack(seed));
     dispatch({ kind: "start-race", request, course });
   }
 
@@ -173,7 +175,6 @@ export function App({
     if (session.kind !== "racing") {
       return;
     }
-    audioRef.current?.playContact({ impulse: event.impulse });
     onRaceContact?.(event);
   }
 
@@ -190,6 +191,7 @@ export function App({
 
     terminalSeedRef.current = outcome.seed;
     onRaceOutcome?.(outcome);
+    audioRef.current?.stopMusic();
     if (outcome.kind === "watchdog") {
       dispatch({ kind: "fail-race", outcome, snapshot });
       return;
@@ -197,7 +199,6 @@ export function App({
 
     const record = createCommittedRaceRecord({ request: session.request, outcome });
     store.appendCommittedRace(record);
-    audioRef.current?.playFinish();
     dispatch({ kind: "complete-race", outcome, snapshot, record });
   }
 
@@ -219,6 +220,7 @@ export function App({
     });
     const course = createCourse(seed);
     resetRaceReferences();
+    audioRef.current?.startMusic(selectRaceMusicTrack(seed));
     dispatch({ kind: "retry-race", request, course });
   }
 
@@ -245,7 +247,7 @@ export function App({
       <BroadcastRace
         cameraMode={cameraMode}
         course={session.course}
-        onContact={handleContact}
+        onContact={onRaceContact === undefined ? undefined : handleContact}
         onOutcome={handleOutcome}
         onSnapshot={handleSnapshot}
         request={session.request}

@@ -14,7 +14,7 @@ describe("AudioToggle", () => {
     const onMutedChange = vi.fn();
     render(<AudioToggle muted={true} onMutedChange={onMutedChange} />);
 
-    const toggle = screen.getByRole("switch", { name: "Race audio" });
+    const toggle = screen.getByRole("switch", { name: "Race music" });
     expect((toggle as HTMLInputElement).checked).toBe(false);
     expect(screen.getByText("Muted by default")).toBeTruthy();
 

@@ -1,61 +1,43 @@
-export interface RaceAudioContact {
-  readonly impulse: number;
-}
+import type { RaceMusicTrack } from "./raceMusic";
 
 export interface RaceAudio {
   isMuted(): boolean;
   setMuted(muted: boolean): Promise<void>;
-  playContact(event: RaceAudioContact): void;
-  playFinish(): void;
+  startMusic(track: RaceMusicTrack): void;
+  stopMusic(): void;
   dispose(): void;
 }
 
-const MINIMUM_CONTACT_INTERVAL_SECONDS = 0.045;
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
+interface RaceAudioOptions {
+  readonly createMusicPlayer?: () => HTMLAudioElement;
 }
 
-function createContext(): AudioContext {
-  const Constructor =
-    window.AudioContext ??
-    (window as Window & { readonly webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+const MUSIC_VOLUME = 0.16;
 
-  if (Constructor === undefined) {
-    throw new Error("Web Audio is not available in this browser");
-  }
-
-  return new Constructor();
-}
-
-export function createRaceAudio(): RaceAudio {
-  let context: AudioContext | undefined;
+export function createRaceAudio({
+  createMusicPlayer = () => new Audio(),
+}: RaceAudioOptions = {}): RaceAudio {
+  let musicPlayer: HTMLAudioElement | undefined;
+  let activeMusicUrl: string | undefined;
+  let loadedMusicUrl: string | undefined;
   let muted = true;
   let disposed = false;
-  let lastContactAtSeconds = Number.NEGATIVE_INFINITY;
 
-  function contextIfActive(): AudioContext | undefined {
-    return muted || disposed ? undefined : context;
-  }
+  function playActiveMusic(): void {
+    if (muted || disposed || activeMusicUrl === undefined) {
+      return;
+    }
 
-  function playTone(
-    activeContext: AudioContext,
-    frequency: number,
-    volume: number,
-    durationSeconds: number,
-    type: OscillatorType,
-  ): void {
-    const oscillator = activeContext.createOscillator();
-    const gain = activeContext.createGain();
-    const startedAt = activeContext.currentTime;
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, startedAt);
-    gain.gain.setValueAtTime(volume, startedAt);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startedAt + durationSeconds);
-    oscillator.connect(gain);
-    gain.connect(activeContext.destination);
-    oscillator.start(startedAt);
-    oscillator.stop(startedAt + durationSeconds);
+    const player = (musicPlayer ??= createMusicPlayer());
+    if (loadedMusicUrl !== activeMusicUrl) {
+      player.pause();
+      player.src = activeMusicUrl;
+      player.loop = true;
+      player.volume = MUSIC_VOLUME;
+      player.currentTime = 0;
+      loadedMusicUrl = activeMusicUrl;
+    }
+    void player.play().catch(() => undefined);
   }
 
   return {
@@ -69,43 +51,33 @@ export function createRaceAudio(): RaceAudio {
 
       muted = nextMuted;
       if (muted) {
+        musicPlayer?.pause();
         return;
       }
 
-      context ??= createContext();
-      if (context.state === "suspended") {
-        await context.resume();
-      }
+      playActiveMusic();
     },
-    playContact(event) {
-      const activeContext = contextIfActive();
-      if (activeContext === undefined) {
+    startMusic(track) {
+      if (disposed) {
         return;
       }
 
-      const startedAt = activeContext.currentTime;
-      if (startedAt - lastContactAtSeconds < MINIMUM_CONTACT_INTERVAL_SECONDS) {
-        return;
+      activeMusicUrl = track.url;
+      loadedMusicUrl = undefined;
+      if (muted && musicPlayer !== undefined) {
+        musicPlayer.pause();
+        musicPlayer.currentTime = 0;
       }
-
-      lastContactAtSeconds = startedAt;
-      const impulse = clamp(event.impulse, 0, 6);
-      playTone(
-        activeContext,
-        190 + impulse * 72,
-        0.025 + impulse * 0.012,
-        0.055 + impulse * 0.008,
-        "sine",
-      );
+      playActiveMusic();
     },
-    playFinish() {
-      const activeContext = contextIfActive();
-      if (activeContext === undefined) {
+    stopMusic() {
+      activeMusicUrl = undefined;
+      if (musicPlayer === undefined) {
         return;
       }
 
-      playTone(activeContext, 660, 0.12, 0.24, "triangle");
-      playTone(activeContext, 880, 0.08, 0.34, "sine");
+      musicPlayer.pause();
+      musicPlayer.currentTime = 0;
     },
     dispose() {
       if (disposed) {
@@ -114,9 +86,9 @@ export function createRaceAudio(): RaceAudio {
 
       disposed = true;
       muted = true;
-      if (context !== undefined && context.state !== "closed") {
-        void context.close();
-      }
+      activeMusicUrl = undefined;
+      loadedMusicUrl = undefined;
+      musicPlayer?.pause();
     },
   };
 }

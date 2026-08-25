@@ -28,6 +28,11 @@
   .card{background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:18px 18px 16px;
         display:flex;flex-direction:column}
   .card.hold{border-color:#f0d6cf;background:var(--warnbg)}
+  .card.new{border-color:#cfdcf3}
+  .card.new .hdr h3::after{content:"new";font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+        font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);
+        background:#eaf0fc;border:1px solid #d3e0f6;border-radius:3px;padding:1px 4px;
+        margin-left:7px;vertical-align:2px;font-weight:600}
   .card h3{margin:0;font-size:18px;letter-spacing:-.01em}
   .hdr{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:2px}
   .chip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.03em;
@@ -54,6 +59,16 @@
   .ref .nm{font-size:13.5px;font-weight:600;margin-bottom:1px}
   .ref .rl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--ink3);margin-bottom:7px}
   .ref .ds{font-size:11.5px;color:var(--ink2);line-height:1.4;margin-top:7px}
+  .ref.gone{opacity:.6;border-style:dashed}
+  .cov{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:4px 16px 12px;margin-bottom:34px}
+  .cov table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .cov th{text-align:left;font-weight:600;color:var(--ink3);font-size:11px;text-transform:uppercase;
+          letter-spacing:.06em;padding:9px 10px 6px 0;border-bottom:1px solid var(--rule)}
+  .cov td{padding:6px 10px 6px 0;border-bottom:1px solid #f0f1f3;color:var(--ink2);vertical-align:top}
+  .cov td:first-child{color:var(--ink);font-weight:600}
+  .cov tr:last-child td{border-bottom:0}
+  .cov .tot{font-size:12.5px;color:var(--ink2);margin:11px 0 0}
+  .cov .tot b{color:var(--ink)}
 
   footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);font-size:12.5px;
          color:var(--ink3);line-height:1.6;max-width:80ch}
@@ -76,7 +91,7 @@
 <main>
   <h1>Candidate Modules: what each one looks like, and what it does to the field</h1>
   <p class="lede">
-    Eight proposed Modules, drawn to the project's real scale. Each panel shows the geometry plus
+    Nineteen proposed Modules, drawn to the project's real scale. Each panel shows the geometry plus
     the marble paths through it; the strip underneath shows what it does to marble
     <strong>order</strong> — which is the whole reason a Role exists.
     <strong>None of these are built.</strong> Every dimension is a design proposal, not a measurement.
@@ -90,8 +105,24 @@
     <span style="color:var(--ink3)">from <code>src/race/scale.ts</code></span>
   </div>
 
+  <div class="cov">
+    <table>
+      <tr><th>Role</th><th>On <code>main</code> today</th><th>Candidates below</th></tr>
+      <tr><td>accel</td><td>Chute — fixed in every Arc Slot, structural</td><td>Steep zigzag, Banked S-bend</td></tr>
+      <tr><td>scatter</td><td>Pin field</td><td>Bumper cluster, Splitter tree, Herringbone ribs, Baffle slalom, Kicker lip</td></tr>
+      <tr><td>shuffle</td><td>Whoops</td><td>Crossover weave, Pocketed drum, Drop shelves, Unequal twin loop, Catch cups</td></tr>
+      <tr><td>sort</td><td>Staircase</td><td>Cascading ledges, Loaded rocker, Grate express, Counter-slope gate, Split fork</td></tr>
+      <tr><td>queue</td><td>None — the Role was deleted with the windmill</td><td>Turnstile, Zipper merge (each also costs a Role change)</td></tr>
+    </table>
+    <p class="tot">One Module per obstacle Role means <code>enumerateRoleSelections()</code> returns exactly
+    <b>1</b> Course. A second Module for each of scatter, shuffle and sort takes that to <b>8</b>; a third to
+    <b>27</b>. That multiplication is the reason to build more than one of these.</p>
+  </div>
+
   <h2>Build first — the four that fill a Role cleanly</h2>
-  <p class="sub">One per obstacle Role. Together they take the Assembler from 1 possible Role selection to 16.</p>
+  <p class="sub">One per obstacle Role <em>as the Roles stood on 2026-08-24</em>. Three of the four still
+  land on a live Role and together take the Assembler from 1 possible Role selection to 8; the Turnstile's
+  <code>queue</code> no longer exists.</p>
 
   <div class="grid">
 
@@ -195,6 +226,12 @@
         <dt>Dwell</dt><dd>Bounded: worst case ≈ (field size ÷ arms) × rotation period.</dd>
         <dt>Params</dt><dd>Arm count (3–4), angular velocity, throat width, hub radius.</dd>
       </dl>
+      <div class="risk"><b>Changed since this was drawn:</b> there is no <code>queue</code> Role any more.
+      It left the <code>Role</code> union with the windmill in <code>2be90ca</code>, so the Turnstile now
+      costs a Role addition — <code>src/modules/types.ts</code>, the Arc's Slot table in
+      <code>src/course/arc.ts</code>, and <code>ROLE_ORDER</code> — before its geometry is worth writing.
+      Registering it as <code>sort</code> instead is the cheaper reading: forced gaps between marbles is
+      what <code>sort</code> is already for.</div>
       <div class="fieldstrip"><div class="cap">Effect on the field — order preserved, gaps forced open</div>
       <svg viewBox="0 0 340 40" role="img" aria-label="Entry order 1,2,3,4 tightly packed becomes exit order 1,2,3,4 evenly and widely spaced.">
         <text x="0" y="24" font-size="10" fill="var(--ink3)">in</text>
@@ -314,8 +351,454 @@
 
   </div>
 
+  <h2>More candidates — scatter</h2>
+  <p class="sub">Everything from here down is drawn against the Course as it actually runs: a 0.5 m channel
+  at <code>COURSE_GRADE</code> 0.12, entry and exit on the same centreline, and no free fall between
+  Modules. Static geometry unless a card says otherwise — the windmill was the one moving Module that
+  shipped, and it came out again.</p>
+
+  <div class="grid">
+
+    <!-- ============ HERRINGBONE RIBS ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Herringbone ribs</h3><span class="chip s">scatter</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: eight low ribs lie across the floor at alternating angles, throwing a marble from wall to wall as it crosses them.">
+        <rect x="28" y="34" width="404" height="138" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <line x1="28" y1="34" x2="432" y2="34" stroke="var(--wall)" stroke-width="2.5"/>
+        <line x1="28" y1="172" x2="432" y2="172" stroke="var(--wall)" stroke-width="2.5"/>
+        <g stroke="var(--part)" stroke-width="5" stroke-linecap="round">
+          <line x1="56" y1="40" x2="96" y2="166"/>
+          <line x1="146" y1="166" x2="106" y2="40"/>
+          <line x1="156" y1="40" x2="196" y2="166"/>
+          <line x1="246" y1="166" x2="206" y2="40"/>
+          <line x1="256" y1="40" x2="296" y2="166"/>
+          <line x1="346" y1="166" x2="306" y2="40"/>
+          <line x1="356" y1="40" x2="396" y2="166"/>
+        </g>
+        <path d="M28 62 L86 74 L118 122 L186 134 L218 82 L286 70 L318 120 L386 132 L432 122"
+              fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <circle cx="42" cy="64" r="7" fill="var(--accent)"/>
+        <text x="230" y="26" font-size="10" fill="var(--ink3)" text-anchor="middle">ribs 8 mm tall — a marble rides over, never on</text>
+        <line x1="56" y1="186" x2="156" y2="186" stroke="var(--ink3)" stroke-width="1" marker-start="url(#arg)" marker-end="url(#arg)"/>
+        <text x="106" y="198" font-size="10" fill="var(--ink3)" text-anchor="middle">pitch 0.1 m = 1 Cell</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a floor of angled ribs, like a herringbone parquet. Each rib
+      gives the marble a small sideways nudge in a direction the rib chooses, so the field fans across the
+      full channel width without a single vertical obstacle. It is the pin field's effect delivered by the
+      floor instead of by posts — nothing to wedge between, nothing to balance on.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None. <code>step()</code> returns <code>[]</code>.</dd>
+        <dt>Dwell</dt><dd>Strictly bounded: no rib is tall enough to stop a marble, so travel time is path length over speed.</dd>
+        <dt>Params</dt><dd>Rib count (6–14), rib angle (20–35°), rib height (6–10 mm), pitch.</dd>
+      </dl>
+      <div class="risk"><b>Watch:</b> rib height is the whole design. Above ~12 mm (0.75 marble radius) a rib
+      stops deflecting and starts acting as a step, which is the Staircase's job and hurts speed badly at
+      a 12% grade.</div>
+    </div>
+
+    <!-- ============ BAFFLE SLALOM ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Baffle slalom</h3><span class="chip s">scatter</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: five baffles reach in from alternating walls, forcing marbles into an S path with a wide inside line and a slow outside line.">
+        <rect x="28" y="34" width="404" height="138" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <line x1="28" y1="34" x2="432" y2="34" stroke="var(--wall)" stroke-width="2.5"/>
+        <line x1="28" y1="172" x2="432" y2="172" stroke="var(--wall)" stroke-width="2.5"/>
+        <g fill="var(--part)">
+          <rect x="86" y="34" width="9" height="84"/>
+          <rect x="156" y="88" width="9" height="84"/>
+          <rect x="226" y="34" width="9" height="84"/>
+          <rect x="296" y="88" width="9" height="84"/>
+          <rect x="366" y="34" width="9" height="84"/>
+        </g>
+        <path d="M28 150 Q92 152 120 128 Q152 100 190 78 Q228 58 262 84 Q296 112 330 130 Q368 148 432 142"
+              fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M28 160 Q100 166 138 148 Q182 128 210 104 Q248 74 280 100 Q318 132 356 152 Q392 166 432 158"
+              fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="6 5"/>
+        <circle cx="44" cy="150" r="7" fill="var(--accent)"/>
+        <circle cx="44" cy="161" r="7" fill="var(--accent2)"/>
+        <line x1="91" y1="118" x2="91" y2="172" stroke="var(--accent)" stroke-width="1" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <text x="230" y="192" font-size="10" fill="var(--accent)" text-anchor="middle">gap 0.16 m = 5 marble ⌀</text>
+        <text x="230" y="26" font-size="10" fill="var(--ink3)" text-anchor="middle">baffles cover 60% of the channel, alternating walls</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a slalom. Two marbles entering side by side take visibly
+      different lines through it — the one that gets the inside of each turn walks away, and which marble
+      that is depends only on where it happened to be when it arrived. Big lateral spread out of a Module
+      barely longer than the Chute.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded, but longer than the Chute it replaces — every marble travels ~1.3× the straight distance.</dd>
+        <dt>Params</dt><dd>Baffle count (3–6), coverage (0.5–0.7 of channel width), pitch, baffle thickness.</dd>
+      </dl>
+      <div class="risk"><b>Watch:</b> coverage is a choke in disguise. Past ~0.75 the gap drops under four
+      marble diameters and a 15-marble pack backs up — the exact failure that got the funnel choke cut.
+      Cap the parameter in the schema, do not leave it to tuning.</div>
+    </div>
+
+    <!-- ============ KICKER LIP ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Kicker lip</h3><span class="chip s">scatter</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: a short upturned lip launches marbles, and a fast marble flies further down the run-out than a slow one.">
+        <path d="M24 54 L196 116 Q228 128 236 100" fill="none" stroke="var(--part)" stroke-width="4"/>
+        <path d="M24 22 L188 82" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M252 150 L436 172" stroke="var(--part)" stroke-width="4"/>
+        <path d="M252 118 L436 140" stroke="var(--wall)" stroke-width="2.5" stroke-dasharray="6 5"/>
+        <path d="M238 96 Q300 62 386 158" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="7 5"/>
+        <path d="M238 100 Q276 88 308 152" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="7 5"/>
+        <circle cx="120" cy="86" r="7" fill="var(--accent)"/>
+        <circle cx="386" cy="158" r="7" fill="var(--accent)"/>
+        <circle cx="308" cy="152" r="7" fill="var(--accent2)"/>
+        <text x="330" y="72" font-size="10" fill="var(--accent)">fast in, long carry</text>
+        <text x="188" y="144" font-size="10" fill="var(--accent2)" text-anchor="end">slow in, short carry</text>
+        <line x1="236" y1="98" x2="236" y2="128" stroke="var(--ink3)" stroke-width="1" marker-start="url(#arg)" marker-end="url(#arg)"/>
+        <text x="200" y="172" font-size="10" fill="var(--ink3)">rise ≤ 48 mm</text>
+        <text x="230" y="192" font-size="10" fill="var(--warn)" text-anchor="middle">the roof (dashed) is not optional — it is what keeps the marble in the Course</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> the only jump in the catalogue. Marbles leave the floor for
+      about a fifth of a second and land spread out along the run-out by arrival speed. It converts a speed
+      difference too small to see into a gap of several marble diameters, and it is the best-looking single
+      shot available on a flat Board.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded and short — ballistic, no contact.</dd>
+        <dt>Params</dt><dd>Lip rise (24–48 mm), lip radius, run-out length, roof clearance.</dd>
+      </dl>
+      <div class="risk"><b>Unresolved:</b> an airborne marble is the one thing this Course has no containment
+      story for. Everything else is a channel with rails. Settle the roof geometry and prove it in the
+      Validator across the full entry-speed range <em>before</em> the lip, not after.</div>
+    </div>
+
+  </div>
+
+  <h2>More candidates — shuffle</h2>
+  <p class="sub">Reordering the field is the property that makes the race feel unrigged, and Whoops is
+  currently the only Module that does it. These three do it by three different mechanisms.</p>
+
+  <div class="grid">
+
+    <!-- ============ DROP SHELVES ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Drop shelves</h3><span class="chip sh">shuffle</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: three shelves alternate direction down a shaft, marbles running along each one and tipping off its end onto the next.">
+        <rect x="30" y="22" width="400" height="156" fill="#fbfbfd" stroke="#e4e7eb"/>
+        <path d="M34 44 L300 62" stroke="var(--part)" stroke-width="5" stroke-linecap="round"/>
+        <path d="M426 104 L160 122" stroke="var(--part)" stroke-width="5" stroke-linecap="round"/>
+        <path d="M34 164 L426 150" stroke="var(--part)" stroke-width="5" stroke-linecap="round" stroke-dasharray="0"/>
+        <path d="M306 70 Q322 84 412 98" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+        <path d="M154 130 Q140 142 60 156" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+        <g fill="var(--accent)">
+          <circle cx="120" cy="43" r="8"/><circle cx="176" cy="47" r="8"/><circle cx="252" cy="52" r="8"/>
+        </g>
+        <g fill="var(--accent2)">
+          <circle cx="360" cy="98" r="8"/><circle cx="286" cy="103" r="8"/>
+        </g>
+        <text x="60" y="36" font-size="10" fill="var(--ink3)">shelf 1 — runs right</text>
+        <text x="330" y="94" font-size="10" fill="var(--ink3)" text-anchor="end">shelf 2 — runs left</text>
+        <text x="60" y="180" font-size="10" fill="var(--ink3)">shelf 3 — runs right, exits to the connector</text>
+        <line x1="440" y1="62" x2="440" y2="104" stroke="var(--ink3)" stroke-width="1" marker-start="url(#arg)" marker-end="url(#arg)"/>
+        <text x="436" y="86" font-size="9.5" fill="var(--ink3)" text-anchor="end">60 mm</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a switchback in miniature, but the point is not the descent —
+      it is that a marble's order at the <em>end</em> of a shelf has nothing to do with its order at the
+      start. Marbles bunch at the shelf lip, tip off in whatever order the bunching produced, and get one
+      more chance to reorder on each of the next two shelves.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None. This is the Staircase's geometry turned 90° in intent: it reorders instead of spacing out.</dd>
+        <dt>Dwell</dt><dd>Bounded; every shelf slopes, so nothing has a flat spot to rest on.</dd>
+        <dt>Params</dt><dd>Shelf count (2–4), shelf grade, drop between shelves (40–80 mm), overlap.</dd>
+      </dl>
+      <div class="risk"><b>Watch:</b> the lip. A square shelf edge catches a marble on its shoulder and
+      stalls it; bevel the last 20 mm, and keep the drop under four marble diameters so the landing does not
+      launch it off the shelf below.</div>
+    </div>
+
+    <!-- ============ UNEQUAL TWIN LOOP ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Unequal twin loop</h3><span class="chip sh">shuffle</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: a splitter sends marbles down either a long bowed lane or a short straight lane which rejoin, so the entry order can invert.">
+        <rect x="28" y="26" width="404" height="150" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <path d="M28 40 L120 40 Q210 40 230 62" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M28 162 L120 162 Q210 162 230 140" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M130 84 Q186 40 250 46 Q322 52 344 100" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M130 118 Q186 162 250 156 Q322 150 344 102" fill="none" stroke="var(--wall)" stroke-width="2.5"/>
+        <path d="M112 92 L138 78 L138 124 Z" fill="var(--part)"/>
+        <path d="M28 96 L110 96" fill="none" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <path d="M140 88 Q192 56 250 62 Q312 68 342 100 L432 100" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M140 114 Q192 146 250 140 Q312 134 342 102 L432 102" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="7 5"/>
+        <circle cx="60" cy="96" r="7" fill="var(--accent)"/><text x="60" y="100" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+        <circle cx="84" cy="96" r="7" fill="var(--accent2)"/><text x="84" y="100" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+        <circle cx="380" cy="101" r="7" fill="var(--accent2)"/><text x="380" y="105" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+        <circle cx="406" cy="101" r="7" fill="var(--accent)"/><text x="406" y="105" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+        <text x="238" y="36" font-size="10" fill="var(--accent)" text-anchor="middle">long lane — 1.4× the distance</text>
+        <text x="238" y="180" font-size="10" fill="var(--accent2)" text-anchor="middle">short lane — straight through</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> the channel opens into two visibly unequal lanes and closes
+      again. Every marble that takes the long side loses about a fifth of a second, so the leader arriving
+      on the wrong side of the splitter comes out behind. Spectators can see the outcome coming from the
+      moment of the split, which is the whole appeal.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None. Pure geometry, so it can never jam or stall.</dd>
+        <dt>Dwell</dt><dd>Two fixed values, one per lane. The most predictable Module in this document.</dd>
+        <dt>Params</dt><dd>Length ratio (1.2–1.6), splitter offset (biases how the field divides), lane width.</dd>
+      </dl>
+      <div class="risk"><b>Watch:</b> each lane is half the channel — 0.25 m, about eight marble diameters.
+      That is enough for a 15-marble pack, but the splitter apex has the Splitter tree's balancing problem
+      in miniature. Round it, or offset it so dead centre is never a stable rest.</div>
+    </div>
+
+    <!-- ============ CATCH CUPS ============ -->
+    <div class="card new hold">
+      <div class="hdr"><h3>Catch cups</h3><span class="chip sh">shuffle</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: five shallow cups set into a sloping floor, some holding waiting marbles, with an arrival knocking one free.">
+        <path d="M24 58 L74 62 A26 26 0 0 0 126 68 L166 72 A26 26 0 0 0 218 78 L258 82
+                 A26 26 0 0 0 310 88 L350 92 A26 26 0 0 0 402 98 L436 102"
+              fill="none" stroke="var(--part)" stroke-width="4"/>
+        <path d="M24 26 L436 70" stroke="var(--wall)" stroke-width="2.5" stroke-dasharray="6 5"/>
+        <circle cx="100" cy="76" r="9" fill="var(--accent)"/>
+        <circle cx="192" cy="86" r="9" fill="var(--accent)"/>
+        <circle cx="284" cy="96" r="9" fill="var(--accent2)"/>
+        <circle cx="60" cy="52" r="9" fill="#3f4650"/>
+        <path d="M70 48 Q92 50 100 64" fill="none" stroke="var(--accent2)" stroke-width="2" marker-end="url(#ar2)"/>
+        <text x="112" y="44" font-size="10" fill="var(--accent2)">the next arrival is what frees the one waiting</text>
+        <text x="230" y="140" font-size="10" fill="var(--ink3)" text-anchor="middle">cup depth ≈ 0.6 marble ⌀ · 5 cups over 0.9 m</text>
+        <text x="230" y="166" font-size="10" fill="var(--warn)" text-anchor="middle">nobody arrives after the last marble</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> marbles dropping into shallow scoops and sitting there, visibly
+      stuck, until a following marble knocks them on. It produces the largest reordering per centimetre of
+      any static idea here, and it reads instantly on camera.</p>
+      <div class="risk"><b>Unresolved — the tail of the field.</b> A cup that only empties on impact has
+      unbounded Dwell Time for whichever marble is last, which is exactly the case <code>last</code>
+      Selection Mode cares most about. Make every cup drain under gravity alone within a fixed time
+      (a lip lower than the entry side), then the mechanic survives; otherwise it is a race that never
+      finishes.</div>
+    </div>
+
+  </div>
+
+  <h2>More candidates — sort</h2>
+  <p class="sub">Sort spreads the field out by speed so the finish is not a blob. The Staircase does it by
+  interrupting descent; these do it by making speed itself decide the path.</p>
+
+  <div class="grid">
+
+    <!-- ============ GRATE EXPRESS ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Grate express</h3><span class="chip so">sort</span></div>
+      <div class="view">Elevation, cut through the channel — travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation cutaway: a slotted upper floor over a lower lane; a fast marble skims across the slots while a slow one drops through into the lane below.">
+        <path d="M24 62 L106 70" stroke="var(--part)" stroke-width="4"/>
+        <path d="M146 74 L216 80" stroke="var(--part)" stroke-width="4"/>
+        <path d="M256 84 L326 90" stroke="var(--part)" stroke-width="4"/>
+        <path d="M366 94 L436 100" stroke="var(--part)" stroke-width="4"/>
+        <path d="M24 148 L436 176" stroke="var(--part)" stroke-width="4"/>
+        <path d="M24 26 L436 66" stroke="var(--wall)" stroke-width="2.5" stroke-dasharray="6 5"/>
+        <path d="M24 52 Q160 56 300 74 Q380 84 432 90" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M24 56 Q90 60 122 68 Q140 84 150 126 Q156 150 200 156 L432 172"
+              fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="7 5"/>
+        <circle cx="60" cy="53" r="7" fill="var(--accent)"/>
+        <circle cx="404" cy="86" r="7" fill="var(--accent)"/>
+        <circle cx="300" cy="163" r="7" fill="var(--accent2)"/>
+        <text x="436" y="34" font-size="10" fill="var(--accent)" text-anchor="end">fast — skims the slots, keeps the express floor</text>
+        <text x="212" y="140" font-size="10" fill="var(--accent2)">slow — sinks into the first slot it cannot clear</text>
+        <line x1="106" y1="86" x2="146" y2="90" stroke="var(--ink3)" stroke-width="1" marker-start="url(#arg)" marker-end="url(#arg)"/>
+        <text x="30" y="120" font-size="9.5" fill="var(--ink3)">slot 1.15 × marble ⌀</text>
+        <text x="60" y="192" font-size="10" fill="var(--ink3)">lower lane rejoins the channel at the exit anchor, ~0.15 s down</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a cattle grid that sorts. Arrive fast and you fly over the
+      slots and keep the express floor; arrive slow and the first slot swallows you into a longer lane
+      underneath. The gap it opens is proportional to the speed difference that already existed, which is
+      exactly what <code>sort</code> is for — and it does it without costing the leaders anything.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded on both paths; the lower lane is longer by construction, not by chance.</dd>
+        <dt>Params</dt><dd>Slot count (3–5), slot width (1.05–1.3 marble ⌀), slot pitch, lower-lane drop.</dd>
+      </dl>
+      <div class="risk"><b>Watch:</b> slot width is a narrow band. Under 1.05 ⌀ nothing ever drops through;
+      over ~1.4 ⌀ everything does and there is no sort, only a detour. Sweep it in the Showcase against real
+      entry speeds before fixing a default.</div>
+    </div>
+
+    <!-- ============ SPLIT FORK ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Split fork, unequal surfaces</h3><span class="chip so">sort</span></div>
+      <div class="view">Plan view — looking at the Board face-on from above; travel left→right, channel width top↔bottom</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: a wedge divides the channel into a smooth fast lane and a high-friction rough lane which rejoin before the exit.">
+        <rect x="28" y="30" width="404" height="142" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <line x1="28" y1="30" x2="432" y2="30" stroke="var(--wall)" stroke-width="2.5"/>
+        <line x1="28" y1="172" x2="432" y2="172" stroke="var(--wall)" stroke-width="2.5"/>
+        <rect x="150" y="104" width="200" height="66" fill="#eceff3"/>
+        <g stroke="#c3cad3" stroke-width="1.4">
+          <line x1="158" y1="170" x2="188" y2="106"/><line x1="182" y1="170" x2="212" y2="106"/>
+          <line x1="206" y1="170" x2="236" y2="106"/><line x1="230" y1="170" x2="260" y2="106"/>
+          <line x1="254" y1="170" x2="284" y2="106"/><line x1="278" y1="170" x2="308" y2="106"/>
+          <line x1="302" y1="170" x2="332" y2="106"/><line x1="326" y1="170" x2="350" y2="118"/>
+        </g>
+        <path d="M126 101 L150 88 L150 116 Z" fill="var(--part)"/>
+        <line x1="150" y1="102" x2="350" y2="102" stroke="var(--part)" stroke-width="4"/>
+        <path d="M28 96 L120 100" fill="none" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <path d="M124 94 L152 86 L344 86 L432 92" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M124 108 L152 126 L344 130 L432 108" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="7 5"/>
+        <circle cx="60" cy="97" r="7" fill="var(--accent)"/>
+        <circle cx="84" cy="98" r="7" fill="var(--accent2)"/>
+        <circle cx="400" cy="90" r="7" fill="var(--accent)"/>
+        <circle cx="352" cy="122" r="7" fill="var(--accent2)"/>
+        <text x="250" y="70" font-size="10" fill="var(--accent)" text-anchor="middle">smooth lane — friction 0.08, the Course default</text>
+        <text x="250" y="192" font-size="10" fill="var(--accent2)" text-anchor="middle">rough lane — friction 0.5, same length, visibly slower</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> two identical-looking lanes with different floors, and a marble
+      that drew the rough one falling behind for the whole length of the Module with no contact drama at
+      all. Cheapest Module in this document to build: two floor plates, one wedge, one material difference,
+      no new geometry emitter and no new shape.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded; the rough lane is slower by a fixed ratio, not by an amount that can grow.</dd>
+        <dt>Params</dt><dd>Rough-lane friction (0.2–0.6), fork offset, fork length.</dd>
+      </dl>
+      <div class="risk"><b>Note:</b> this is the lane comb and the friction patches from the 2026-08-18
+      obstacle list, merged and shrunk to one Module. Both were cut then for reasons that no longer apply —
+      they were designed against an 11 m bed with a <code>fraction</code> placement API. At 0.5 m of channel
+      the two lanes fit side by side with room for the pack.</div>
+    </div>
+
+    <!-- ============ COUNTER-SLOPE GATE ============ -->
+    <div class="card new hold">
+      <div class="hdr"><h3>Counter-slope gate</h3><span class="chip so">sort</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: a dip followed by a rise; a fast marble crests it while a slow marble rolls back down into the dip.">
+        <path d="M24 54 L120 92 Q186 122 244 74 L436 128" fill="none" stroke="var(--part)" stroke-width="4"/>
+        <path d="M24 22 L118 60 Q186 90 246 42 L436 96" fill="none" stroke="var(--wall)" stroke-width="2.5" stroke-dasharray="6 5"/>
+        <path d="M40 48 Q140 100 200 108 Q238 106 250 70 L400 112" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+        <path d="M40 62 Q130 108 186 114 Q214 114 224 96" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="7 5"/>
+        <path d="M224 96 Q212 118 176 118" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar2)"/>
+        <circle cx="48" cy="50" r="7" fill="var(--accent)"/>
+        <circle cx="380" cy="107" r="7" fill="var(--accent)"/>
+        <circle cx="196" cy="112" r="7" fill="var(--accent2)"/>
+        <text x="436" y="46" font-size="10" fill="var(--accent)" text-anchor="end">above the threshold speed — crests and goes</text>
+        <text x="150" y="146" font-size="10" fill="var(--accent2)">below it — rolls back and tries again</text>
+        <line x1="244" y1="74" x2="244" y2="106" stroke="var(--ink3)" stroke-width="1" marker-start="url(#arg)" marker-end="url(#arg)"/>
+        <text x="290" y="168" font-size="9.5" fill="var(--ink3)">crest 30 mm above the dip</text>
+        <text x="230" y="192" font-size="10" fill="var(--warn)" text-anchor="middle">a marble can sit in the dip oscillating for as long as the physics allows</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> a hill the marbles have to earn. It is the sharpest sort
+      available — it does not slow the tail of the field, it holds it — and the near misses are genuinely
+      tense to watch.</p>
+      <div class="risk"><b>Unresolved — Dwell Time is unbounded by design.</b> With restitution 0.15 and
+      friction 0.08 a marble that fails the crest keeps almost all its energy and oscillates. It escapes
+      only when a follower pushes it, which makes the last marble's finish time unbounded and the race's
+      duration a function of nothing you control. It needs a bleed — a downstream leak from the dip, or a
+      crest that lowers behind the pack — and that is a design decision, not a parameter.</div>
+    </div>
+
+  </div>
+
+  <h2>More candidates — accel</h2>
+  <p class="sub">The Chute is fixed into every third Arc Slot, which means the Course's connective tissue is
+  the same shot eight times. Neither of these changes what an <code>accel</code> Slot does; they change what
+  it looks like.</p>
+
+  <div class="grid">
+
+    <!-- ============ STEEP ZIGZAG ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Steep zigzag</h3><span class="chip">accel</span></div>
+      <div class="view">Elevation — the viewer's face-on view; travel left→right, gravity down</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Elevation: three steep switchback ramps stacked in one Cell column, a marble accelerating down each and reversing at the ends.">
+        <rect x="30" y="20" width="400" height="160" fill="#fbfbfd" stroke="#e4e7eb"/>
+        <path d="M40 38 L372 78" stroke="var(--part)" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M420 94 L88 134" stroke="var(--part)" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M40 150 L424 172" stroke="var(--part)" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M376 76 Q412 82 414 92" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M84 132 Q46 138 44 148" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M46 32 L370 72" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+        <path d="M414 88 L92 128" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+        <path d="M46 144 L418 166" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+        <circle cx="130" cy="43" r="7" fill="var(--accent)"/>
+        <text x="230" y="196" font-size="10" fill="var(--ink3)" text-anchor="middle">grade 0.35 per leg · ≈ 1.2 m of path in ≈ 0.4 m of Board</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> the pack folding back on itself down a set of steep ramps,
+      picking up more speed per Cell of Board than a straight Chute can. It also spreads the field a little
+      at each reversal, so an <code>accel</code> Slot stops being dead time between obstacles.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded and shorter than the Chute it replaces at equal drop.</dd>
+        <dt>Params</dt><dd>Leg count (2–4), leg grade (0.25–0.45), reversal radius, width.</dd>
+      </dl>
+      <div class="risk"><b>Note:</b> this Module shipped once and was cut in <code>fe48df4</code> along with
+      four others — for catalogue size, not for a physics failure. Rebuilding it is a revert plus a
+      re-tune, which makes it the cheapest item on this page. Check the reversals against the connector work
+      in <code>src/course/connectors.ts</code>: hairpins at the Board's row ends already solve the same
+      problem, and the two should share geometry rather than each having their own.</div>
+    </div>
+
+    <!-- ============ BANKED S-BEND ============ -->
+    <div class="card new">
+      <div class="hdr"><h3>Banked S-bend</h3><span class="chip">accel</span></div>
+      <div class="view">Plan view with a section — travel left→right; the inset is cut across the channel</div>
+      <div class="plate">
+      <svg viewBox="0 0 460 200" role="img" aria-label="Plan view: an S-shaped channel with banked outer walls, a marble riding high on each bank, plus an inset cross-section showing the banking angle.">
+        <rect x="28" y="24" width="290" height="152" fill="#f7f8fa" stroke="#e4e7eb"/>
+        <path d="M28 44 Q126 44 168 100 Q210 156 306 156" fill="none" stroke="var(--wall)" stroke-width="3"/>
+        <path d="M28 96 Q100 96 138 152 Q150 172 172 176" fill="none" stroke="var(--wall)" stroke-width="3"/>
+        <path d="M188 24 Q214 30 232 52 Q262 100 306 100" fill="none" stroke="var(--wall)" stroke-width="3"/>
+        <path d="M28 70 Q112 70 152 126 Q192 180 306 128" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <circle cx="62" cy="70" r="7" fill="var(--accent)"/>
+        <circle cx="176" cy="150" r="7" fill="var(--accent)"/>
+        <text x="70" y="126" font-size="10" fill="var(--ink3)">the marble climbs the outside of each turn</text>
+        <line x1="336" y1="52" x2="336" y2="168" stroke="#e4e7eb" stroke-width="1"/>
+        <text x="352" y="44" font-size="10" fill="var(--ink3)">section A–A</text>
+        <path d="M352 140 L392 140 Q420 140 428 108" fill="none" stroke="var(--part)" stroke-width="4"/>
+        <path d="M352 140 L352 108" stroke="var(--part)" stroke-width="4"/>
+        <circle cx="414" cy="120" r="8" fill="var(--accent)"/>
+        <path d="M400 156 L428 156" stroke="var(--ink3)" stroke-width="1"/>
+        <text x="390" y="176" font-size="9.5" fill="var(--ink3)">bank 30–45°</text>
+      </svg>
+      </div>
+      <p class="says"><b>What you'd see:</b> the marbles leaning into a banked curve instead of running
+      straight. It holds speed through a direction change the flat Chute cannot make at all, and the pack
+      strings out along the bank by entry speed — high and fast on the outside, low and slow on the inside.</p>
+      <dl>
+        <dt>Moving parts</dt><dd>None.</dd>
+        <dt>Dwell</dt><dd>Bounded; comparable to a Chute of the same path length.</dd>
+        <dt>Params</dt><dd>Bend radius, bank angle (30–45°), length, width.</dd>
+      </dl>
+      <div class="risk"><b>Watch:</b> ADR 0003 binds this one. The bank is a curved surface, so it collides
+      as a fan of flat cuboid plates and only the visual is swept — the same treatment Whoops gets. Too few
+      plates and the marble reads every facet edge as a kick; that is the defect
+      <code>src/course/collisionContinuity.test.ts</code> exists to catch.</div>
+    </div>
+
+  </div>
+
   <h2>Held back — good ideas with an unresolved problem</h2>
-  <p class="sub">Each of these works on paper. Each also has one specific thing that has to be settled before it is safe to build.</p>
+  <p class="sub">The original four. Each works on paper, and each has one specific thing that has to be
+  settled before it is safe to build. Two of the newer candidates above — Catch cups and the Counter-slope
+  gate — carry the same warning band for the same reason: an unbounded Dwell Time hiding inside geometry
+  that otherwise looks safe.</p>
 
   <div class="grid">
 
@@ -431,7 +914,8 @@
       field leaves in single file. The drama is watching which of two neighbours takes the gap.</p>
       <div class="risk"><b>Unresolved:</b> this is funnel-choke's geometry with a comb bolted on. It is
       only safe if the merge zone provably cannot hold two marbles abreast at any point. If you cannot
-      show that from the geometry, you are re-shipping the Module you just removed — skip it.</div>
+      show that from the geometry, you are re-shipping the Module you just removed — skip it.
+      <br><br><b>And:</b> its <code>queue</code> Role no longer exists — see the Turnstile.</div>
     </div>
 
     <!-- ============ LOADED ROCKER ============ -->
@@ -468,8 +952,12 @@
 
   </div>
 
-  <h2>For comparison — the four Modules already on the Board</h2>
-  <p class="sub">Same drawing conventions, so you can judge whether a candidate actually looks and behaves differently from what races already show.</p>
+  <h2>For comparison — what is actually on the Board</h2>
+  <p class="sub">Same drawing conventions, so you can judge whether a candidate actually looks and behaves
+  differently from what races already show. Four Modules are registered in
+  <code>src/course/courseModules.ts</code>: the structural Chute plus one obstacle per Role. The windmill
+  is drawn here because it is the one moving Module this project shipped and then removed — read it as the
+  evidence behind every "static geometry preferred" line above.</p>
   <div class="refgrid">
 
     <div class="ref"><div class="nm">Pin field</div><div class="rl">scatter · live</div>
@@ -506,7 +994,7 @@
       </svg>
       <div class="ds">Treads catch and release; drop height sets who gets ahead.</div></div>
 
-    <div class="ref"><div class="nm">Windmill</div><div class="rl">queue · live</div>
+    <div class="ref gone"><div class="nm">Windmill</div><div class="rl">queue · removed 2026-08-24</div>
       <svg viewBox="0 0 190 110" role="img" aria-label="A four-bladed paddle wheel batting marbles that arrive along a sloped channel.">
         <path d="M8 30 L62 44" stroke="var(--wall)" stroke-width="2.5"/>
         <path d="M126 66 L182 82" stroke="var(--wall)" stroke-width="2.5"/>
@@ -517,7 +1005,8 @@
         <circle cx="94" cy="56" r="6" fill="var(--part)"/>
         <circle cx="70" cy="40" r="6" fill="var(--accent)"/>
       </svg>
-      <div class="ds">Blades bat arrivals. Meters the field, but strikes are unpredictable.</div></div>
+      <div class="ds">Blades bat arrivals. Removed in <code>2be90ca</code> with the rest of the collision-seam
+      work; the <code>queue</code> Role went with it. The only Module to date whose moving part was the problem.</div></div>
 
     <div class="ref"><div class="nm">Chute</div><div class="rl">accel · structural</div>
       <svg viewBox="0 0 190 110" role="img" aria-label="A plain sloped channel with a marble accelerating down it.">
@@ -536,11 +1025,19 @@
     travel spans are consistent with the 0.6–1.8 m range the live Modules occupy. Plan views look at
     the Board face-on from above, so the vertical axis is channel width; elevations are the viewer's
     face-on view, so the vertical axis is gravity.<br>
-    <strong>Status.</strong> All eight candidates are unbuilt proposals from the 2026-08-24
-    brainstorm. Dimensions, pocket counts, restitution values, and dwell claims are design intent,
-    not Validator measurements — run each through the Validator before trusting any of them.
-    Live Module drawings are schematic, not traced from their <code>buildSpec</code> output.
-    Branch <code>marble-race-broadcast-ui/phase-4-production-release</code>. Drawn 2026-08-24.
+    <strong>Status.</strong> All nineteen candidates are unbuilt proposals — eight from the 2026-08-24
+    brainstorm, eleven added 2026-08-25. Dimensions, pocket counts, friction and restitution values, and
+    every dwell claim are design intent, not Validator measurements — run each through the Validator
+    before trusting any of them. Live Module drawings are schematic, not traced from their
+    <code>buildSpec</code> output.<br>
+    <strong>What changed on 2026-08-25.</strong> The catalogue was cut to four obstacles in
+    <code>fe48df4</code> (steep zigzag, rumble strip, friction lanes, funnel choke, vortex bowl removed)
+    and the windmill followed in <code>2be90ca</code>, taking the <code>queue</code> Role with it. So the
+    Arc now has exactly one Module per Role and <code>enumerateRoleSelections()</code> yields one Course.
+    The eleven new candidates are drawn against that Course — 0.5 m channel, <code>COURSE_GRADE</code>
+    0.12, entry and exit on one continuous centreline — rather than against the Showcase, which is why
+    none of them ask for a free fall, a wider bed, or a second Role.
+    Drawn 2026-08-24, extended 2026-08-25.
   </footer>
 </main>
 </body>

@@ -6,6 +6,40 @@ import type { Quaternion, Vector3 } from "../race/types";
 import { stepStartGate } from "./startFinish";
 import type { Course } from "./types";
 
+interface CourseMotionPlan {
+  readonly modules: readonly {
+    readonly spec: Spec;
+    readonly step: (spec: Spec, tSeconds: number) => readonly KinematicTransform[];
+  }[];
+  readonly connectors: readonly Spec[];
+}
+
+const motionPlans = new WeakMap<Course, CourseMotionPlan>();
+
+function hasKinematicCollider(spec: Spec): boolean {
+  return spec.colliders.some(({ kinematic }) => kinematic === true);
+}
+
+function motionPlanFor(course: Course): CourseMotionPlan {
+  const cached = motionPlans.get(course);
+  if (cached !== undefined) return cached;
+
+  const modules = course.modules.flatMap(({ moduleId, spec }) => {
+    const module = ALL_MODULES.find(({ id }) => id === moduleId);
+    if (!module) {
+      throw new Error(`Course references unknown Module ${moduleId}`);
+    }
+    if (!hasKinematicCollider(spec)) return [];
+    return [{ spec, step: module.step }];
+  });
+  const connectors = course.connectors.flatMap(({ spec }) =>
+    hasKinematicCollider(spec) ? [spec] : [],
+  );
+  const plan = { modules, connectors };
+  motionPlans.set(course, plan);
+  return plan;
+}
+
 function vector(value: ThreeVector3): Vector3 {
   return [value.x, value.y, value.z];
 }
@@ -38,15 +72,12 @@ export function stepCourse(course: Course, tSeconds: number): readonly Kinematic
   }
 
   const transforms: KinematicTransform[] = [...stepStartGate(course.start, tSeconds)];
-  for (const placed of course.modules) {
-    const module = ALL_MODULES.find(({ id }) => id === placed.moduleId);
-    if (!module) {
-      throw new Error(`Course references unknown Module ${placed.moduleId}`);
-    }
-    transforms.push(...module.step(placed.spec, tSeconds));
+  const plan = motionPlanFor(course);
+  for (const module of plan.modules) {
+    transforms.push(...module.step(module.spec, tSeconds));
   }
-  for (const connector of course.connectors) {
-    transforms.push(...stepRotatingSpec(connector.spec, tSeconds));
+  for (const connector of plan.connectors) {
+    transforms.push(...stepRotatingSpec(connector, tSeconds));
   }
   return transforms;
 }

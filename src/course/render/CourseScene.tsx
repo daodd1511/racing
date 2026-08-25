@@ -1,6 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import type { Course } from "../types";
@@ -40,6 +40,29 @@ function sceneSpecs(course: Course) {
     { id: "finish", spec: course.finish },
   ];
 }
+
+function hasKinematicVisuals({ spec }: ReturnType<typeof sceneSpecs>[number]): boolean {
+  return spec.colliders.some(({ kinematic }) => kinematic === true);
+}
+
+const StaticCourse = memo(function StaticCourse({ course }: { readonly course: Course }) {
+  const visibleSpecs = useMemo(
+    () =>
+      sceneSpecs(course)
+        .filter((entry) => !hasKinematicVisuals(entry))
+        .map(({ id, spec }) => ({ id, spec: raceVisibleSpec(spec) })),
+    [course],
+  );
+
+  return (
+    <>
+      <Board board={course.board} />
+      {visibleSpecs.map(({ id, spec }) => (
+        <SpecVisuals key={id} spec={spec} />
+      ))}
+    </>
+  );
+});
 
 function Marble({
   style,
@@ -107,7 +130,8 @@ function Marble({
 }
 
 /** Visual Course counterpart to the raw live world. Specs come from the
- * materialized Course exactly once; only marble meshes consume live snapshots. */
+ * materialized Course exactly once; only moving visuals and marble meshes
+ * consume live snapshots. */
 export function CourseScene({
   course,
   snapshot,
@@ -118,15 +142,18 @@ export function CourseScene({
   const marbleTransforms = snapshot?.marbleTransforms ?? stagedMarbleTransforms;
   const styles = marbleStyles ?? createMarbleStyles(marbleTransforms.length);
   const transforms = stepCourse(course, snapshot?.elapsedSeconds ?? 0);
-  const visibleSpecs = useMemo(
-    () => sceneSpecs(course).map(({ id, spec }) => ({ id, spec: raceVisibleSpec(spec) })),
+  const movingSpecs = useMemo(
+    () =>
+      sceneSpecs(course)
+        .filter(hasKinematicVisuals)
+        .map(({ id, spec }) => ({ id, spec: raceVisibleSpec(spec) })),
     [course],
   );
 
   return (
     <group name="course-scene">
-      <Board board={course.board} />
-      {visibleSpecs.map(({ id, spec }) => (
+      <StaticCourse course={course} />
+      {movingSpecs.map(({ id, spec }) => (
         <SpecVisuals key={id} spec={spec} transforms={transforms} />
       ))}
       {marbleTransforms.map(({ marbleIndex, position, rotation }) => (

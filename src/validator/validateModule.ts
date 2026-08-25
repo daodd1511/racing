@@ -1,5 +1,6 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 
+import { buildFeederApronSpec } from "../modules/feederApron";
 import type { ModuleDefinition, Spec } from "../modules/types";
 import {
   INITIAL_KINEMATIC_CLOCK,
@@ -150,6 +151,7 @@ export async function validateModule<P>(
   await RAPIER.init();
 
   const spec = module.buildSpec(params);
+  const feederApronSpec = buildFeederApronSpec(spec.footprint.entry);
   const maxSteps = Math.ceil(options.maxSimulationSeconds / KINEMATIC_FIXED_STEP_SECONDS);
 
   const allDwellSeconds: number[] = [];
@@ -160,8 +162,8 @@ export async function validateModule<P>(
   let anyExited = false;
 
   for (let seed = 0; seed < options.seedCount; seed += 1) {
-    const builtWorld = buildWorld([spec]);
-    const bodies = spawnMarbles(builtWorld.world, spec, options.marbleCount, seed);
+    const builtWorld = buildWorld([feederApronSpec, spec]);
+    const bodies = spawnMarbles(builtWorld.world, feederApronSpec, options.marbleCount, seed);
     const runs: MarbleRun[] = bodies.map(() => ({ frames: [] }));
     let clock = INITIAL_KINEMATIC_CLOCK;
 

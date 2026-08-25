@@ -36,6 +36,11 @@ The complete chain of Modules mounted on a Board for one race, from start grid
 to finish line.
 _Avoid_: track, layout, level
 
+**Course Fairness**:
+How little a marble's starting grid position predicts its finishing outcome
+across equivalent races.
+_Avoid_: randomness, balance
+
 ### Modules
 
 **Module**:
@@ -43,6 +48,15 @@ One self-contained, independently authored piece of the Course — a pin field,
 a staircase, a chute. The unit of composition and of the Showcase.
 _Avoid_: obstacle (too narrow — a chute is a Module but obstructs nothing),
 component, piece, section
+
+**Obstacle Module**:
+A Scatter, Shuffle, or Sort Module that disrupts the field rather than
+restoring momentum.
+_Avoid_: obstacle, obs
+
+**Course Eligibility**:
+Whether a Module may be placed in a live Course or is limited to the Showcase.
+_Avoid_: active status, production status
 
 **Spec**:
 The pure geometry a Module's build function returns: its colliders, its
@@ -71,14 +85,31 @@ _Avoid_: step, stage, spot
 
 ### Behaviour
 
+**Accel**:
+Increasing the field's exit speed relative to entry without intentionally
+changing its lateral distribution, temporal gaps, or order. It restores
+momentum rather than adding another obstacle behaviour.
+_Avoid_: speed boost, speed-up
+
+**Scatter**:
+Redistributing marbles laterally so their exit lane is difficult to predict
+from their entry lane. Scatter is spatial; Shuffle is a change in order.
+_Avoid_: spread, deflection
+
 **Shuffle**:
-Reordering the field — marbles leave a Module in a different order than they
-entered. The property that makes a race feel unrigged.
+Making the exit order difficult to predict from the entry order across
+equivalent races. Deterministic preservation and deterministic reversal are
+not Shuffle. The property that makes a race feel unrigged.
 _Avoid_: mixing, randomising
 
+**Sort**:
+Widening the field's temporal separation so faster and slower marbles leave
+farther apart than they entered. Sort changes gaps; Shuffle changes order.
+_Avoid_: temporal spread, speed sorting
+
 **Dwell Time**:
-How long a marble spends inside one Module. Its worst case is what decides
-whether a Module is safe to put in a Course.
+The elapsed time between a marble's valid entry into a Module and its valid
+exit from that Module.
 _Avoid_: latency, hold time, transit time
 
 ### Tooling
@@ -101,3 +132,8 @@ _Avoid_: simulator, test harness, checker
 Releases marbles into a Module in the Showcase — continuously, in a burst, or
 one at a time.
 _Avoid_: spawner, emitter, dropper
+
+**Burst 15**:
+The Feeder profile that releases a full 15-marble field simultaneously from
+the same starting formation used by a live Course.
+_Avoid_: burst mode, batch release

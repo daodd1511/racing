@@ -76,6 +76,20 @@ function snapshotAt(x: number, y: number, z = 0): RaceSnapshot {
   };
 }
 
+function handoffSnapshot(elapsedSeconds: number, decisiveMarbleIndex: number): RaceSnapshot {
+  return {
+    elapsedSeconds,
+    marbleTransforms: [
+      { marbleIndex: 0, position: [0, 0, 0], rotation: [0, 0, 0, 1] },
+      { marbleIndex: 1, position: [1.5, 0, 0], rotation: [0, 0, 0, 1] },
+    ],
+    ranking: decisiveMarbleIndex === 0 ? [0, 1] : [1, 0],
+    decisiveMarbleIndex,
+    passedCheckpoints: [0, 0],
+    splitTimes: [[], []],
+  };
+}
+
 function advanceCamera(deltaSeconds: number): void {
   if (cameraRuntime.frame === null) {
     throw new Error("Expected DecisiveCamera to register a frame callback");
@@ -183,5 +197,30 @@ describe("DecisiveCamera", () => {
     }
 
     expect(camera.position.x).toBeGreaterThan(-1.45);
+  });
+
+  it("does not accelerate abruptly after a decisive-marble handoff", () => {
+    const camera = new THREE.PerspectiveCamera();
+    cameraRuntime.camera = camera;
+    const view = render(
+      <DecisiveCamera course={EASTBOUND_COURSE} snapshot={handoffSnapshot(1, 0)} />,
+    );
+    settleCamera();
+
+    const frameDisplacements: number[] = [];
+    let previousX = camera.position.x;
+    for (let frame = 1; frame <= 100; frame += 1) {
+      view.rerender(
+        <DecisiveCamera course={EASTBOUND_COURSE} snapshot={handoffSnapshot(1 + frame / 60, 1)} />,
+      );
+      advanceCamera(1 / 60);
+      frameDisplacements.push(camera.position.x - previousX);
+      previousX = camera.position.x;
+    }
+
+    const displacementChanges = frameDisplacements
+      .slice(1)
+      .map((displacement, index) => Math.abs(displacement - frameDisplacements[index]));
+    expect(Math.max(...displacementChanges)).toBeLessThan(0.01);
   });
 });

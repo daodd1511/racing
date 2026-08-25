@@ -19,7 +19,10 @@ const MINIMUM_HAIRPIN_REACH = SCALE.channelWidth / 2 + SCALE.marbleRadius * 4;
 // centreline gains at least ten metres of horizontal travel per metre of
 // vertical drop, which caps the average turn grade at roughly 10%.
 export const HAIRPIN_REACH_PER_DROP = 5;
-const LINK_SAMPLES = 16;
+// Same-row links change from a steep Module tangent to the Course's gentle
+// inter-Slot drop over a short distance. Coarse facets turn that continuous
+// curve into a sequence of collision ramps that visibly kick marbles.
+const LINK_SAMPLES = 64;
 const HAIRPIN_SAMPLES = 96;
 export const CONNECTOR_EDGE_CLEARANCE =
   MINIMUM_HAIRPIN_REACH + SCALE.channelWidth / 2 + RAIL_THICKNESS;
@@ -162,28 +165,29 @@ function physicalSegments(
   });
 }
 
-interface ChannelCollider {
-  readonly collider: ColliderSpec;
+interface ChannelColliders {
+  readonly colliders: readonly ColliderSpec[];
   readonly bounds: { readonly min: Vector3; readonly max: Vector3 };
 }
 
-function smoothOpenChannelCollider(
+function smoothOpenChannelColliders(
   route: readonly Vector3[],
   start: Anchor,
   end: Anchor,
   railHeight: number,
   id: string,
   material: ColliderSpec["material"] = CONNECTOR_MATERIAL,
-  endOverlap: number = SEGMENT_OVERLAP,
-): ChannelCollider {
-  const floorRoute: readonly Vector3[] = [
-    vector(new ThreeVector3(...route[0]).sub(direction(start).multiplyScalar(SEGMENT_OVERLAP))),
-    ...route.map((point): Vector3 => [...point]),
-    vector(new ThreeVector3(...route.at(-1)!).add(direction(end).multiplyScalar(endOverlap))),
-  ];
+): ChannelColliders {
+  // Meet the neighboring open contact surfaces exactly at their shared
+  // Anchors. Extending this mesh beneath either neighbor creates two nearly
+  // coplanar contacts; Rapier resolves both and visibly kicks a marble at an
+  // otherwise tangent-continuous seam.
+  const floorRoute: readonly Vector3[] = route.map((point): Vector3 => [...point]);
 
   const vertices: number[] = [];
-  const indices: number[] = [];
+  const floorIndices: number[] = [];
+  const leftRailIndices: number[] = [];
+  const rightRailIndices: number[] = [];
   floorRoute.forEach((point, index) => {
     const before = new ThreeVector3(...floorRoute[Math.max(0, index - 1)]);
     const after = new ThreeVector3(...floorRoute[Math.min(floorRoute.length - 1, index + 1)]);
@@ -210,25 +214,33 @@ function smoothOpenChannelCollider(
     );
   });
 
-  const addQuad = (a: number, b: number, nextA: number, nextB: number) => {
+  const addQuad = (indices: number[], a: number, b: number, nextA: number, nextB: number) => {
     indices.push(nextA, b, a, nextA, nextB, b);
   };
   for (let index = 0; index < floorRoute.length - 1; index += 1) {
     const current = index * 4;
     const next = current + 4;
-    addQuad(current, current + 1, next, next + 1);
-    addQuad(current + 1, current + 3, next + 1, next + 3);
-    addQuad(current + 2, current, next + 2, next);
+    addQuad(floorIndices, current, current + 1, next, next + 1);
+    addQuad(rightRailIndices, current + 1, current + 3, next + 1, next + 3);
+    addQuad(leftRailIndices, current + 2, current, next + 2, next);
   }
   const coordinates = (axis: 0 | 1 | 2) => vertices.filter((_, index) => index % 3 === axis);
+  const collider = (part: string, indices: readonly number[]): ColliderSpec => ({
+    id: `${id}-${part}`,
+    shape: { kind: "trimesh", vertices, indices },
+    position: [0, 0, 0],
+    rotation: [0, 0, 0, 1],
+    material,
+  });
   return {
-    collider: {
-      id,
-      shape: { kind: "trimesh", vertices, indices },
-      position: [0, 0, 0],
-      rotation: [0, 0, 0, 1],
-      material,
-    },
+    // Keep the concave floor-to-rail creases out of Rapier's internal-edge
+    // smoothing. In one trimesh, FIX_INTERNAL_EDGES blends that intentional
+    // 90-degree crease into an upward-facing ramp during a fast hairpin hit.
+    colliders: [
+      collider("floor", floorIndices),
+      collider("rail-left", leftRailIndices),
+      collider("rail-right", rightRailIndices),
+    ],
     bounds: {
       min: [Math.min(...coordinates(0)), Math.min(...coordinates(1)), Math.min(...coordinates(2))],
       max: [Math.max(...coordinates(0)), Math.max(...coordinates(1)), Math.max(...coordinates(2))],
@@ -253,14 +265,13 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
   // The open swept mesh removes the old closed hairpin roof, while the
   // zero-restitution track material prevents sampled surface normals from
   // becoming visible rebound kicks.
-  const smoothChannel = smoothOpenChannelCollider(
+  const smoothChannel = smoothOpenChannelColliders(
     route,
     request.start,
     request.end,
     railHeight,
     `${request.id}-continuous-channel`,
     isHairpin ? HAIRPIN_MATERIAL : CONNECTOR_MATERIAL,
-    isHairpin ? SCALE.marbleRadius * 4 : SEGMENT_OVERLAP,
   );
   const extraBounds = [smoothChannel.bounds];
   const bounds = extraBounds.reduce(
@@ -275,7 +286,7 @@ export function buildCourseConnector(request: ConnectorRequest): CourseConnector
     channel.bounds,
   );
   const spec: Spec = {
-    colliders: [smoothChannel.collider],
+    colliders: smoothChannel.colliders,
     visuals: channel.visuals,
     footprint: {
       cells: [],

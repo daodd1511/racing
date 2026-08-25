@@ -20,13 +20,18 @@ describe("buildCourseConnector", () => {
       incomingSpeed: 0,
     });
 
-    expect(connector.spec.footprint.route).toHaveLength(17);
-    expect(connector.spec.colliders).toHaveLength(1);
-    expect(connector.spec.colliders[0]).toMatchObject({
-      id: "connector-1-2-continuous-channel",
-      shape: { kind: "trimesh" },
-      material: { restitution: 0 },
-    });
+    expect(connector.spec.footprint.route).toHaveLength(65);
+    expect(connector.spec.colliders).toHaveLength(3);
+    expect(connector.spec.colliders.map(({ id }) => id)).toEqual([
+      "connector-1-2-continuous-channel-floor",
+      "connector-1-2-continuous-channel-rail-left",
+      "connector-1-2-continuous-channel-rail-right",
+    ]);
+    expect(
+      connector.spec.colliders.every(
+        ({ shape, material }) => shape.kind === "trimesh" && material.restitution === 0,
+      ),
+    ).toBe(true);
     expect(connector.spec.footprint.entry.position).toEqual([0, 0, 0]);
     expect(connector.spec.footprint.exit.position).toEqual([0.4, -0.05, 0]);
   });
@@ -55,12 +60,12 @@ describe("buildCourseConnector", () => {
       Math.max(route[0][0], route.at(-1)![0]),
     );
     expect(route.every((point, index) => index === 0 || point[1] < route[index - 1][1])).toBe(true);
-    expect(connector.spec.colliders).toHaveLength(1);
-    expect(connector.spec.colliders[0]).toMatchObject({
-      id: "connector-2-3-continuous-channel",
-      shape: { kind: "trimesh" },
-      material: { restitution: 0 },
-    });
+    expect(connector.spec.colliders).toHaveLength(3);
+    expect(
+      connector.spec.colliders.every(
+        ({ shape, material }) => shape.kind === "trimesh" && material.restitution === 0,
+      ),
+    ).toBe(true);
     expect(rail?.shape.kind).toBe("cuboid");
     expect(rail?.shape.kind === "cuboid" ? rail.shape.halfExtents[1] * 2 : 0).toBeCloseTo(
       expectedRailHeight,

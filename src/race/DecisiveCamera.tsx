@@ -35,8 +35,8 @@ const START_CLOSE_UP_LOOK_AHEAD_CELLS = 8;
 // camera visibly trail the marble. The previous low rates compounded target
 // and camera damping into roughly a half-second of perceived input lag.
 const TARGET_DAMPING = 12;
-const TARGET_SWITCH_DAMPING = 3;
-const TARGET_SWITCH_SECONDS = 0.35;
+const TARGET_SWITCH_DAMPING = 0;
+const TARGET_SWITCH_SECONDS = 0.8;
 // Rankings can alternate every physics snapshot when two marbles run side by
 // side. Require one candidate to remain decisive before moving the camera;
 // otherwise the camera jumps between two valid but distant transforms.
@@ -220,8 +220,19 @@ export function DecisiveCamera({
       }
     }
 
-    const targetDamping =
-      targetSwitchSecondsRef.current > 0 ? TARGET_SWITCH_DAMPING : TARGET_DAMPING;
+    const switchProgress = THREE.MathUtils.clamp(
+      1 - targetSwitchSecondsRef.current / TARGET_SWITCH_SECONDS,
+      0,
+      1,
+    );
+    // Ease from rest to the normal follow rate. Starting at a non-zero rate
+    // jolts the camera when the pending target becomes active; changing the
+    // rate abruptly at the end causes the same defect a second time.
+    const targetDamping = THREE.MathUtils.lerp(
+      TARGET_SWITCH_DAMPING,
+      TARGET_DAMPING,
+      THREE.MathUtils.smootherstep(switchProgress, 0, 1),
+    );
     targetSwitchSecondsRef.current = Math.max(0, targetSwitchSecondsRef.current - deltaSeconds);
     targetRef.current.lerp(desiredTargetRef.current, frameDamping(targetDamping, deltaSeconds));
     const framing = framingForMode(mode, followingRef.current);

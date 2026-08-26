@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Measurement foundation: in-progress
+- Current phase: 1 — done
+- Phase 1 — Measurement foundation: done
 - Phase 2 — Existing Module remediation: pending
 - Phase 3 — Showcase route: pending
 - Phase 4 — Candidate Modules: pending
@@ -41,8 +41,8 @@ Fresh review: required — validation and threshold code defines the spec's test
 - [x] (amended 2026-08-26) Extend `src/modules/feederApron.ts`, `src/modules/feederApron.test.ts`, `src/validator/feedProfiles.ts`, `src/validator/feedProfiles.test.ts`, `src/validator/validateModule.ts`, and `src/validator/validateModule.test.ts` with cohort-derived width/length-matched feeder infrastructure and constrained Burst physics evidence proving every release is supported and crosses both Module/control entry planes inside the requested constraint.
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npx vitest related --run <changed files>`
+- [x] `npm run typecheck`
+- [x] `npx vitest related --run <changed files>`
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm the calibration report justifies every proposed threshold, identifies exclusions and compute cost, records Rapier/configuration/seed evidence, and shows existing-Module before/after results.

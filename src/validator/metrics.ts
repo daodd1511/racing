@@ -1,4 +1,5 @@
 import type { Anchor } from "../modules/types";
+import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
 
 // Per-run primitives the Validator aggregates into distributions (percentiles
@@ -26,6 +27,158 @@ function length(v: Vector3): number {
   return Math.hypot(v[0], v[1], v[2]);
 }
 
+function interpolateVector(start: Vector3, end: Vector3, fraction: number): Vector3 {
+  return [
+    start[0] + (end[0] - start[0]) * fraction,
+    start[1] + (end[1] - start[1]) * fraction,
+    start[2] + (end[2] - start[2]) * fraction,
+  ];
+}
+
+export const CROSSING_HYSTERESIS_DISTANCE = SCALE.marbleRadius * 2;
+export const CROSSING_TIE_EPSILON_SECONDS = 1e-9;
+
+export interface CrossingObservation {
+  readonly timeSeconds: number;
+  readonly position: Vector3;
+  readonly speed: number;
+  /** Index of the first frame after the interpolated plane crossing. */
+  readonly segmentEndFrameIndex: number;
+}
+
+export interface ModuleRunObservation {
+  readonly entry: CrossingObservation | null;
+  readonly exit: CrossingObservation | null;
+  readonly completed: boolean;
+  readonly dwellSeconds: number | null;
+}
+
+export interface CohortValidity {
+  readonly totalRuns: number;
+  readonly completedRuns: number;
+  readonly minimumCompletedRuns: number;
+  readonly behaviorAvailable: boolean;
+}
+
+export function planeDistance(plane: Anchor, position: Vector3): number {
+  return dot(subtract(position, plane.position), plane.tangent);
+}
+
+/** Finds the first forward plane crossing that remains provisional until the
+ * marble travels one diameter beyond the plane. A return across the plane
+ * before confirmation discards that attempt. */
+export function observeConfirmedCrossing(
+  frames: readonly FrameSample[],
+  plane: Anchor,
+  startFrameIndex = 0,
+): CrossingObservation | null {
+  let provisional: CrossingObservation | null = null;
+  const firstSegmentEnd = Math.max(1, startFrameIndex + 1);
+
+  for (let index = firstSegmentEnd; index < frames.length; index += 1) {
+    const previous = frames[index - 1];
+    const current = frames[index];
+    const previousDistance = planeDistance(plane, previous.position);
+    const currentDistance = planeDistance(plane, current.position);
+
+    if (provisional !== null) {
+      if (currentDistance < 0) {
+        provisional = null;
+      } else if (currentDistance >= CROSSING_HYSTERESIS_DISTANCE) {
+        return provisional;
+      }
+      continue;
+    }
+
+    if (previousDistance < 0 && currentDistance >= 0) {
+      const distanceDelta = currentDistance - previousDistance;
+      const fraction = distanceDelta === 0 ? 0 : -previousDistance / distanceDelta;
+      const duration = current.tSeconds - previous.tSeconds;
+      provisional = {
+        timeSeconds: previous.tSeconds + duration * fraction,
+        position: interpolateVector(previous.position, current.position, fraction),
+        speed: duration > 0 ? length(subtract(current.position, previous.position)) / duration : 0,
+        segmentEndFrameIndex: index,
+      };
+      if (currentDistance >= CROSSING_HYSTERESIS_DISTANCE) {
+        return provisional;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function observeModuleRun(
+  run: MarbleRun,
+  entry: Anchor,
+  exit: Anchor,
+): ModuleRunObservation {
+  const entryObservation = observeConfirmedCrossing(run.frames, entry);
+  const exitObservation =
+    entryObservation === null
+      ? null
+      : observeConfirmedCrossing(run.frames, exit, entryObservation.segmentEndFrameIndex);
+  const completed = entryObservation !== null && exitObservation !== null;
+
+  return {
+    entry: entryObservation,
+    exit: exitObservation,
+    completed,
+    dwellSeconds: completed ? exitObservation.timeSeconds - entryObservation.timeSeconds : null,
+  };
+}
+
+/** Competition ranks: tied crossings share a rank and the following rank
+ * skips the tied positions (`1, 1, 3`). Incomplete runs remain unranked. */
+export function tieAwareCrossingRanks(
+  observations: readonly (CrossingObservation | null)[],
+): readonly (number | null)[] {
+  const ranked = observations
+    .flatMap((observation, index) => (observation === null ? [] : [{ index, observation }]))
+    .sort(
+      (left, right) =>
+        left.observation.timeSeconds - right.observation.timeSeconds || left.index - right.index,
+    );
+  const result: (number | null)[] = observations.map(() => null);
+  let groupStart = 0;
+
+  while (groupStart < ranked.length) {
+    let groupEnd = groupStart + 1;
+    while (
+      groupEnd < ranked.length &&
+      Math.abs(
+        ranked[groupEnd].observation.timeSeconds - ranked[groupStart].observation.timeSeconds,
+      ) <= CROSSING_TIE_EPSILON_SECONDS
+    ) {
+      groupEnd += 1;
+    }
+    const rank = groupStart + 1;
+    for (let index = groupStart; index < groupEnd; index += 1) {
+      result[ranked[index].index] = rank;
+    }
+    groupStart = groupEnd;
+  }
+
+  return result;
+}
+
+export function evaluateCohortValidity(
+  observations: readonly ModuleRunObservation[],
+  minimumCompletedRuns: number,
+): CohortValidity {
+  if (!Number.isSafeInteger(minimumCompletedRuns) || minimumCompletedRuns < 1) {
+    throw new RangeError("minimumCompletedRuns must be a positive integer");
+  }
+  const completedRuns = observations.filter(({ completed }) => completed).length;
+  return {
+    totalRuns: observations.length,
+    completedRuns,
+    minimumCompletedRuns,
+    behaviorAvailable: completedRuns >= minimumCompletedRuns,
+  };
+}
+
 /** Signed distance of `position` past the exit plane -- the plane through
  * `exit.position` perpendicular to `exit.tangent`. Positive means crossed.
  * Exported so the Showcase's live Feeder can detect the same crossing
@@ -33,7 +186,7 @@ function length(v: Vector3): number {
  * streaming context -- the batch (`measureDwell`) and live paths must agree
  * on what "exited" means. */
 export function exitPlaneDistance(exit: Anchor, position: Vector3): number {
-  return dot(subtract(position, exit.position), exit.tangent);
+  return planeDistance(exit, position);
 }
 
 export interface DwellResult {
@@ -118,7 +271,9 @@ export function displacementPerSecond(run: MarbleRun): number[] {
  * dwell time), normalized by the maximum possible inversions for that many
  * marbles -- a marble that never exits doesn't participate in the ranking,
  * since it never took a position in the exit order. */
-export function shuffleCoefficient(dwellSecondsByMarbleIndex: readonly (number | null)[]): number {
+export function finishOrderInversionCoefficient(
+  dwellSecondsByMarbleIndex: readonly (number | null)[],
+): number {
   const exited = dwellSecondsByMarbleIndex
     .map((dwellSeconds, index) => ({ index, dwellSeconds }))
     .filter(
@@ -143,6 +298,10 @@ export function shuffleCoefficient(dwellSecondsByMarbleIndex: readonly (number |
   const maxInversions = (n * (n - 1)) / 2;
   return maxInversions === 0 ? 0 : inversions / maxInversions;
 }
+
+/** Compatibility alias for pre-calibration Module guardrails. New Module
+ * evidence uses Role metrics; only Course outcomes use inversion. */
+export const shuffleCoefficient = finishOrderInversionCoefficient;
 
 export interface StallCount {
   readonly stalled: number;

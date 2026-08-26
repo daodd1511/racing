@@ -1,7 +1,10 @@
 import { useFrame } from "@react-three/fiber";
 import { BallCollider, RigidBody, type RapierRigidBody } from "@react-three/rapier";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { buildFeederApronSpec } from "../modules/feederApron";
+import { INITIAL_KINEMATIC_CLOCK, type KinematicStep } from "../modules/kinematics";
+import { ModuleColliders } from "../modules/render/ModuleColliders";
 import type { Anchor } from "../modules/types";
 import { exitPlaneDistance } from "../validator/metrics";
 import { SCALE } from "../race/scale";
@@ -17,6 +20,7 @@ const ENTRY_LIFT_RADII = 2;
  * settles past the exit plane, short enough not to accumulate free-falling
  * bodies forever under a long continuous feed. */
 const DESPAWN_DROP_METERS = 0.6;
+const STATIC_STEP: KinematicStep = () => [];
 
 function cross(a: Vector3, b: Vector3): Vector3 {
   return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -159,6 +163,8 @@ interface SpawnedMarble {
  * accumulate free-falling bodies forever. */
 export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: FeederProps) {
   const [marbles, setMarbles] = useState<readonly SpawnedMarble[]>([]);
+  const apronSpec = useMemo(() => buildFeederApronSpec(entry), [entry]);
+  const apronClockRef = useRef(INITIAL_KINEMATIC_CLOCK);
   const nextIdRef = useRef(0);
   const lastTriggerRef = useRef(triggerNonce);
   const lastContinuousSpawnRef = useRef(0);
@@ -166,8 +172,8 @@ export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: Fee
   // without making spawnOne/spawnBurst's identity depend on `entry` (which
   // would otherwise change every render `entry` does, e.g. on every param
   // edit for a Module whose entry position depends on its own params).
-  const entryRef = useRef(entry);
-  entryRef.current = entry;
+  const entryRef = useRef(apronSpec.footprint.entry);
+  entryRef.current = apronSpec.footprint.entry;
 
   const makeSpawnPosition = useCallback((): Vector3 => {
     const currentEntry = entryRef.current;
@@ -234,6 +240,7 @@ export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: Fee
 
   return (
     <>
+      <ModuleColliders spec={apronSpec} step={STATIC_STEP} clockRef={apronClockRef} />
       {marbles.map(({ id, spawnPosition }) => {
         return (
           <Marble

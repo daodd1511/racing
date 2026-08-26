@@ -16,7 +16,7 @@ describe("runCourseRaceValidation", () => {
     });
     expect(result.finishTimes.every((time) => time !== null && Number.isFinite(time))).toBe(true);
     expect(result.exitSpeeds.every((speed) => speed !== null && Number.isFinite(speed))).toBe(true);
-    expect(Number.isFinite(result.shuffleCoefficient)).toBe(true);
+    expect(Number.isFinite(result.finishOrderInversionCoefficient)).toBe(true);
   }, 15_000);
 
   it("includes the active Module combination in the physics gate", () => {

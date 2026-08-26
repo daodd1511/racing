@@ -25,6 +25,8 @@ export interface FeedCohort {
   readonly seed: number;
   readonly releases: readonly FeedRelease[];
   readonly stallTimeoutSeconds: number;
+  readonly entryConstraintWidth: number;
+  readonly feederApronLength: number;
 }
 
 export interface FeedConfiguration {
@@ -169,12 +171,25 @@ export function buildFeedCohort(
           profile === "continuous" ? CONTINUOUS_RELEASE_INTERVAL_SECONDS : 0,
           entryConstraintWidth,
         );
+  const upstreamOffsets = releases.map(({ position }) =>
+    Math.abs(
+      (position[0] - entry.position[0]) * entry.tangent[0] +
+        (position[1] - entry.position[1]) * entry.tangent[1] +
+        (position[2] - entry.position[2]) * entry.tangent[2],
+    ),
+  );
+  const feederApronLength = Math.max(
+    FEEDER_APRON_LENGTH,
+    Math.max(...upstreamOffsets) + SCALE.marbleRadius * 2,
+  );
 
   return Object.freeze({
     profile,
     seed,
     releases,
     stallTimeoutSeconds: FEED_STALL_TIMEOUT_SECONDS,
+    entryConstraintWidth,
+    feederApronLength,
   });
 }
 

@@ -73,6 +73,13 @@ describe("buildFeedCohort", () => {
           ({ position }) => Math.abs(position[0]) <= width / 2 - SCALE.marbleRadius + 1e-12,
         ),
       ).toBe(true);
+      expect(cohort.entryConstraintWidth).toBe(width);
+      expect(cohort.feederApronLength).toBeGreaterThanOrEqual(
+        Math.max(
+          ...cohort.releases.map(({ position }) => Math.abs(position[2] - ENTRY.position[2])),
+        ) +
+          SCALE.marbleRadius * 2,
+      );
       if (profile === "burst15") {
         for (let left = 0; left < cohort.releases.length; left += 1) {
           for (let right = left + 1; right < cohort.releases.length; right += 1) {

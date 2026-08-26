@@ -328,7 +328,10 @@ async function simulateCohort(
   maxSimulationSeconds?: number,
 ): Promise<SimulatedCohort> {
   await RAPIER.init();
-  const feederApron = buildFeederApronSpec(spec.footprint.entry);
+  const feederApron = buildFeederApronSpec(spec.footprint.entry, {
+    width: cohort.entryConstraintWidth,
+    length: cohort.feederApronLength,
+  });
   const built = buildWorld([feederApron, spec]);
   const bodies = new Map<number, RAPIER.RigidBody>();
   const runs = new Map<number, MarbleRun>();
@@ -600,8 +603,11 @@ export async function validateModule<P>(
       controlValidatedRuns.push(...controlResult.runs);
       controlRoleRuns.push(...controlResult.roleRuns);
     }
-    const minimumCompletedRuns =
-      options.minimumCompletedRuns ?? defaultMinimumCompletedRuns(profile, moduleRuns.length);
+    const approvedMinimumCompletedRuns = defaultMinimumCompletedRuns(profile, moduleRuns.length);
+    const minimumCompletedRuns = Math.max(
+      approvedMinimumCompletedRuns,
+      options.minimumCompletedRuns ?? approvedMinimumCompletedRuns,
+    );
     const dwell = dwellEvidence(
       moduleRuns.map(({ observation }) => observation),
       minimumCompletedRuns,

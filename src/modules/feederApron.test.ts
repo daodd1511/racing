@@ -1,6 +1,7 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { SCALE } from "../race/scale";
 import { buildWorld } from "../validator/buildWorld";
 import { FEEDER_APRON_LENGTH, buildFeederApronSpec } from "./feederApron";
 import type { Anchor } from "./types";
@@ -53,5 +54,21 @@ describe("buildFeederApronSpec", () => {
     } finally {
       built.world.free();
     }
+  });
+
+  it("builds a width- and length-matched constrained apron without changing defaults", () => {
+    const width = SCALE.marbleRadius * 5;
+    const length = FEEDER_APRON_LENGTH * 2;
+    const constrained = buildFeederApronSpec(ENTRY, { width, length });
+    const floor = constrained.visuals.find(({ id }) => id === "feeder-apron-floor");
+
+    expect(constrained.footprint.entry.position).toEqual([1, 2, 3 - length]);
+    expect(floor?.shape.kind).toBe("cuboid");
+    if (floor?.shape.kind === "cuboid") expect(floor.shape.halfExtents[0] * 2).toBeCloseTo(width);
+    expect(buildFeederApronSpec(ENTRY).footprint.entry.position).toEqual([
+      1,
+      2,
+      3 - FEEDER_APRON_LENGTH,
+    ]);
   });
 });

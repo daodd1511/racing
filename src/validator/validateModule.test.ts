@@ -109,6 +109,32 @@ describe("chute profile validation", () => {
 
     expect(profile.roleRuns.length).toBeGreaterThan(0);
     expect(profile.controlRoleRuns.length).toBe(profile.roleRuns.length);
+    expect(profile.dwell.validity.minimumCompletedRuns).toBe(24);
+    expect(
+      [...profile.roleRuns, ...profile.controlRoleRuns].every(
+        ({ entryLateral }) => Math.abs(entryLateral) <= width / 2 + 1e-6,
+      ),
+    ).toBe(true);
+  }, 30_000);
+
+  it("supports every constrained Burst release through both physical entry planes", async () => {
+    const width = SCALE.marbleRadius * 5;
+    const report = await validateModule(
+      chute,
+      { length: 0.6, grade: 0.25, width: 0.5 },
+      {
+        matrix: "pr",
+        profiles: ["burst15"],
+        seedsByProfile: { burst15: [0] },
+        entryConstraintWidth: width,
+        maxSimulationSeconds: 6,
+      },
+    );
+    const profile = report.profiles[0];
+
+    expect(profile.completedMarbles).toBe(15);
+    expect(profile.roleRuns).toHaveLength(15);
+    expect(profile.controlRoleRuns).toHaveLength(15);
     expect(
       [...profile.roleRuns, ...profile.controlRoleRuns].every(
         ({ entryLateral }) => Math.abs(entryLateral) <= width / 2 + 1e-6,

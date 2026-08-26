@@ -162,8 +162,8 @@ export function renderCalibrationReport(
         `${validation.legacyReport.stalledMarbles} stalls; Dwell p50 ${formatNumber(validation.legacyReport.dwellSecondsP50)}; ` +
         `Dwell p99 label ${formatNumber(validation.legacyReport.dwellSecondsP99)}.`,
       "",
-      "| Profile | Seeds | Completed / total | Excluded | Stalls | Timeouts | Dwell p05 / p50 / p95 | Control Dwell p95 | Dwell p95 ratio | Exit speed p05 / p50 / p95 | Dwell seed-mean 95% CI | Exit-speed seed-mean 95% CI | Maximum Dwell | Role evidence |",
-      "|---|---:|---:|---:|---:|---:|---|---:|---:|---|---|---|---:|---|",
+      "| Profile | Seeds | Completed / total | Excluded | Stalls | Timeouts | Control stalls | Control timeouts | Dwell p05 / p50 / p95 | Control Dwell p95 | Dwell p95 ratio | Exit speed p05 / p50 / p95 | Dwell seed-mean 95% CI | Exit-speed seed-mean 95% CI | Maximum Dwell | Role evidence |",
+      "|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---|---|---|---:|---|",
     );
     for (const profile of validation.report.profiles) {
       const dwellValues = profile.runs.flatMap(({ observation }) =>
@@ -187,7 +187,7 @@ export function renderCalibrationReport(
           ? profile.dwell.dwellSecondsP95 / profile.controlDwell.dwellSecondsP95
           : null;
       lines.push(
-        `| ${profile.profile} | ${profile.seeds.join(", ")} | ${profile.completedMarbles} / ${profile.totalMarbles} | ${profile.totalMarbles - profile.completedMarbles} | ${profile.stalledMarbles} | ${profile.timedOutMarbles} | ${distribution(dwellValues)} | ${formatNumber(profile.controlDwell.dwellSecondsP95)} | ${formatNumber(dwellRatio)} | ${distribution(exitSpeedValues)} | ${bootstrapMeanInterval(dwellSeedMeans)} | ${bootstrapMeanInterval(speedSeedMeans)} | ${formatNumber(profile.dwell.maximumDwellSeconds)} | \`${JSON.stringify(profile.evidence)}\` |`,
+        `| ${profile.profile} | ${profile.seeds.join(", ")} | ${profile.completedMarbles} / ${profile.totalMarbles} | ${profile.totalMarbles - profile.completedMarbles} | ${profile.stalledMarbles} | ${profile.timedOutMarbles} | ${profile.controlStalledMarbles} | ${profile.controlTimedOutMarbles} | ${distribution(dwellValues)} | ${formatNumber(profile.controlDwell.dwellSecondsP95)} | ${formatNumber(dwellRatio)} | ${distribution(exitSpeedValues)} | ${bootstrapMeanInterval(dwellSeedMeans)} | ${bootstrapMeanInterval(speedSeedMeans)} | ${formatNumber(profile.dwell.maximumDwellSeconds)} | \`${JSON.stringify(profile.evidence)}\` |`,
       );
     }
     lines.push("");

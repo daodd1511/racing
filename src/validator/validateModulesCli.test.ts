@@ -108,7 +108,8 @@ describe("calibration report", () => {
     expect(markdown).toContain("Rapier version: `0.19.2`");
     expect(markdown).toContain("Parameters: `{");
     expect(markdown).toContain("Legacy pre-correction comparison");
-    expect(markdown).toContain("| single | 1, 2 | 2 / 2 | 0 | 0 | 0 |");
+    expect(markdown).toContain("| Control stalls | Control timeouts |");
+    expect(markdown).toContain("| single | 1, 2 | 2 / 2 | 0 | 0 | 0 | 0 | 0 |");
     expect(markdown).toContain("| 1.000000 | 1.200000 |");
     expect(markdown).toContain("95% CI");
     expect(markdown).toContain("Compute seconds: 2.500");

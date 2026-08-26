@@ -80,10 +80,36 @@ function release(
   });
 }
 
-function burstReleases(entry: Anchor, random: () => number): readonly FeedRelease[] {
-  const grid = startGridPositions(15);
+function constrainedBurstPositions(width: number): readonly Vector3[] {
+  const spacing = SCALE.marbleRadius * 2.001;
+  const usableCenterSpan = Math.max(0, width - SCALE.marbleRadius * 2);
+  const rowCapacity = Math.max(1, Math.min(5, Math.floor(usableCenterSpan / spacing) + 1));
+  return Object.freeze(
+    Array.from({ length: 15 }, (_, marbleIndex): Vector3 => {
+      const row = Math.floor(marbleIndex / rowCapacity);
+      const column = marbleIndex % rowCapacity;
+      const marblesInRow = Math.min(rowCapacity, 15 - row * rowCapacity);
+      return Object.freeze([
+        (column - (marblesInRow - 1) / 2) * spacing,
+        0,
+        -SCALE.marbleRadius - row * spacing,
+      ]);
+    }),
+  );
+}
+
+function burstReleases(
+  entry: Anchor,
+  random: () => number,
+  entryConstraintWidth: number,
+): readonly FeedRelease[] {
+  const grid =
+    entryConstraintWidth === SCALE.channelWidth
+      ? startGridPositions(15)
+      : constrainedBurstPositions(entryConstraintWidth);
   const frontZ = Math.max(...grid.map((position) => position[2]));
-  const placementJitter = SCALE.marbleRadius * 0.1;
+  const placementJitter =
+    entryConstraintWidth === SCALE.channelWidth ? SCALE.marbleRadius * 0.1 : 0;
 
   return Object.freeze(
     grid.map((position, marbleIndex) => {
@@ -105,8 +131,9 @@ function isolatedReleases(
   random: () => number,
   count: number,
   releaseIntervalSeconds: number,
+  entryConstraintWidth: number,
 ): readonly FeedRelease[] {
-  const lateralRange = SCALE.channelWidth - SCALE.marbleRadius * 4;
+  const lateralRange = Math.max(0, entryConstraintWidth - SCALE.marbleRadius * 4);
   const tangentOffset = -FEEDER_APRON_LENGTH + SCALE.marbleRadius * 3;
 
   return Object.freeze(
@@ -121,17 +148,26 @@ function isolatedReleases(
   );
 }
 
-export function buildFeedCohort(profile: FeedProfile, seed: number, entry: Anchor): FeedCohort {
+export function buildFeedCohort(
+  profile: FeedProfile,
+  seed: number,
+  entry: Anchor,
+  entryConstraintWidth: number = SCALE.channelWidth,
+): FeedCohort {
   if (!Number.isSafeInteger(seed)) throw new RangeError("Feed seed must be a safe integer");
+  if (!Number.isFinite(entryConstraintWidth) || entryConstraintWidth < SCALE.marbleRadius * 2) {
+    throw new RangeError("Feed constraint width must fit at least one marble diameter");
+  }
   const random = createSeededRandom(seed);
   const releases =
     profile === "burst15"
-      ? burstReleases(entry, random)
+      ? burstReleases(entry, random, entryConstraintWidth)
       : isolatedReleases(
           entry,
           random,
           profile === "continuous" ? CONTINUOUS_COHORT_SIZE : 1,
           profile === "continuous" ? CONTINUOUS_RELEASE_INTERVAL_SECONDS : 0,
+          entryConstraintWidth,
         );
 
   return Object.freeze({

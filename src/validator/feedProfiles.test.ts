@@ -61,6 +61,39 @@ describe("buildFeedCohort", () => {
     expect(single.releases[0].releaseStep).toBe(0);
     expect(continuous.stallTimeoutSeconds).toBe(FEED_STALL_TIMEOUT_SECONDS);
   });
+
+  it.each(["burst15", "continuous", "single"] as const)(
+    "keeps %s nominal inputs inside a constrained entry",
+    (profile) => {
+      const width = SCALE.marbleRadius * 5;
+      const cohort = buildFeedCohort(profile, 7, ENTRY, width);
+
+      expect(
+        cohort.releases.every(
+          ({ position }) => Math.abs(position[0]) <= width / 2 - SCALE.marbleRadius + 1e-12,
+        ),
+      ).toBe(true);
+      if (profile === "burst15") {
+        for (let left = 0; left < cohort.releases.length; left += 1) {
+          for (let right = left + 1; right < cohort.releases.length; right += 1) {
+            expect(
+              Math.hypot(
+                cohort.releases[left].position[0] - cohort.releases[right].position[0],
+                cohort.releases[left].position[1] - cohort.releases[right].position[1],
+                cohort.releases[left].position[2] - cohort.releases[right].position[2],
+              ),
+            ).toBeGreaterThan(SCALE.marbleRadius * 2);
+          }
+        }
+      }
+    },
+  );
+
+  it("rejects an entry constraint narrower than one marble", () => {
+    expect(() => buildFeedCohort("single", 7, ENTRY, SCALE.marbleRadius)).toThrow(
+      "Feed constraint width",
+    );
+  });
 });
 
 describe("feedConfigurationIdentity", () => {

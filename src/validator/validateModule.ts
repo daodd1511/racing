@@ -39,6 +39,7 @@ import {
   buildShuffleControl,
   buildSortControl,
   buildWideEntryScatterControl,
+  pairSameSeedRuns,
   type ModuleControl,
 } from "./moduleControls";
 import {
@@ -52,6 +53,7 @@ import {
   type RoleEvidence,
   type RoleMetricRun,
 } from "./roleMetrics";
+import { ROLE_THRESHOLDS } from "./roleThresholds";
 
 const DISPLACEMENT_WARMUP_FRAMES = 6;
 const VISIBLE_MOTION_WINDOW_FRAMES = 60;
@@ -93,6 +95,8 @@ export interface ValidatedRun {
   readonly minimumDisplacementPerSecond: number;
   readonly stalled: boolean;
   readonly timedOut: boolean;
+  /** Physical displacement while a declared Burst gate held the body. */
+  readonly gateHoldDisplacementMeters: number | null;
 }
 
 export interface FeedProfileValidation {
@@ -174,8 +178,11 @@ function lateralCoordinate(origin: Vector3, lateral: Vector3, position: Vector3)
 }
 
 function createMarble(world: RAPIER.World, release: FeedRelease): RAPIER.RigidBody {
+  const descriptor = release.heldByGate
+    ? RAPIER.RigidBodyDesc.kinematicPositionBased()
+    : RAPIER.RigidBodyDesc.dynamic();
   const body = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic()
+    descriptor
       .setTranslation(...release.position)
       .setLinvel(...release.initialVelocity)
       .setLinearDamping(SCALE.linearDamping)
@@ -326,12 +333,21 @@ async function simulateCohort(
   const bodies = new Map<number, RAPIER.RigidBody>();
   const runs = new Map<number, MarbleRun>();
   const releaseByStep = new Map<number, FeedRelease[]>();
+  const dynamicReleaseByStep = new Map<number, FeedRelease[]>();
   cohort.releases.forEach((release) => {
     const releases = releaseByStep.get(release.releaseStep) ?? [];
     releases.push(release);
     releaseByStep.set(release.releaseStep, releases);
+    if (release.heldByGate) {
+      const dynamicStep = release.releaseStep + 1;
+      const dynamicReleases = dynamicReleaseByStep.get(dynamicStep) ?? [];
+      dynamicReleases.push(release);
+      dynamicReleaseByStep.set(dynamicStep, dynamicReleases);
+    }
   });
-  const finalReleaseStep = Math.max(...cohort.releases.map(({ releaseStep }) => releaseStep));
+  const finalReleaseStep = Math.max(
+    ...cohort.releases.map(({ releaseStep, heldByGate }) => releaseStep + (heldByGate ? 1 : 0)),
+  );
   const timeoutSeconds = maxSimulationSeconds ?? cohort.stallTimeoutSeconds;
   const maximumSteps = finalReleaseStep + Math.ceil(timeoutSeconds / KINEMATIC_FIXED_STEP_SECONDS);
   let clock = INITIAL_KINEMATIC_CLOCK;
@@ -345,6 +361,18 @@ async function simulateCohort(
             { tSeconds: stepIndex * KINEMATIC_FIXED_STEP_SECONDS, position: release.position },
           ],
         });
+      }
+      for (const release of dynamicReleaseByStep.get(stepIndex) ?? []) {
+        const body = bodies.get(release.marbleIndex)!;
+        body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
+        body.setLinvel(
+          {
+            x: release.initialVelocity[0],
+            y: release.initialVelocity[1],
+            z: release.initialVelocity[2],
+          },
+          true,
+        );
       }
       clock = advanceKinematicClock(clock);
       const tSeconds = kinematicSeconds(clock);
@@ -360,20 +388,35 @@ async function simulateCohort(
     }
 
     const lateral = normalize(cross(spec.footprint.entry.up, spec.footprint.entry.tangent));
-    const validatedRuns = cohort.releases.map(({ marbleIndex }): ValidatedRun => {
-      const run = runs.get(marbleIndex)!;
-      const observation = observeModuleRun(run, spec.footprint.entry, spec.footprint.exit);
-      const motion = displacementPerSecond(run).slice(DISPLACEMENT_WARMUP_FRAMES);
+    const validatedRuns = cohort.releases.map((release): ValidatedRun => {
+      const run = runs.get(release.marbleIndex)!;
+      const dynamicReleaseStep = release.releaseStep + (release.heldByGate ? 1 : 0);
+      const deadlineSeconds = dynamicReleaseStep * KINEMATIC_FIXED_STEP_SECONDS + timeoutSeconds;
+      const deadlineRun: MarbleRun = {
+        frames: run.frames.filter(({ tSeconds }) => tSeconds <= deadlineSeconds),
+      };
+      const observation = observeModuleRun(deadlineRun, spec.footprint.entry, spec.footprint.exit);
+      const motion = displacementPerSecond(deadlineRun).slice(DISPLACEMENT_WARMUP_FRAMES);
       const minimumDisplacement = minimumWindowAverage(motion, VISIBLE_MOTION_WINDOW_FRAMES);
       const timedOut = !observation.completed;
       const stalled = minimumDisplacement < MINIMUM_VISIBLE_DISPLACEMENT_PER_SECOND;
+      const heldFrames = release.heldByGate ? deadlineRun.frames.slice(0, 2) : [];
+      const gateHoldDisplacementMeters =
+        heldFrames.length < 2
+          ? null
+          : Math.hypot(
+              heldFrames[1].position[0] - heldFrames[0].position[0],
+              heldFrames[1].position[1] - heldFrames[0].position[1],
+              heldFrames[1].position[2] - heldFrames[0].position[2],
+            );
       return Object.freeze({
         seed: cohort.seed,
-        marbleIndex,
+        marbleIndex: release.marbleIndex,
         observation,
         minimumDisplacementPerSecond: minimumDisplacement,
         stalled,
         timedOut,
+        gateHoldDisplacementMeters,
       });
     });
     const roleRuns = validatedRuns.flatMap(({ seed, marbleIndex, observation }) => {
@@ -454,6 +497,36 @@ function evidenceFor(
   }
 }
 
+function defaultMinimumCompletedRuns(profile: FeedProfile, totalRuns: number): number {
+  const calibrationMinimum =
+    profile === "burst15"
+      ? ROLE_THRESHOLDS.cohortValidity.burst15MinimumCompletedRuns
+      : profile === "continuous"
+        ? ROLE_THRESHOLDS.cohortValidity.continuousMinimumCompletedRuns
+        : ROLE_THRESHOLDS.cohortValidity.singleMinimumCompletedRuns;
+  const calibrationTotal = profile === "single" ? 60 : 300;
+  return Math.ceil((totalRuns * calibrationMinimum) / calibrationTotal);
+}
+
+function pairedEvidenceRuns(
+  moduleRuns: readonly RoleMetricRun[],
+  controlRuns: readonly RoleMetricRun[],
+): {
+  readonly moduleRuns: readonly RoleMetricRun[];
+  readonly controlRuns: readonly RoleMetricRun[];
+} | null {
+  if (moduleRuns.length !== controlRuns.length) return null;
+  const controlKeys = new Set(controlRuns.map(({ seed, marbleIndex }) => `${seed}:${marbleIndex}`));
+  if (moduleRuns.some(({ seed, marbleIndex }) => !controlKeys.has(`${seed}:${marbleIndex}`))) {
+    return null;
+  }
+  const pairs = pairSameSeedRuns(moduleRuns, controlRuns);
+  return Object.freeze({
+    moduleRuns: Object.freeze(pairs.map(({ module }) => module)),
+    controlRuns: Object.freeze(pairs.map(({ control }) => control)),
+  });
+}
+
 export function validationSeedsFor(
   matrix: ValidationMatrix,
   profile: FeedProfile,
@@ -517,7 +590,7 @@ export async function validateModule<P>(
     const controlValidatedRuns: ValidatedRun[] = [];
     const controlRoleRuns: RoleMetricRun[] = [];
     for (const seed of seeds) {
-      const cohort = buildFeedCohort(profile, seed, spec.footprint.entry);
+      const cohort = buildFeedCohort(profile, seed, spec.footprint.entry, width);
       const [moduleResult, controlResult] = await Promise.all([
         simulateCohort(spec, module.step, cohort, options.maxSimulationSeconds),
         simulateCohort(control.spec, STATIC_STEP, cohort, options.maxSimulationSeconds),
@@ -527,8 +600,23 @@ export async function validateModule<P>(
       controlValidatedRuns.push(...controlResult.runs);
       controlRoleRuns.push(...controlResult.roleRuns);
     }
-    const evidence = evidenceFor(module.role, scatterMode, roleRuns, controlRoleRuns, width);
-    const minimumCompletedRuns = options.minimumCompletedRuns ?? 1;
+    const minimumCompletedRuns =
+      options.minimumCompletedRuns ?? defaultMinimumCompletedRuns(profile, moduleRuns.length);
+    const dwell = dwellEvidence(
+      moduleRuns.map(({ observation }) => observation),
+      minimumCompletedRuns,
+    );
+    const controlDwell = dwellEvidence(
+      controlValidatedRuns.map(({ observation }) => observation),
+      minimumCompletedRuns,
+    );
+    const pairedRuns =
+      dwell.validity.behaviorAvailable && controlDwell.validity.behaviorAvailable
+        ? pairedEvidenceRuns(roleRuns, controlRoleRuns)
+        : null;
+    const evidence = pairedRuns
+      ? evidenceFor(module.role, scatterMode, pairedRuns.moduleRuns, pairedRuns.controlRuns, width)
+      : { evidence: null, controlEvidence: null };
     profileReports.push(
       Object.freeze({
         profile,
@@ -539,14 +627,8 @@ export async function validateModule<P>(
         timedOutMarbles: moduleRuns.filter(({ timedOut }) => timedOut).length,
         controlStalledMarbles: controlValidatedRuns.filter(({ stalled }) => stalled).length,
         controlTimedOutMarbles: controlValidatedRuns.filter(({ timedOut }) => timedOut).length,
-        dwell: dwellEvidence(
-          moduleRuns.map(({ observation }) => observation),
-          minimumCompletedRuns,
-        ),
-        controlDwell: dwellEvidence(
-          controlValidatedRuns.map(({ observation }) => observation),
-          minimumCompletedRuns,
-        ),
+        dwell,
+        controlDwell,
         evidence: evidence.evidence,
         controlEvidence: evidence.controlEvidence,
         runs: Object.freeze(moduleRuns),

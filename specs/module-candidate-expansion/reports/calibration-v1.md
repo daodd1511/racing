@@ -2,7 +2,7 @@
 
 Matrix: `full`. Threshold table version: `v1`.
 Rapier version: `0.19.2`.
-Compute seconds: 15.925.
+Compute seconds: 14.629.
 
 ## Calibration decision
 
@@ -50,7 +50,7 @@ field-size identity; Shuffle uses Burst and Continuous; Sort uses Burst and Cont
 - Legacy comparisons use the old frame-relative, spawn-inside-Module harness and its invalid
   small-sample `p99` label. They document the before state only and have no acceptance
   authority.
-- The 15.925-second compute cost covers all corrected Module/control matrices and invalid
+- The 14.629-second compute cost covers all corrected Module/control matrices and invalid
   legacy comparisons on the calibration machine. Rapier is fixed at `0.19.2`.
 
 ## Existing Module conclusions
@@ -68,7 +68,7 @@ field-size identity; Shuffle uses Burst and Continuous; Sort uses Burst and Cont
 ## chute
 
 Parameters: `{"length":0.6,"grade":0.25,"width":0.5}`.
-Compute seconds: 3.975.
+Compute seconds: 3.297.
 
 Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 completed; 0 stalls; Dwell p50 0.816667; Dwell p99 label 1.250000.
 
@@ -81,7 +81,7 @@ Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 co
 ## pin-field
 
 Parameters: `{"rowCount":10,"postSpacing":0.10463746025267581,"postHeight":0.0511872,"postWidth":0.027264,"rowPitch":0.12033307929057717}`.
-Compute seconds: 4.639.
+Compute seconds: 4.239.
 
 Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 completed; 0 stalls; Dwell p50 3.016667; Dwell p99 label 5.066667.
 
@@ -94,7 +94,7 @@ Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 co
 ## staircase
 
 Parameters: `{"stepCount":5,"tread":0.12,"riseHeight":0.03,"width":0.5}`.
-Compute seconds: 3.505.
+Compute seconds: 3.345.
 
 Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 completed; 0 stalls; Dwell p50 1.400000; Dwell p99 label 2.983333.
 
@@ -107,7 +107,7 @@ Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 co
 ## whoops
 
 Parameters: `{"amplitude":0.006,"wavelength":0.3,"length":1.2,"grade":0.55,"width":0.5}`.
-Compute seconds: 3.807.
+Compute seconds: 3.748.
 
 Legacy pre-correction comparison (invalid as acceptance authority): 300 / 300 completed; 0 stalls; Dwell p50 0.883333; Dwell p99 label 1.116667.
 

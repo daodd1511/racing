@@ -2,12 +2,13 @@
 
 ## Status and priority
 
-Planned and implemented on 2026-09-08. All three execution phases passed their
-local gates; the full suite and production build passed. User review remains.
-This work takes priority over Blender asset migration. Blender and new Obstacle
-Modules remain deferred until this work is reviewed. The user requested a saved
-plan before ending the session; do not interpret this document as a phase-start
-or commit instruction. See [EXECUTION.md](EXECUTION.md) for three pending phases; implement when requested.
+Completed and merged on 2026-09-08 in PRs [#24](https://github.com/daodd1511/racing/pull/24),
+[#25](https://github.com/daodd1511/racing/pull/25) and
+[#27](https://github.com/daodd1511/racing/pull/27). The user confirmed closure.
+All three phases are done, with no recorded verification debt. See
+[EXECUTION.md](EXECUTION.md) for the implementation and verification record.
+Blender asset migration is next; starting it requires an explicit instruction.
+New Obstacle Module design follows the Blender migration.
 
 ## Goal
 

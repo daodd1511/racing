@@ -1,15 +1,17 @@
 # Specs
 
-## Active specs
+## Pending specs
+
+[Blender asset migration](blender-asset-migration/PLAN.md) — next;
+[five execution phases](blender-asset-migration/EXECUTION.md) remain pending.
+Phase 1 requires an explicit start instruction. New Obstacle Module design follows
+this migration.
+
+## Completed specs
 
 [Runtime performance and Module foundations](runtime-module-foundations/PLAN.md) —
-current priority; [execution status](runtime-module-foundations/EXECUTION.md):
-all three phases implemented and verified; Phase 3 awaits PR submission and user review.
-Blender migration remains deferred.
-
-[Blender asset migration](blender-asset-migration/PLAN.md) — deferred until runtime
-and Module foundations are reviewed; [five execution phases](blender-asset-migration/EXECUTION.md)
-remain pending. Phase 1 has not started.
+completed and merged on 2026-09-08 in PRs #24, #25 and #27;
+[execution record](runtime-module-foundations/EXECUTION.md). No verification debt.
 
 ## Archived specs
 

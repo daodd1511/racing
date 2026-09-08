@@ -2,8 +2,9 @@
 
 ## Status
 
-Deferred behind [runtime performance and Module foundations](../runtime-module-foundations/PLAN.md)
-as of 2026-09-08. Reconcile its resulting Module contract before starting migration.
+[Runtime performance and Module foundations](../runtime-module-foundations/PLAN.md)
+completed and merged on 2026-09-08. Its resulting Module contract is recorded in
+“Runtime foundations integration” below. This migration is next; no phase has started.
 
 Planning complete for the requested migration. See [EXECUTION.md](EXECUTION.md) for
 the five pending phases. Implementation requires an explicit phase-start instruction.

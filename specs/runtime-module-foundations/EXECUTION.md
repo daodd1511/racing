@@ -7,12 +7,14 @@ Probe: `gh stack view --json` returned exit 6 because `main` belongs to multiple
 
 ## STATUS
 
+- Spec status: complete — merged 2026-09-08; user requested closure.
 - Current phase: 3 — done
 - Phase 1 — Simulation bookkeeping: done
 - Phase 2 — Direct rendering updates: done
 - Phase 3 — Module integration and recovery areas: done
 - Verification debt: none — all phase gates passed; final spec gate passed 197 tests and the production build.
-- Commit checkpoint: all three phases implemented locally; Phase 3 awaits push/PR authorization and user review.
+- Merge checkpoint: PRs #24, #25 and #27 merged on 2026-09-08.
+- Review record: user confirmed closure after merge; individual manual scenarios below remain historical checklists, not outstanding phase work.
 
 ## Phase 1 — Simulation bookkeeping
 

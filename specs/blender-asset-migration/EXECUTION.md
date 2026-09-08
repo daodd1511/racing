@@ -12,14 +12,15 @@ If initialization reports remote unavailability, apply the rulebook's sequential
 
 ## STATUS
 
-- Priority: deferred behind runtime-module-foundations; no migration phase has started.
-- Current phase: 1 — pending
-- Phase 1 — Extract and export authored assets: pending
+- Priority: next — runtime-module-foundations completed and merged on 2026-09-08; Phase 1 started on 2026-09-08.
+- Current phase: 1 — done
+- Phase 1 — Extract and export authored assets: done
 - Phase 2 — Load unchanged assets alongside the baseline: pending
 - Phase 3 — Tune all Modules and reassemble the Course: pending
 - Phase 4 — Tune and save from development views: pending
 - Phase 5 — Promote reviewed assets and retire the old path: pending
 - Verification debt: none
+- Phase 1 checkpoint: implementation and phase gate passed; fresh re-review found no remaining actionable findings. User explicitly authorized local commits on 2026-09-08. Three local commits record implementation and completion; no push or PR. All new Phase 1 files are committed. Pre-existing edits in other spec documents remain outside these commits.
 
 ## Phase 1 — Extract and export authored assets
 
@@ -31,24 +32,32 @@ Produces: `AssetId`, `ModuleId`, `AuthoredAsset`, `AuthoredCatalog`, `ModuleTuni
 
 Fresh review: required — export publication and failure paths protect existing authored files and valid exports.
 
-- [ ] Preserve optional `Spec.recoveryBoxes` in `src/assets/types.ts`, `src/assets/parseAuthoredAsset.ts` and `scripts/blender/export.py` as explicit position/rotation/half-extents metadata; capture `RegisteredModule.course.defaults` through `courseParamValues`, without adding boxes to existing baseline Specs.
-- [ ] Create `src/assets/types.ts` and `src/assets/parseAuthoredAsset.ts` per PLAN.md → "Export and authoring contract" and "Shared tuning contract"; represent markers, collider kinds, physical profiles, authored visual IDs, rest geometry and control bindings as strict plain data.
-- [ ] Add `scripts/assets/captureBaseline.ts`, `assets/baseline/` and `src/config/module-settings.json`; extract `courseParamValues`, each current Module's `buildSpec`, `buildStartSpec`, `buildFinishSpec`, marble styles and `raceVisibleSpec` visual adjustments without editing their existing generators.
-- [ ] Add `tsx` as a development dependency in `package.json` and update `pnpm-lock.yaml`; provide `assets:capture` as `tsx scripts/assets/captureBaseline.ts` and record capture provenance in `assets/baseline/README.md`.
-- [ ] Extend `tsconfig.json` coverage to `scripts/**/*.ts` and `vite.config.ts` so the project-wide typecheck covers the new server/export TypeScript; keep Python authoring code outside TypeScript coverage.
-- [ ] Create `scripts/blender/bootstrap.py` and `assets/blender/{chute,pin-field,staircase,whoops,start,finish,marble}.blend`; consume captured geometry, establish named collections/markers/control bindings and preserve all baseline shapes/transforms; refuse existing source-file overwrites.
-- [ ] Create `scripts/blender/export.py` and `scripts/assets/exportAssets.ts`; export with the installed Blender CLI into validated immutable package revisions under `src/assets/authored/`, then atomically update `catalog.json`; normal export never regenerates source models.
-- [ ] Add `assets:export` as `tsx scripts/assets/exportAssets.ts` in `package.json`; the wrapper locates Blender through an explicit `BLENDER_BIN` override or the installed macOS executable, invokes Python with failure propagation and preserves the old catalog on failure.
-- [ ] Add `src/assets/physicsProfiles.ts` with captured physical values; export material keys rather than changing friction/restitution or inferring collisions from visual meshes.
-- [ ] Add `scripts/assets/checkAssets.ts` and `assets:check` (`tsx scripts/assets/checkAssets.ts`); check source/exporter/output hashes, referenced files and schema compatibility without Blender; leave production build integration to Phase 5.
-- [ ] Add `src/assets/parseAuthoredAsset.test.ts` for invalid collider/marker/control data and `scripts/assets/exportAssets.test.ts` for failed publication preserving the prior catalog; use temporary fixtures, not a Blender subprocess on every related-test run.
-- [ ] Run `pnpm assets:capture`, then bootstrap each named source with Blender `--background --python scripts/blender/bootstrap.py -- <captured-input> <blend-output>`, followed by `pnpm assets:export` and `pnpm assets:check`; compare exported baseline colliders/markers with the capture and correct conversion errors without redesigning shapes.
-- [ ] Add `docs/blender-authoring.md` with named structure, commands and ownership boundaries; document metadata units, axis conversion and the prohibition on silently overwriting manual edits.
+- [x] Preserve optional `Spec.recoveryBoxes` in `src/assets/types.ts`, `src/assets/parseAuthoredAsset.ts` and `scripts/blender/export.py` as explicit position/rotation/half-extents metadata; capture `RegisteredModule.course.defaults` through `courseParamValues`, without adding boxes to existing baseline Specs.
+- [x] Create `src/assets/types.ts` and `src/assets/parseAuthoredAsset.ts` per PLAN.md → "Export and authoring contract" and "Shared tuning contract"; represent markers, collider kinds, physical profiles, authored visual IDs, rest geometry and control bindings as strict plain data.
+- [x] Add `scripts/assets/captureBaseline.ts`, `assets/baseline/` and `src/config/module-settings.json`; extract `courseParamValues`, each current Module's `buildSpec`, `buildStartSpec`, `buildFinishSpec`, marble styles and `raceVisibleSpec` visual adjustments without editing their existing generators.
+- [x] Add `tsx` as a development dependency in `package.json` and update `pnpm-lock.yaml`; provide `assets:capture` as `tsx scripts/assets/captureBaseline.ts` and record capture provenance in `assets/baseline/README.md`.
+- [x] (amended 2026-09-08) Add `pnpm-workspace.yaml` with explicit esbuild build approval required by the installed pnpm version for `tsx`.
+- [x] Extend `tsconfig.json` coverage to `scripts/**/*.ts` and `vite.config.ts` so the project-wide typecheck covers the new server/export TypeScript; keep Python authoring code outside TypeScript coverage.
+- [x] Create `scripts/blender/bootstrap.py` and `assets/blender/{chute,pin-field,staircase,whoops,start,finish,marble}.blend`; consume captured geometry, establish named collections/markers/control bindings and preserve all baseline shapes/transforms; refuse existing source-file overwrites.
+- [x] Create `scripts/blender/export.py` and `scripts/assets/exportAssets.ts`; export with the installed Blender CLI into validated immutable package revisions under `src/assets/authored/`, then atomically update `catalog.json`; normal export never regenerates source models.
+- [x] Add `assets:export` as `tsx scripts/assets/exportAssets.ts` in `package.json`; the wrapper locates Blender through an explicit `BLENDER_BIN` override or the installed macOS executable, invokes Python with failure propagation and preserves the old catalog on failure.
+- [x] Add `src/assets/physicsProfiles.ts` with captured physical values; export material keys rather than changing friction/restitution or inferring collisions from visual meshes.
+- [x] (amended 2026-09-08) Exclude unpublished export staging, locks and catalog temporary files in `.gitignore`.
+- [x] Add `scripts/assets/checkAssets.ts` and `assets:check` (`tsx scripts/assets/checkAssets.ts`); check source/exporter/output hashes, referenced files and schema compatibility without Blender; leave production build integration to Phase 5.
+- [x] Add `src/assets/parseAuthoredAsset.test.ts` for invalid collider/marker/control data and `scripts/assets/exportAssets.test.ts` for failed publication preserving the prior catalog; use temporary fixtures, not a Blender subprocess on every related-test run.
+- [x] Run `pnpm assets:capture`, then bootstrap each named source with Blender `--background --python scripts/blender/bootstrap.py -- <captured-input> <blend-output>`, followed by `pnpm assets:export` and `pnpm assets:check`; compare exported baseline colliders/markers with the capture and correct conversion errors without redesigning shapes.
+- [x] Add `docs/blender-authoring.md` with named structure, commands and ownership boundaries; document metadata units, axis conversion and the prohibition on silently overwriting manual edits.
+
+- [x] (amended 2026-09-08) Tighten `src/assets/parseAuthoredAsset.ts` and its tests after fresh review: reject unknown keys at every schema level, enforce captured parameter ranges and Module-specific binding/repetition contracts, then re-export packages with the updated parser fingerprint.
 
 **Phase gate (hard):**
 
-- [ ] `./node_modules/.bin/tsc -b`
-- [ ] `./node_modules/.bin/vitest related --run <changed-source-files>` — fill arguments from this phase's real diff, including exporter wrapper changes; use reverse dependencies, not selected test paths.
+- [x] `./node_modules/.bin/tsc -b` — passed 2026-09-08
+- [x] `./node_modules/.bin/vitest related --run <changed-source-files>` — fill arguments from this phase's real diff, including exporter wrapper changes; use reverse dependencies, not selected test paths. Passed 2026-09-08: 54 files, 229 tests; inputs computed from actual changed/untracked source and data files.
+
+**Completion checkpoint:**
+
+- [x] Commit the verified Phase 1 files and confirm commit integrity after explicit commit approval. User confirmed on 2026-09-08; all new files appear in branch commits. The working tree retains only pre-existing spec-document edits outside Phase 1.
 
 **Review checklist (user, at PR review):**
 

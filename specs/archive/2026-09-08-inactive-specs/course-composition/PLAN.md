@@ -1,5 +1,8 @@
 # Course composition — Plan
 
+> Status: inactive — cancelled and archived on 2026-09-08 at the user’s request.
+> Historical plan only. Do not execute or resume its phases. This is not a completion claim.
+
 Spec 2 of two, following
 [`module-candidate-expansion`](../module-candidate-expansion/PLAN.md). Spec 1
 establishes truthful Module evidence and leaves every passing candidate

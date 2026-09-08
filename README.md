@@ -42,6 +42,14 @@ The two development pages are intentionally separate from the production
 picker. They are included in the production build for review, not linked from
 the picker flow.
 
+## Design references
+
+- [Video-inspired Module shortlist](docs/references/2026-09-08-marble-module-shortlist.html)
+  (2026-09-08) — compares real marble Course mechanisms with existing Modules,
+  retains two prototype candidates and one reserve, and explains five exclusions.
+  Open the self-contained HTML in a browser; reference frames and diagrams are
+  embedded. These are design hypotheses, not validated behavior or an execution plan.
+
 ## First / Last semantics
 
 A setting on the setup screen chooses how the race result is read, and

@@ -13,14 +13,15 @@ If initialization reports remote unavailability, apply the rulebook's sequential
 ## STATUS
 
 - Priority: next — runtime-module-foundations completed and merged on 2026-09-08; Phase 1 started on 2026-09-08.
-- Current phase: 3 — done
+- Current phase: 4 — done
 - Phase 1 — Extract and export authored assets: done
 - Phase 2 — Load unchanged assets alongside the baseline: done
 - Phase 3 — Tune all Modules and reassemble the Course: done
-- Phase 4 — Tune and save from development views: pending
+- Phase 4 — Tune and save from development views: done
 - Phase 5 — Promote reviewed assets and retire the old path: pending
 - Verification debt: none
-- Phase 3 checkpoint: the complete phase gate passed after two fresh-review marker corrections on 2026-09-08 (25 files, 122 tests; 37.37 seconds). The single fresh re-review found no remaining actionable findings. Implementation is committed in `61f994f` and `f4e7fc0`; this completion record is the third Phase 3 commit. All nine new files appear in branch commits; Phase 3 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. No Phase 3 push or PR.
+- Phase 4 checkpoint: the complete phase gate passed after the initial fresh-review corrections and the user-directed capped re-review correction on 2026-09-08 (28 files, 154 tests; 94.50 seconds). The initial review found two P2 issues: validator infrastructure errors mapped to 422 and missing Showcase regression coverage. The re-review confirmed those corrections but found that the Showcase test observed Physics mounts without asserting the apply remount; the user directed the explicit assertion fix, and the workflow permits no third review. Browser checks covered draft-only sliders, explicit Course restart, Save without physics/HMR restart and stale-tab conflict handling before browser automation became unavailable. Implementation is committed in `fe10dd3` and `88ba73e`; this completion record is the third Phase 4 commit. All seven new files appear in branch commits; Phase 4 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted.
+- Phase 3 checkpoint: the complete phase gate passed after two fresh-review marker corrections on 2026-09-08 (25 files, 122 tests; 37.37 seconds). The single fresh re-review found no remaining actionable findings. Implementation is committed in `61f994f` and `f4e7fc0`; this completion record is the third Phase 3 commit. All nine new files appear in branch commits; Phase 3 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. Published as PR #31 on 2026-09-08.
 - Phase 2 checkpoint: implementation and phase gate passed on 2026-09-08 (18 files, 67 tests); browser checks exercised the authored Course and all four Showcase Module selectors. Fresh review remains not required after actual-diff assessment. You explicitly authorized local commits on 2026-09-08. Runtime and comparison changes are committed in `c4af673` and `bc08a22`; this completion record is the third Phase 2 commit. All eight new files are included, and all Phase 2 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. Published as PR #29 on 2026-09-08.
 - Phase 1 checkpoint: implementation and phase gate passed; fresh re-review found no remaining actionable findings. User explicitly authorized local commits on 2026-09-08. Three commits record implementation and completion; published as PR #28 on 2026-09-08. All new Phase 1 files are committed. Pre-existing edits in other spec documents remain outside these commits.
 
@@ -167,18 +168,28 @@ Produces: `readModuleSettings(): Promise<SettingsSnapshot>`; `saveModuleSettings
 
 Fresh review: required — development HTTP write boundary and atomic/conflict-safe persistence protect repository settings.
 
-- [ ] Create `scripts/dev/moduleSettingsPlugin.ts` and register it in `vite.config.ts` for local development only; implement the fixed-path, loopback/same-origin, body-limit, revision-check and atomic-save contract in PLAN.md → "Settings and local save API".
-- [ ] Create `src/dev/moduleSettingsClient.ts` and `src/dev/ModuleTuningPanel.tsx`; expose named Module selection, supported sliders, draft/applied/saved states, restart, Save and visible validation/conflict errors.
-- [ ] Update `src/dev/coursePreview.tsx` and `src/styles/course.css` to apply drafts only on restart, keep the same seed/Roster/Selection Mode, update every instance and retain the last runnable Course after rejected assembly.
-- [ ] Update `src/showcase/{Showcase,ParamPanel}.tsx` to use the same Module controls/configuration and retain Feeder/metrics; do not reintroduce independent hidden Showcase presets or placement-specific overrides.
-- [ ] Keep editing and save code under `import.meta.env.DEV`; intercept configuration-file HMR in `scripts/dev/moduleSettingsPlugin.ts` so Save does not mutate or restart an active physics world.
-- [ ] Add `scripts/dev/moduleSettingsPlugin.test.ts` for invalid/untrusted requests, concurrent stale revisions and write failures retaining the original file; extend `src/dev/coursePreview.test.tsx` for apply-on-restart/shared placement behavior and `src/dev/buildEntries.test.ts` for production exclusion.
-- [ ] Update `docs/blender-authoring.md` with the geometry-edit versus parameter-tune workflows, shared settings behavior, restart semantics and stale-save recovery.
+- [x] Create `scripts/dev/moduleSettingsPlugin.ts` and register it in `vite.config.ts` for local development only; implement the fixed-path, loopback/same-origin, body-limit, revision-check and atomic-save contract in PLAN.md → "Settings and local save API".
+- [x] Create `src/dev/moduleSettingsClient.ts` and `src/dev/ModuleTuningPanel.tsx`; expose named Module selection, supported sliders, draft/applied/saved states, restart, Save and visible validation/conflict errors.
+- [x] Update `src/dev/coursePreview.tsx` and `src/styles/course.css` to apply drafts only on restart, keep the same seed/Roster/Selection Mode, update every instance and retain the last runnable Course after rejected assembly.
+- [x] Update `src/showcase/{Showcase,ParamPanel}.tsx` to use the same Module controls/configuration and retain Feeder/metrics; do not reintroduce independent hidden Showcase presets or placement-specific overrides.
+- [x] Keep editing and save code under `import.meta.env.DEV`; intercept configuration-file HMR in `scripts/dev/moduleSettingsPlugin.ts` so Save does not mutate or restart an active physics world.
+- [x] Add `scripts/dev/moduleSettingsPlugin.test.ts` for invalid/untrusted requests, concurrent stale revisions and write failures retaining the original file; extend `src/dev/coursePreview.test.tsx` for apply-on-restart/shared placement behavior and `src/dev/buildEntries.test.ts` for production exclusion.
+- [x] Update `docs/blender-authoring.md` with the geometry-edit versus parameter-tune workflows, shared settings behavior, restart semantics and stale-save recovery.
+
+- [x] (amended 2026-09-08) Correct `SaveSettingsRequest.expectedRevision` in `src/assets/types.ts` to match the agreed HTTP contract; add shared panel styling in `src/dev/moduleTuning.css` and action/client tests in `src/dev/ModuleTuningPanel.test.tsx`.
+- [x] (amended 2026-09-08) Keep baseline comparison distinct from applied tuning in `src/dev/coursePreview.tsx` and `src/showcase/Showcase.tsx`; report stale saved-state status accurately in `src/dev/ModuleTuningPanel.tsx` and add regressions to the existing editor tests.
+- [x] (amended 2026-09-08) Correct fresh-review findings in `scripts/dev/moduleSettingsPlugin.ts` and its tests so validator infrastructure failures return 500 while settings failures return 422; add `src/showcase/Showcase.test.tsx` for baseline/applied state, physics restart and retained Feeder/metrics controls.
+- [x] (amended 2026-09-08) Following user direction after the capped re-review, strengthen `src/showcase/Showcase.test.tsx` to assert that applying a draft remounts the Physics world.
 
 **Phase gate (hard):**
 
-- [ ] `./node_modules/.bin/tsc -b`
-- [ ] `./node_modules/.bin/vitest related --run <changed-source-files>` — resolve arguments from the actual phase diff, including Vite middleware consumers.
+- [x] `./node_modules/.bin/tsc -b` — passed 2026-09-08
+- [x] `./node_modules/.bin/vitest related --run <changed-source-files>` — actual 12-file TypeScript source diff; passed 2026-09-08 with one worker: 27 files, 152 tests (101.83 seconds). Two unchanged physics tests exceeded their wall-clock timeouts in parallel while browser verification tabs were still active; the complete unchanged selection passed after serializing workers.
+- [x] (amended 2026-09-08) Rerun the complete phase gate after fresh-review and user-directed corrections. TypeScript and the actual 13-file dependency inputs passed: 28 files, 154 tests (94.50 seconds).
+
+**Completion checkpoint:**
+
+- [x] Commit the verified Phase 4 implementation in logical groups and confirm every new file appears in branch commits. The save boundary is committed in `fe10dd3`; the shared Course/Showcase editor is committed in `88ba73e`; this completion record is the remaining phase-owned change.
 
 **Review checklist (user, at PR review):**
 

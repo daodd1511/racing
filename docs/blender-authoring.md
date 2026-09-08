@@ -1,8 +1,9 @@
 # Blender asset authoring
 
 Phase 1 preserves the live Course geometry in seven editable sources under
-`assets/blender/`. The game still uses its existing generators until the runtime
-migration phases. Do your visual and behavioral comparison before retiring them.
+`assets/blender/`. The game defaults to its existing generators. Development views can load the
+authored baseline for comparison. Do your visual and behavioral comparison before
+retiring the original generators.
 
 ## Export a saved edit
 
@@ -72,3 +73,23 @@ For a fresh destination with no captured files or settings, run
 Repeat for `pin-field`, `staircase`, `whoops`, `start`, `finish` and `marble`.
 Both capture and bootstrap refuse existing output files. Never remove a manually
 edited source to rerun bootstrap; export that saved source instead.
+
+
+## Compare the authored baseline
+
+In the development Course view (`course.html`), select **Blender baseline** and
+wait for loading to finish. Use **Start or restart** to apply it with the selected
+seed and Selection Mode; the fixed Roster stays the same. The header identifies
+the active source. Select **Original baseline** and restart to compare that source.
+A loading error offers **Retry assets** and prevents an authored restart.
+
+In the Showcase (`showcase.html`), select **Original baseline** or **Blender baseline**.
+Both use the captured Course settings for the selected Module. Parameter tuning
+is disabled during baseline comparison; **Return to live tuning** restores the
+existing Showcase controls. Changing sources restarts the Showcase physics world.
+
+Authored meshes share immutable cached geometry and materials. Course placement
+and gate motion still come from the same plain-data Spec used by physics.
+The marble visual uses the captured mesh while the game retains its spherical
+collider, radius and Roster stripe identities. Parameter deformation follows in
+Phase 3; non-baseline authored values currently fail explicitly.

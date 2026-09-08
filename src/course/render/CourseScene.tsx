@@ -3,6 +3,7 @@ import { Html } from "@react-three/drei";
 import { memo, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import { AuthoredMarbleGeometry } from "../../assets/render/AuthoredVisuals";
 import type { Course } from "../types";
 import { SpecVisuals } from "../../modules/render/ModuleColliders";
 import { StaticSpecVisuals } from "../../modules/render/StaticSpecVisuals";
@@ -71,7 +72,9 @@ function Marble({
   rotation,
   marbleIndex,
   frameRef,
+  authored = false,
 }: {
+  readonly authored?: boolean;
   readonly marbleIndex: number;
   readonly frameRef?: RaceFrameRef;
   readonly style: MarbleStyle;
@@ -121,7 +124,11 @@ function Marble({
         position={initialPositionRef.current}
         quaternion={initialRotationRef.current}
       >
-        <sphereGeometry args={[SCALE.marbleRadius, 20, 14]} />
+        {authored ? (
+          <AuthoredMarbleGeometry />
+        ) : (
+          <sphereGeometry args={[SCALE.marbleRadius, 20, 14]} />
+        )}
         <meshStandardMaterial
           color="#ffffff"
           map={marbleStripeTexture(style)}
@@ -181,6 +188,7 @@ export function CourseScene({
       {marbleTransforms.map(({ marbleIndex, position, rotation }) => (
         <Marble
           key={marbleIndex}
+          authored={course.start.visuals.some((visual) => visual.authored !== undefined)}
           marbleIndex={marbleIndex}
           frameRef={frameRef}
           name={marbleNames?.[marbleIndex]}

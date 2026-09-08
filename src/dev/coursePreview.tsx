@@ -2,6 +2,8 @@ import { Canvas } from "@react-three/fiber";
 import { StrictMode, useMemo, useState, type ReactNode, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 
+import { useAuthoredAssets } from "../assets/render/useAuthoredAssets";
+import { AssetComparison, type ComparisonSource } from "./AssetComparison";
 import { assembleCourse } from "../course/assembleCourse";
 import { CourseScene } from "../course/render/CourseScene";
 import { CourseMinimap } from "../race/CourseMinimap";
@@ -47,6 +49,7 @@ export function raceStatus(snapshot: RaceSnapshot | null, outcome: RaceOutcome |
 
 export interface CourseControlsProps {
   readonly children?: ReactNode;
+  readonly disabled?: boolean;
   readonly seed: number;
   readonly selectionMode: SelectionMode;
   readonly onSeedChange: (seed: number) => void;
@@ -56,6 +59,7 @@ export interface CourseControlsProps {
 
 export function CourseControls({
   children,
+  disabled = false,
   seed,
   selectionMode,
   onSeedChange,
@@ -85,7 +89,7 @@ export function CourseControls({
         </select>
       </label>
       {children}
-      <button onClick={onStart} type="button">
+      <button disabled={disabled} onClick={onStart} type="button">
         Start or restart
       </button>
     </section>
@@ -93,6 +97,10 @@ export function CourseControls({
 }
 
 export function CoursePreview() {
+  const [pendingSource, setPendingSource] = useState<ComparisonSource>("legacy");
+  const [activeSource, setActiveSource] = useState<ComparisonSource>("legacy");
+  const [assemblyError, setAssemblyError] = useState<string | null>(null);
+  const assets = useAuthoredAssets(pendingSource === "authored" || activeSource === "authored");
   const [cameraMode, setCameraMode] = useState<CameraMode>("close-up");
   const [pendingSeed, setPendingSeed] = useState(7);
   const [pendingSelectionMode, setPendingSelectionMode] = useState<SelectionMode>("last");
@@ -101,7 +109,7 @@ export function CoursePreview() {
   const [runNumber, setRunNumber] = useState(0);
   const [snapshot, setSnapshot] = useState<RaceSnapshot | null>(null);
   const [outcome, setOutcome] = useState<RaceOutcome | null>(null);
-  const course = useMemo(() => assembleCourse(activeSeed), [activeSeed]);
+  const [course, setCourse] = useState(() => assembleCourse(7));
   const request = useMemo(
     () => ({ seed: activeSeed, roster: FIXED_ROSTER, selectionMode: activeSelectionMode }),
     [activeSeed, activeSelectionMode],
@@ -123,6 +131,16 @@ export function CoursePreview() {
   }
 
   function startRace(): void {
+    if (pendingSource === "authored" && assets.state.status !== "ready") return;
+    try {
+      const next = assembleCourse(pendingSeed, { source: pendingSource });
+      setCourse(next);
+    } catch (error) {
+      setAssemblyError(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    setAssemblyError(null);
+    setActiveSource(pendingSource);
     setActiveSeed(pendingSeed);
     setActiveSelectionMode(pendingSelectionMode);
     setSnapshot(null);
@@ -136,18 +154,39 @@ export function CoursePreview() {
         <div>
           <p className="course-preview__eyebrow">Development harness</p>
           <h1>Course review</h1>
+          <p>
+            Active source: {activeSource === "authored" ? "Blender baseline" : "Original baseline"}.
+            Apply the selected source with Start or restart.
+          </p>
+          {assemblyError && (
+            <p role="alert">
+              Could not assemble selected Course: {assemblyError}. The previous Course remains
+              active.
+            </p>
+          )}
         </div>
         <p aria-live="polite" className="course-preview__status" role="status">
           {raceStatus(snapshot, outcome)}
         </p>
       </header>
       <CourseControls
+        disabled={pendingSource === "authored" && assets.state.status !== "ready"}
         onSeedChange={setPendingSeed}
         onSelectionModeChange={setPendingSelectionMode}
         onStart={startRace}
         seed={pendingSeed}
         selectionMode={pendingSelectionMode}
       >
+        {import.meta.env.DEV && (
+          <AssetComparison
+            source={pendingSource}
+            onChange={setPendingSource}
+            state={assets.state}
+            onRetry={() => {
+              void assets.retry();
+            }}
+          />
+        )}
         <label>
           Camera
           <select
@@ -164,25 +203,27 @@ export function CoursePreview() {
           <color attach="background" args={["#12171c"]} />
           <ambientLight intensity={0.8} />
           <directionalLight castShadow intensity={1.8} position={[4, 8, 6]} />
-          <LiveRace
-            key={runNumber}
-            course={course}
-            request={request}
-            onOutcome={setOutcome}
-            onSnapshot={handleSnapshot}
-          >
-            {({ frameRef }) => (
-              <>
-                <CourseScene
-                  course={course}
-                  marbleStyles={marbleStyles}
-                  frameRef={frameRef}
-                  stagedMarbleTransforms={stagedMarbleTransforms}
-                />
-                <DecisiveCamera course={course} frameRef={frameRef} mode={cameraMode} />
-              </>
-            )}
-          </LiveRace>
+          {(activeSource !== "authored" || assets.state.status === "ready") && (
+            <LiveRace
+              key={runNumber}
+              course={course}
+              request={request}
+              onOutcome={setOutcome}
+              onSnapshot={handleSnapshot}
+            >
+              {({ frameRef }) => (
+                <>
+                  <CourseScene
+                    course={course}
+                    marbleStyles={marbleStyles}
+                    frameRef={frameRef}
+                    stagedMarbleTransforms={stagedMarbleTransforms}
+                  />
+                  <DecisiveCamera course={course} frameRef={frameRef} mode={cameraMode} />
+                </>
+              )}
+            </LiveRace>
+          )}
         </Canvas>
       </section>
       <section aria-label="Course overview" className="course-preview__overview">

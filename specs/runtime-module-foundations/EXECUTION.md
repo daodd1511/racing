@@ -7,10 +7,10 @@ Probe: `gh stack view --json` returned exit 6 because `main` belongs to multiple
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — in-progress
 - Phase 1 — Simulation bookkeeping: done
 - Phase 2 — Direct rendering updates: done
-- Phase 3 — Module integration and recovery areas: pending
+- Phase 3 — Module integration and recovery areas: in-progress
 - Verification debt: none — Phase 1 passed 34 related tests; Phase 2 passed 29 related tests; both passed project typecheck.
 - Commit checkpoint: user explicitly authorized all commits and Phase 2; Phase 1 work committed.
 
@@ -89,8 +89,8 @@ Produces: `RecoveryBox = { readonly position: Vector3; readonly rotation: Quater
 
 Fresh review: not required
 
-- [ ] In `src/modules/registry.ts`, store Course eligibility and exact existing Course defaults with each catalog registration; update `src/course/courseModules.ts` to derive eligibility/defaults from that metadata instead of a whitelist and Module-ID branches, preserving `courseParamValues(module: RegisteredModule): ParamValues` and `courseModulesByRole(role: Role): readonly RegisteredModule[]`.
-- [ ] Audit `src/course/arc.ts` and `src/course/board.ts` against that catalog; retain the existing explicit obstacle inventory, seeded ordering, bay dimensions and placement choices rather than generating a new race composition policy.
+- [x] In `src/modules/registry.ts`, store Course eligibility and exact existing Course defaults with each catalog registration; update `src/course/courseModules.ts` to derive eligibility/defaults from that metadata instead of a whitelist and Module-ID branches, preserving `courseParamValues(module: RegisteredModule): ParamValues` and `courseModulesByRole(role: Role): readonly RegisteredModule[]`.
+- [x] Audit `src/course/arc.ts` and `src/course/board.ts` against that catalog; retain the existing explicit obstacle inventory, seeded ordering, bay dimensions and placement choices rather than generating a new race composition policy.
 - [ ] Add `RecoveryBox` and optional `Spec.recoveryBoxes` to `src/modules/types.ts`; boxes describe a union of valid marble-center volumes in local coordinates, are independent of colliders, and an omitted or empty list uses legacy corridor recovery.
 - [ ] In `src/course/transformSpec.ts`, transform recovery-box positions and rotations with the Spec while retaining half-extents; keep them available through `src/course/assembleCourse.ts` without merging them into Footprint bounds or the progress route.
 - [ ] Add `src/race/recoveryAreas.ts` with `containsRecoveryPoint(boxes: readonly RecoveryBox[], position: Vector3): boolean`; include boundaries and use oriented-box membership, with precomputed inverse transforms cached per immutable box collection.
@@ -103,7 +103,7 @@ Fresh review: not required
 **Phase gate (hard):**
 
 - [ ] Run `./node_modules/.bin/tsc -b` from the repository root.
-- [ ] Run `./node_modules/.bin/vitest related --run <changed-source-files>` with arguments derived from the real phase diff, including production subjects of changed tests.
+- [ ] Run `./node_modules/.bin/vitest related --run --maxWorkers=1 <changed-source-files>` with arguments derived from the real phase diff, including production subjects of changed tests.
 
 **Review checklist (user, at PR review):**
 
@@ -115,5 +115,5 @@ Fresh review: not required
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] Run `./node_modules/.bin/vitest run` over the accumulated spec changes.
+- [ ] Run `./node_modules/.bin/vitest run --maxWorkers=1` (amended 2026-09-08: serial workers avoid the contention observed in phase 1; test scope unchanged) over the accumulated spec changes.
 - [ ] Run `./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build` to verify the changed scene consumers and all application entry points bundle together.

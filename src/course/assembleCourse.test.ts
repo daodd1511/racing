@@ -5,6 +5,7 @@ import { ALL_MODULES } from "../modules/registry";
 import { createSeededRandom, deriveRaceSeed } from "../race/random";
 import { enumerateRoleSelections } from "./arc";
 import { assembleCourse, assembleCourseFromRoleSelection } from "./assembleCourse";
+import { courseParamValues, COURSE_MODULES } from "./courseModules";
 import { BOARD } from "./board";
 import { stepCourse } from "./stepCourse";
 
@@ -75,4 +76,24 @@ describe("assembleCourse", () => {
     const course = assembleCourse(5);
     expect(() => stepCourse(course, Number.NaN)).toThrow(/finite/);
   });
+});
+
+it("keeps tuned Course defaults and inventory in the catalog", () => {
+  expect(COURSE_MODULES.map(({ id }) => id)).toEqual(["chute", "pin-field", "staircase", "whoops"]);
+  const defaults = (id: string) =>
+    courseParamValues(ALL_MODULES.find((module) => module.id === id)!);
+  expect(defaults("chute").grade).toBe(0.12);
+  expect(defaults("pin-field").courseGrade).toBe(0.12);
+  expect(defaults("staircase")).toMatchObject({ stepCount: 10, tread: 0.2, riseHeight: 0.048 });
+  expect(defaults("whoops")).toMatchObject({
+    amplitude: 0.016,
+    grade: 0.12,
+    length: 2.4,
+    wavelength: 0.4,
+  });
+  const ids = assembleCourse(7).modules.map(({ moduleId }) => moduleId);
+  expect(ids.filter((id) => id === "chute")).toHaveLength(12);
+  expect(ids.filter((id) => id === "pin-field")).toHaveLength(4);
+  expect(ids.filter((id) => id === "whoops")).toHaveLength(3);
+  expect(ids.filter((id) => id === "staircase")).toHaveLength(3);
 });

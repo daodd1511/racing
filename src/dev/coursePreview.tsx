@@ -1,15 +1,16 @@
 import { Canvas } from "@react-three/fiber";
-import { StrictMode, useMemo, useState, type ChangeEvent } from "react";
+import { StrictMode, useMemo, useState, type ReactNode, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 
 import { assembleCourse } from "../course/assembleCourse";
 import { CourseScene } from "../course/render/CourseScene";
 import { CourseMinimap } from "../race/CourseMinimap";
 import { DecisiveCamera } from "../race/DecisiveCamera";
+import { startingGridTransforms } from "../race/startAssignment";
 import { LiveRace } from "../race/LiveRace";
 import type { RaceOutcome, RaceSnapshot } from "../race/liveTypes";
 import { createMarbleStyles } from "../render/marbleStyles";
-import type { SelectionMode } from "../race/types";
+import type { CameraMode, SelectionMode } from "../race/types";
 import "../styles/course.css";
 
 export const FIXED_ROSTER = Object.freeze([
@@ -45,6 +46,7 @@ export function raceStatus(snapshot: RaceSnapshot | null, outcome: RaceOutcome |
 }
 
 export interface CourseControlsProps {
+  readonly children?: ReactNode;
   readonly seed: number;
   readonly selectionMode: SelectionMode;
   readonly onSeedChange: (seed: number) => void;
@@ -53,6 +55,7 @@ export interface CourseControlsProps {
 }
 
 export function CourseControls({
+  children,
   seed,
   selectionMode,
   onSeedChange,
@@ -81,6 +84,7 @@ export function CourseControls({
           <option value="last">Last finisher</option>
         </select>
       </label>
+      {children}
       <button onClick={onStart} type="button">
         Start or restart
       </button>
@@ -89,6 +93,7 @@ export function CourseControls({
 }
 
 export function CoursePreview() {
+  const [cameraMode, setCameraMode] = useState<CameraMode>("close-up");
   const [pendingSeed, setPendingSeed] = useState(7);
   const [pendingSelectionMode, setPendingSelectionMode] = useState<SelectionMode>("last");
   const [activeSeed, setActiveSeed] = useState(7);
@@ -102,6 +107,20 @@ export function CoursePreview() {
     [activeSeed, activeSelectionMode],
   );
   const marbleStyles = useMemo(() => createMarbleStyles(FIXED_ROSTER.length), []);
+
+  const stagedMarbleTransforms = useMemo(
+    () => startingGridTransforms(course, request.seed, request.roster.length),
+    [course, request],
+  );
+  function handleSnapshot(next: RaceSnapshot): void {
+    setSnapshot((previous) =>
+      previous === null ||
+      next.elapsedSeconds < previous.elapsedSeconds ||
+      next.elapsedSeconds - previous.elapsedSeconds >= 0.1
+        ? next
+        : previous,
+    );
+  }
 
   function startRace(): void {
     setActiveSeed(pendingSeed);
@@ -128,7 +147,18 @@ export function CoursePreview() {
         onStart={startRace}
         seed={pendingSeed}
         selectionMode={pendingSelectionMode}
-      />
+      >
+        <label>
+          Camera
+          <select
+            value={cameraMode}
+            onChange={(event) => setCameraMode(event.target.value as CameraMode)}
+          >
+            <option value="close-up">Close up</option>
+            <option value="broadcast">Broadcast</option>
+          </select>
+        </label>
+      </CourseControls>
       <section aria-label="Live Course" className="course-preview__stage">
         <Canvas camera={{ fov: 42, position: [0, 0, 6] }} shadows="percentage">
           <color attach="background" args={["#12171c"]} />
@@ -139,12 +169,17 @@ export function CoursePreview() {
             course={course}
             request={request}
             onOutcome={setOutcome}
-            onSnapshot={setSnapshot}
+            onSnapshot={handleSnapshot}
           >
-            {({ snapshot: liveSnapshot }) => (
+            {({ frameRef }) => (
               <>
-                <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
-                <DecisiveCamera course={course} snapshot={liveSnapshot} />
+                <CourseScene
+                  course={course}
+                  marbleStyles={marbleStyles}
+                  frameRef={frameRef}
+                  stagedMarbleTransforms={stagedMarbleTransforms}
+                />
+                <DecisiveCamera course={course} frameRef={frameRef} mode={cameraMode} />
               </>
             )}
           </LiveRace>

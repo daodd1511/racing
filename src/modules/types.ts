@@ -113,7 +113,16 @@ export interface VisualSpec {
 /** The pure output of `buildSpec`: everything needed to build both a raw
  * Rapier world (the Validator) and a rendered scene (the runtime), and
  * nothing that only one of those two consumers needs. */
+/** Local-space marble-center volume, independent of collision geometry.
+ * Multiple boxes form a union. Omission/empty means legacy corridor recovery. */
+export interface RecoveryBox {
+  readonly position: Vector3;
+  readonly rotation: Quaternion;
+  readonly halfExtents: Vector3;
+}
+
 export interface Spec {
+  readonly recoveryBoxes?: readonly RecoveryBox[];
   readonly colliders: readonly ColliderSpec[];
   readonly footprint: Footprint;
   readonly visuals: readonly VisualSpec[];

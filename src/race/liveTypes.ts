@@ -42,3 +42,8 @@ export type RaceOutcome =
       readonly unfinishedMarbleIndices: readonly number[];
       readonly elapsedSeconds: number;
     };
+
+/** Direct presentation channel; replaced when the Course or request changes. */
+export interface RaceFrameRef {
+  current: RaceSnapshot | null;
+}

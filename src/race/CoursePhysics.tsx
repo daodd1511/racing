@@ -88,7 +88,7 @@ export function CoursePhysics({
     }
     if (latestSnapshot) callbacksRef.current.onSnapshot(latestSnapshot);
     if (terminalOutcome) callbacksRef.current.onOutcome(terminalOutcome);
-  });
+  }, -2);
 
   return null;
 }

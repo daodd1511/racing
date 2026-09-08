@@ -140,6 +140,15 @@ function transformVisual(
 export function transformSpec(spec: Spec, placement: CoursePlacement, idPrefix: string): Spec {
   const rotation = placementQuaternion(placement);
   return {
+    ...(spec.recoveryBoxes === undefined
+      ? {}
+      : {
+          recoveryBoxes: spec.recoveryBoxes.map((box) => ({
+            position: transformPoint(box.position, placement, rotation),
+            rotation: transformRotation(box.rotation, rotation),
+            halfExtents: box.halfExtents,
+          })),
+        }),
     colliders: spec.colliders.map((collider) =>
       transformCollider(collider, placement, rotation, idPrefix),
     ),

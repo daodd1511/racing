@@ -58,7 +58,7 @@ vi.mock("../race/LiveRace", () => ({
     onSnapshot,
   }: {
     readonly children?: (state: {
-      readonly snapshot: RaceSnapshot;
+      readonly frameRef: { current: RaceSnapshot };
       readonly outcome: null;
     }) => ReactNode;
     readonly onContact?: (event: RaceContactEvent) => void;
@@ -102,7 +102,7 @@ vi.mock("../race/LiveRace", () => ({
         <button onClick={emitOutcome} type="button">
           Emit outcome
         </button>
-        {children?.({ snapshot: runtime.snapshot, outcome: null })}
+        {children?.({ frameRef: { current: runtime.snapshot }, outcome: null })}
       </>
     );
   },
@@ -110,12 +110,15 @@ vi.mock("../race/LiveRace", () => ({
 
 vi.mock("../course/render/CourseScene", () => ({
   CourseScene({
-    snapshot,
+    snapshot: staticSnapshot,
+    frameRef,
     stagedMarbleTransforms = [],
   }: {
-    readonly snapshot: RaceSnapshot | null;
+    readonly snapshot?: RaceSnapshot | null;
+    readonly frameRef?: { current: RaceSnapshot | null };
     readonly stagedMarbleTransforms?: RaceSnapshot["marbleTransforms"];
   }) {
+    const snapshot = frameRef ? frameRef.current : staticSnapshot;
     return (
       <>
         <output>Course scene {snapshot?.elapsedSeconds ?? "pending"}</output>
@@ -127,12 +130,15 @@ vi.mock("../course/render/CourseScene", () => ({
 
 vi.mock("../race/DecisiveCamera", () => ({
   DecisiveCamera({
-    snapshot,
+    snapshot: staticSnapshot,
+    frameRef,
     startingGridSize,
   }: {
-    readonly snapshot: RaceSnapshot | null;
+    readonly snapshot?: RaceSnapshot | null;
+    readonly frameRef?: { current: RaceSnapshot | null };
     readonly startingGridSize?: number;
   }) {
+    const snapshot = frameRef ? frameRef.current : staticSnapshot;
     return (
       <output>
         Camera {snapshot?.decisiveMarbleIndex ?? "pending"} grid {startingGridSize}

@@ -1,12 +1,15 @@
 # Module candidate expansion — Plan
 
+> Status: inactive — cancelled and archived on 2026-09-08 at the user’s request.
+> Historical plan only. Do not execute or resume its phases. This is not a completion claim.
+
 Spec 1 of two. This spec establishes trustworthy Module evidence, remediates the
 existing catalogue, rebuilds the Showcase around that evidence, and evaluates
 three candidate Modules. Spec 2 will address Course composition after this plan
 is complete.
 
 The archived
-[`module-candidates-schematics.html`](../archive/2026-08-21-marble-race-catalogue/prototypes/module-candidates-schematics.html)
+[`module-candidates-schematics.html`](../../2026-08-21-marble-race-catalogue/prototypes/module-candidates-schematics.html)
 is an immutable design input, not an implementation contract. This plan
 supersedes its Role claims, proposed dimensions, shared-throat recommendation,
 and Course-selection assumptions.

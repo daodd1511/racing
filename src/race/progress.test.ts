@@ -120,3 +120,40 @@ describe("Race progress", () => {
     });
   });
 });
+
+describe("cached route projection", () => {
+  it("keeps first-segment ties and skips duplicate points at interval boundaries", () => {
+    const course = {
+      ...COURSE,
+      route: [
+        [0, 0, 0],
+        [0, 0, 0],
+        [2, 0, 0],
+        [0, 0, 0],
+      ] as const,
+      checkpoints: [],
+    };
+    const state = createRaceProgress(request("last"), course);
+    expect(projectMarbleOntoCourse(state, 0, [1, 1, 0])).toEqual({
+      routeDistance: 1,
+      distanceSquared: 1,
+      point: [1, 0, 0],
+    });
+    const bounded = { ...course, checkpoints: [{ ...COURSE.checkpoints[0], routeDistance: 2 }] };
+    const after = recordCheckpoint(createRaceProgress(request("last"), bounded), 0, 0, 1);
+    expect(projectMarbleOntoCourse(after, 0, [1, 0, 0]).routeDistance).toBe(3);
+    expect(projectMarbleOntoCourse(after, 0, [2, 0, 0]).routeDistance).toBe(2);
+  });
+
+  it("retains lazy rankings and first-finish ordering across subsequent updates", () => {
+    const state = createRaceProgress(request("first"), COURSE);
+    const advanced = recordMarbleProgress(state, 2, COURSE.route[1], 1);
+    const finished = recordFinish(advanced, 1, 2);
+    const ignored = recordFinish(finished, 0, 2);
+    expect(state.ranking).toEqual([0, 1, 2]);
+    expect(finished.ranking[0]).toBe(1);
+    expect(ignored).toBe(finished);
+    expect(finished.ranking).toBe(finished.ranking);
+    expect(finished.outcome?.kind).toBe("completed");
+  });
+});

@@ -4,7 +4,7 @@ import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CoursePhysics } from "./CoursePhysics";
+import { CoursePhysics, type CoursePhysicsProps } from "./CoursePhysics";
 
 const runtime = vi.hoisted(() => {
   const initialSnapshot = Object.freeze({
@@ -31,6 +31,7 @@ const runtime = vi.hoisted(() => {
 
   return {
     frame: undefined as undefined | ((state: unknown, deltaSeconds: number) => void),
+    priority: undefined as number | undefined,
     initialSnapshot,
     terminalSnapshot,
     outcome,
@@ -49,7 +50,8 @@ const rapierRuntime = vi.hoisted(() => ({ init: vi.fn(async () => undefined) }))
 vi.mock("@dimforge/rapier3d-compat", () => ({ default: { init: rapierRuntime.init } }));
 
 vi.mock("@react-three/fiber", () => ({
-  useFrame(callback: (state: unknown, deltaSeconds: number) => void) {
+  useFrame(callback: (state: unknown, deltaSeconds: number) => void, priority?: number) {
+    runtime.priority = priority;
     runtime.frame = callback;
   },
 }));
@@ -123,4 +125,15 @@ describe("CoursePhysics", () => {
     expect(backlogRuntime.advance).toHaveBeenCalledWith(expect.anything(), 1 / 60, 8);
     expect(events).toEqual(["snapshot:0", "snapshot:4", "outcome"]);
   });
+});
+
+it("publishes physics before default-priority visual frame callbacks", () => {
+  const props = {
+    course: {} as CoursePhysicsProps["course"],
+    request: { seed: 7, roster: ["A"], selectionMode: "last" as const },
+    onSnapshot: vi.fn(),
+    onOutcome: vi.fn(),
+  };
+  render(<CoursePhysics {...props} />);
+  expect(runtime.priority).toBe(-2);
 });

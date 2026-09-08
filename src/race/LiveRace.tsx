@@ -1,11 +1,17 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { Course } from "../course/types";
 import { CoursePhysics } from "./CoursePhysics";
-import type { RaceContactEvent, RaceOutcome, RaceRequest, RaceSnapshot } from "./liveTypes";
+import type {
+  RaceFrameRef,
+  RaceContactEvent,
+  RaceOutcome,
+  RaceRequest,
+  RaceSnapshot,
+} from "./liveTypes";
 
 export interface LiveRaceState {
-  readonly snapshot: RaceSnapshot | null;
+  readonly frameRef: RaceFrameRef;
   readonly outcome: RaceOutcome | null;
 }
 
@@ -18,8 +24,6 @@ export interface LiveRaceProps {
   readonly children?: (state: LiveRaceState) => ReactNode;
 }
 
-const EMPTY_RACE_STATE: LiveRaceState = Object.freeze({ snapshot: null, outcome: null });
-
 /** R3F child that owns only live Course progress. Persistence, audio, and
  * result UI remain consumers through callbacks. */
 export function LiveRace({
@@ -30,15 +34,26 @@ export function LiveRace({
   onOutcome,
   children,
 }: LiveRaceProps) {
-  const [state, setState] = useState(EMPTY_RACE_STATE);
+  const frameRef = useMemo<RaceFrameRef>(() => ({ current: null }), [course, request]);
+  const [completed, setCompleted] = useState<{
+    frameRef: RaceFrameRef;
+    outcome: RaceOutcome;
+  } | null>(null);
+  const outcome = completed?.frameRef === frameRef ? completed.outcome : null;
+  useEffect(
+    () => () => {
+      frameRef.current = null;
+    },
+    [frameRef],
+  );
 
   function handleSnapshot(snapshot: RaceSnapshot): void {
-    setState((previous) => Object.freeze({ ...previous, snapshot }));
+    frameRef.current = snapshot;
     onSnapshot?.(snapshot);
   }
 
   function handleOutcome(outcome: RaceOutcome): void {
-    setState((previous) => Object.freeze({ ...previous, outcome }));
+    setCompleted({ frameRef, outcome });
     onOutcome?.(outcome);
   }
 
@@ -52,7 +67,7 @@ export function LiveRace({
         onOutcome={handleOutcome}
         onSnapshot={handleSnapshot}
       />
-      {children?.(state)}
+      {children?.({ frameRef, outcome })}
     </>
   );
 }

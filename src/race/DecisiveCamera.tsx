@@ -3,7 +3,7 @@ import { useRef } from "react";
 import * as THREE from "three";
 
 import type { Course } from "../course/types";
-import type { RaceSnapshot } from "./liveTypes";
+import type { RaceFrameRef, RaceSnapshot } from "./liveTypes";
 import { START_GRID_CAPACITY } from "../course/startFinish";
 import type { CameraMode } from "./types";
 import { decisiveMarbleTarget, marbleCameraTarget } from "./cameraTarget";
@@ -52,7 +52,8 @@ const VERTICAL_VIEW_LIMIT = 0.999;
 
 export interface DecisiveCameraProps {
   readonly course: Course;
-  readonly snapshot: RaceSnapshot | null;
+  readonly snapshot?: RaceSnapshot | null;
+  readonly frameRef?: RaceFrameRef;
   readonly mode?: CameraMode;
   readonly startingGridSize?: number;
 }
@@ -108,7 +109,8 @@ function frameDamping(rate: number, deltaSeconds: number): number {
 /** Chases the decisive marble from behind along the local Course direction. */
 export function DecisiveCamera({
   course,
-  snapshot,
+  snapshot: staticSnapshot = null,
+  frameRef,
   mode = "broadcast",
   startingGridSize = START_GRID_CAPACITY,
 }: DecisiveCameraProps) {
@@ -135,17 +137,23 @@ export function DecisiveCamera({
   const snapshotElapsedSecondsRef = useRef(0);
   const snapshotRef = useRef<RaceSnapshot | null>(null);
   const courseRef = useRef(course);
+  const sourceRef = useRef(frameRef);
   const modeRef = useRef(mode);
   const startingGridSizeRef = useRef(startingGridSize);
   const initializedRef = useRef(false);
 
   useFrame((_, deltaSeconds) => {
+    const snapshot = frameRef ? frameRef.current : staticSnapshot;
     if (!(camera instanceof THREE.PerspectiveCamera)) return;
     if (
+      sourceRef.current !== frameRef ||
       courseRef.current !== course ||
       modeRef.current !== mode ||
-      startingGridSizeRef.current !== startingGridSize
+      startingGridSizeRef.current !== startingGridSize ||
+      (snapshot !== null && snapshot.elapsedSeconds < snapshotElapsedSecondsRef.current) ||
+      (snapshot === null && snapshotRef.current !== null)
     ) {
+      sourceRef.current = frameRef;
       courseRef.current = course;
       modeRef.current = mode;
       startingGridSizeRef.current = startingGridSize;

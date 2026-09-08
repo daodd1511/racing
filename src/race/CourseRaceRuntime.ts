@@ -2,7 +2,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import type { Course } from "../course/types";
-import type { ColliderSpec } from "../modules/types";
+import type { ColliderSpec, RecoveryBox } from "../modules/types";
 import { stepCourse } from "../course/stepCourse";
 import { applyStep } from "../validator/applyStep";
 import { buildCourseWorld, type BuiltCourseWorld } from "../validator/buildCourseWorld";
@@ -17,6 +17,7 @@ import {
   type MarbleRouteProjection,
   type RaceProgressState,
 } from "./progress";
+import { containsRecoveryPoint } from "./recoveryAreas";
 import { SCALE } from "./scale";
 import { assignStartPositions } from "./startAssignment";
 import type { Quaternion, Vector3 } from "./types";
@@ -54,11 +55,24 @@ function sweptCuboidCrossing(
   sensor: ColliderSpec & {
     readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
   },
+  inverse: ThreeQuaternion,
+  previousLocal: ThreeVector3,
+  currentLocal: ThreeVector3,
 ): boolean {
-  const inverse = new ThreeQuaternion(...sensor.rotation).normalize().invert();
-  const center = new ThreeVector3(...sensor.position);
-  const previousLocal = new ThreeVector3(...previous).sub(center).applyQuaternion(inverse);
-  const currentLocal = new ThreeVector3(...current).sub(center).applyQuaternion(inverse);
+  previousLocal
+    .set(
+      previous[0] - sensor.position[0],
+      previous[1] - sensor.position[1],
+      previous[2] - sensor.position[2],
+    )
+    .applyQuaternion(inverse);
+  currentLocal
+    .set(
+      current[0] - sensor.position[0],
+      current[1] - sensor.position[1],
+      current[2] - sensor.position[2],
+    )
+    .applyQuaternion(inverse);
   if (previousLocal.z > 0 || currentLocal.z <= 0) return false;
   const progress = -previousLocal.z / (currentLocal.z - previousLocal.z);
   const crossing = previousLocal.lerp(currentLocal, progress);
@@ -105,26 +119,41 @@ function contactEvent(
     : null;
 }
 
-function snapshot(built: BuiltCourseWorld, progress: RaceProgressState): RaceSnapshot {
-  const marbleTransforms = [...built.marbleBodies]
-    .sort(([left], [right]) => left - right)
-    .map(([marbleIndex, body]) => {
-      const position = body.translation();
-      const rotation = body.rotation();
+function captureSnapshot(built: BuiltCourseWorld, progress: RaceProgressState): () => RaceSnapshot {
+  // Own the transform values now; a retained step may be read after another
+  // step or disposal. Only presentation objects and rankings are deferred.
+  const transforms = new Float64Array(built.marbleBodies.size * 7);
+  for (const [index, body] of built.marbleBodies) {
+    const p = body.translation();
+    const q = body.rotation();
+    transforms.set([p.x, p.y, p.z, q.x, q.y, q.z, q.w], index * 7);
+  }
+  let result: RaceSnapshot | undefined;
+  return () => {
+    if (result) return result;
+    const marbleTransforms = Array.from({ length: transforms.length / 7 }, (_, marbleIndex) => {
+      const offset = marbleIndex * 7;
       return Object.freeze({
         marbleIndex,
-        position: [position.x, position.y, position.z] as Vector3,
-        rotation: [rotation.x, rotation.y, rotation.z, rotation.w] as const,
+        position: [transforms[offset], transforms[offset + 1], transforms[offset + 2]] as Vector3,
+        rotation: [
+          transforms[offset + 3],
+          transforms[offset + 4],
+          transforms[offset + 5],
+          transforms[offset + 6],
+        ] as const,
       });
     });
-  return Object.freeze({
-    elapsedSeconds: progress.elapsedSeconds,
-    marbleTransforms: Object.freeze(marbleTransforms),
-    ranking: progress.ranking,
-    decisiveMarbleIndex: progress.decisiveMarbleIndex,
-    passedCheckpoints: progress.passedCheckpoints,
-    splitTimes: progress.splitTimes,
-  });
+    result = Object.freeze({
+      elapsedSeconds: progress.elapsedSeconds,
+      marbleTransforms: Object.freeze(marbleTransforms),
+      ranking: progress.ranking,
+      decisiveMarbleIndex: progress.decisiveMarbleIndex,
+      passedCheckpoints: progress.passedCheckpoints,
+      splitTimes: progress.splitTimes,
+    });
+    return result;
+  };
 }
 
 export interface CourseRaceStep {
@@ -141,6 +170,7 @@ export interface CourseRaceRuntimeOptions {
 /** Shared fixed-step live runtime. `RAPIER.init()` must complete before constructing it. */
 export class CourseRaceRuntime {
   readonly #course: Course;
+  readonly #recoveryBoxesByCheckpoint = new Map<number, readonly RecoveryBox[]>();
   readonly #built: BuiltCourseWorld;
   readonly #finishSensor: ColliderSpec & {
     readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
@@ -151,11 +181,23 @@ export class CourseRaceRuntime {
   readonly #collectContactEvents: boolean;
   #finished = new Set<number>();
   #disposed = false;
+  readonly #finishInverse: ThreeQuaternion;
+  readonly #previousLocal = new ThreeVector3();
+  readonly #currentLocal = new ThreeVector3();
 
   constructor(course: Course, request: RaceRequest, options: CourseRaceRuntimeOptions = {}) {
     const assignments = assignStartPositions(request.seed, request.roster.length);
     this.#collectContactEvents = options.collectContactEvents ?? true;
     this.#course = course;
+    for (const module of course.modules) {
+      if (!module.spec.recoveryBoxes?.length) continue;
+      const checkpointIndex = course.checkpoints.findIndex(
+        ({ slotIndex }) => slotIndex === module.slotIndex,
+      );
+      if (checkpointIndex < 0)
+        throw new Error(`Module ${module.moduleId} has recovery boxes but no exit checkpoint`);
+      this.#recoveryBoxesByCheckpoint.set(checkpointIndex, module.spec.recoveryBoxes);
+    }
     this.#progress = createRaceProgress(request, course);
     this.#built = buildCourseWorld(course, assignments, this.#collectContactEvents);
     const finishSensor = course.finish.colliders.find(
@@ -170,6 +212,7 @@ export class CourseRaceRuntime {
       throw new Error("Course Finish is missing its finite cuboid sensor");
     }
     this.#finishSensor = finishSensor;
+    this.#finishInverse = new ThreeQuaternion(...finishSensor.rotation).normalize().invert();
     this.#previousPositions = new Map(
       [...this.#built.marbleBodies].map(([marbleIndex, body]) => {
         const position = body.translation();
@@ -194,7 +237,7 @@ export class CourseRaceRuntime {
   }
 
   get currentSnapshot(): RaceSnapshot {
-    return snapshot(this.#built, this.#progress);
+    return captureSnapshot(this.#built, this.#progress)();
   }
 
   get outcome(): RaceOutcome | null {
@@ -240,15 +283,25 @@ export class CourseRaceRuntime {
         !observation.recovered &&
         this.#progress.outcome === null &&
         !this.#finished.has(marbleIndex) &&
-        sweptCuboidCrossing(previous, current, this.#finishSensor)
+        sweptCuboidCrossing(
+          previous,
+          current,
+          this.#finishSensor,
+          this.#finishInverse,
+          this.#previousLocal,
+          this.#currentLocal,
+        )
       ) {
         this.#recordFinish(marbleIndex, elapsedSeconds);
       }
       this.#previousPositions.set(marbleIndex, current);
     }
     this.#progress = advanceWatchdog(this.#progress, elapsedSeconds);
+    const readSnapshot = captureSnapshot(this.#built, this.#progress);
     return Object.freeze({
-      snapshot: this.currentSnapshot,
+      get snapshot() {
+        return readSnapshot();
+      },
       contactEvents,
       recoveredMarbleIndices: Object.freeze([...recoveredMarbleIndices]),
       outcome: this.#progress.outcome,
@@ -272,9 +325,16 @@ export class CourseRaceRuntime {
       let position: Vector3 = [translation.x, translation.y, translation.z];
       let projection = projectMarbleOntoCourse(this.#progress, marbleIndex, position);
       const heightAboveRoute = position[1] - projection.point[1];
+      // A checkpoint is at the Module exit; the next checkpoint identifies
+      // the Module with positive-length overlap in the active route interval.
+      const boxes = this.#recoveryBoxesByCheckpoint.get(
+        this.#progress.passedCheckpoints[marbleIndex] + 1,
+      );
+      const insideArea = boxes !== undefined && containsRecoveryPoint(boxes, position);
       const recovered =
-        projection.distanceSquared > recoveryDistanceSquared ||
-        heightAboveRoute < -BELOW_TRACK_RECOVERY_DISTANCE;
+        !insideArea &&
+        (projection.distanceSquared > recoveryDistanceSquared ||
+          heightAboveRoute < -BELOW_TRACK_RECOVERY_DISTANCE);
 
       if (recovered) {
         const safe = this.#lastSafeTransforms.get(marbleIndex)!;

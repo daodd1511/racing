@@ -97,18 +97,19 @@ export function BroadcastRace({
       onSnapshot={handleSnapshot}
       request={request}
     >
-      {({ snapshot: liveSnapshot }) => (
+      {({ frameRef }) => (
         <>
           <CourseScene
             course={course}
             marbleNames={marbleNames}
             marbleStyles={marbleStyles}
-            snapshot={liveSnapshot}
+            frameRef={frameRef}
+            stagedMarbleTransforms={stagedMarbleTransforms}
           />
           <DecisiveCamera
             course={course}
             mode={cameraMode}
-            snapshot={liveSnapshot}
+            frameRef={frameRef}
             startingGridSize={request.roster.length}
           />
         </>

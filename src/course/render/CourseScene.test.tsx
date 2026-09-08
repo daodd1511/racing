@@ -12,6 +12,7 @@ const renderCounts = vi.hoisted(() => ({
   board: 0,
   movingSpecs: 0,
   staticSpecs: 0,
+  readTransforms: undefined as undefined | (() => readonly unknown[]),
 }));
 
 vi.mock("@react-three/fiber", () => ({
@@ -25,7 +26,14 @@ vi.mock("@react-three/drei", () => ({
 }));
 
 vi.mock("../../modules/render/ModuleColliders", () => ({
-  SpecVisuals({ transforms }: { readonly transforms?: readonly unknown[] }) {
+  SpecVisuals({
+    transforms,
+    readTransforms,
+  }: {
+    readonly transforms?: readonly unknown[];
+    readonly readTransforms?: () => readonly unknown[];
+  }) {
+    renderCounts.readTransforms = readTransforms;
     if (transforms !== undefined) {
       renderCounts.movingSpecs += 1;
     }
@@ -82,4 +90,14 @@ describe("CourseScene", () => {
     expect(renderCounts.board).toBe(1);
     expect(renderCounts.movingSpecs).toBe(2);
   });
+});
+
+it("reads gate motion from the current frame without another scene render", () => {
+  const frameRef = { current: snapshot(0) };
+  render(<CourseScene course={assembleCourse(17)} frameRef={frameRef} />);
+  const initial = renderCounts.readTransforms!();
+  const count = renderCounts.movingSpecs;
+  frameRef.current = snapshot(3);
+  expect(renderCounts.readTransforms!()).not.toEqual(initial);
+  expect(renderCounts.movingSpecs).toBe(count);
 });

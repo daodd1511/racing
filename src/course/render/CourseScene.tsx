@@ -10,7 +10,7 @@ import { stepCourse } from "../stepCourse";
 import { createMarbleStyles, type MarbleStyle } from "../../render/marbleStyles";
 import { marbleStripeTexture } from "../../render/marbleSkin";
 import { SCALE } from "../../race/scale";
-import type { MarbleTransform, RaceSnapshot } from "../../race/liveTypes";
+import type { MarbleTransform, RaceFrameRef, RaceSnapshot } from "../../race/liveTypes";
 import { Board } from "./Board";
 import { raceVisibleSpec } from "./raceVisuals";
 
@@ -27,7 +27,8 @@ function frameDamping(rate: number, deltaSeconds: number): number {
 
 export interface CourseSceneProps {
   readonly course: Course;
-  readonly snapshot: RaceSnapshot | null;
+  readonly snapshot?: RaceSnapshot | null;
+  readonly frameRef?: RaceFrameRef;
   readonly marbleStyles?: readonly MarbleStyle[];
   readonly marbleNames?: readonly string[];
   readonly stagedMarbleTransforms?: readonly MarbleTransform[];
@@ -68,7 +69,11 @@ function Marble({
   name,
   position,
   rotation,
+  marbleIndex,
+  frameRef,
 }: {
+  readonly marbleIndex: number;
+  readonly frameRef?: RaceFrameRef;
   readonly style: MarbleStyle;
   readonly name?: string;
   readonly position: readonly [number, number, number];
@@ -80,6 +85,7 @@ function Marble({
   const targetRotationRef = useRef(new THREE.Quaternion(...rotation));
   const initialPositionRef = useRef(position);
   const initialRotationRef = useRef(rotation);
+  const sourceRef = useRef(frameRef);
 
   useEffect(() => {
     targetPositionRef.current.set(...position);
@@ -89,6 +95,18 @@ function Marble({
   useFrame((_, deltaSeconds) => {
     const mesh = meshRef.current;
     if (mesh === null) return;
+    if (sourceRef.current !== frameRef) {
+      sourceRef.current = frameRef;
+      mesh.position.set(...position);
+      mesh.quaternion.set(...rotation);
+      targetPositionRef.current.set(...position);
+      targetRotationRef.current.set(...rotation);
+    }
+    const liveTransform = frameRef?.current?.marbleTransforms[marbleIndex];
+    if (liveTransform) {
+      targetPositionRef.current.set(...liveTransform.position);
+      targetRotationRef.current.set(...liveTransform.rotation).normalize();
+    }
     const damping = frameDamping(MARBLE_RENDER_DAMPING, deltaSeconds);
     mesh.position.lerp(targetPositionRef.current, damping);
     mesh.quaternion.slerp(targetRotationRef.current, damping);
@@ -133,14 +151,19 @@ function Marble({
  * consume live snapshots. */
 export function CourseScene({
   course,
-  snapshot,
+  snapshot = null,
+  frameRef,
   marbleStyles,
   marbleNames,
   stagedMarbleTransforms = [],
 }: CourseSceneProps) {
-  const marbleTransforms = snapshot?.marbleTransforms ?? stagedMarbleTransforms;
+  const marbleTransforms =
+    (frameRef ? frameRef.current : snapshot)?.marbleTransforms ?? stagedMarbleTransforms;
   const styles = marbleStyles ?? createMarbleStyles(marbleTransforms.length);
   const transforms = stepCourse(course, snapshot?.elapsedSeconds ?? 0);
+  const readTransforms = frameRef
+    ? () => stepCourse(course, frameRef.current?.elapsedSeconds ?? 0)
+    : undefined;
   const movingSpecs = useMemo(
     () =>
       sceneSpecs(course)
@@ -153,11 +176,13 @@ export function CourseScene({
     <group name="course-scene">
       <StaticCourse course={course} />
       {movingSpecs.map(({ id, spec }) => (
-        <SpecVisuals key={id} spec={spec} transforms={transforms} />
+        <SpecVisuals key={id} spec={spec} transforms={transforms} readTransforms={readTransforms} />
       ))}
       {marbleTransforms.map(({ marbleIndex, position, rotation }) => (
         <Marble
           key={marbleIndex}
+          marbleIndex={marbleIndex}
+          frameRef={frameRef}
           name={marbleNames?.[marbleIndex]}
           style={styles[marbleIndex] ?? FALLBACK_MARBLE_STYLE}
           position={position}

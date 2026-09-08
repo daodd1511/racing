@@ -6,6 +6,7 @@ import { assembleCourse } from "../course/assembleCourse";
 import { CourseScene } from "../course/render/CourseScene";
 import { CourseMinimap } from "../race/CourseMinimap";
 import { DecisiveCamera } from "../race/DecisiveCamera";
+import { startingGridTransforms } from "../race/startAssignment";
 import { LiveRace } from "../race/LiveRace";
 import type { RaceOutcome, RaceSnapshot } from "../race/liveTypes";
 import { createMarbleStyles } from "../render/marbleStyles";
@@ -107,6 +108,20 @@ export function CoursePreview() {
   );
   const marbleStyles = useMemo(() => createMarbleStyles(FIXED_ROSTER.length), []);
 
+  const stagedMarbleTransforms = useMemo(
+    () => startingGridTransforms(course, request.seed, request.roster.length),
+    [course, request],
+  );
+  function handleSnapshot(next: RaceSnapshot): void {
+    setSnapshot((previous) =>
+      previous === null ||
+      next.elapsedSeconds < previous.elapsedSeconds ||
+      next.elapsedSeconds - previous.elapsedSeconds >= 0.1
+        ? next
+        : previous,
+    );
+  }
+
   function startRace(): void {
     setActiveSeed(pendingSeed);
     setActiveSelectionMode(pendingSelectionMode);
@@ -154,12 +169,17 @@ export function CoursePreview() {
             course={course}
             request={request}
             onOutcome={setOutcome}
-            onSnapshot={setSnapshot}
+            onSnapshot={handleSnapshot}
           >
-            {({ snapshot: liveSnapshot }) => (
+            {({ frameRef }) => (
               <>
-                <CourseScene course={course} marbleStyles={marbleStyles} snapshot={liveSnapshot} />
-                <DecisiveCamera course={course} snapshot={liveSnapshot} mode={cameraMode} />
+                <CourseScene
+                  course={course}
+                  marbleStyles={marbleStyles}
+                  frameRef={frameRef}
+                  stagedMarbleTransforms={stagedMarbleTransforms}
+                />
+                <DecisiveCamera course={course} frameRef={frameRef} mode={cameraMode} />
               </>
             )}
           </LiveRace>

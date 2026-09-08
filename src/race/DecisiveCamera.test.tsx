@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
 
 import type { BoardSpec, Course } from "../course/types";
-import type { RaceSnapshot } from "./liveTypes";
+import type { RaceFrameRef, RaceSnapshot } from "./liveTypes";
 import type { Vector3 } from "./types";
 
 const cameraRuntime = vi.hoisted(() => ({
@@ -223,4 +223,20 @@ describe("DecisiveCamera", () => {
       .map((displacement, index) => Math.abs(displacement - frameDisplacements[index]));
     expect(Math.max(...displacementChanges)).toBeLessThan(0.01);
   });
+});
+
+it("follows a frame ref in Close up without rerendering and resets on null", () => {
+  const camera = new THREE.PerspectiveCamera();
+  cameraRuntime.camera = camera;
+  const frameRef: RaceFrameRef = { current: snapshotAt(0, 0) };
+  render(<DecisiveCamera course={EASTBOUND_COURSE} frameRef={frameRef} mode="close-up" />);
+  settleCamera();
+  const initialX = camera.position.x;
+  frameRef.current = { ...snapshotAt(1, 0), elapsedSeconds: 2 };
+  settleCamera();
+  expect(camera.position.x - initialX).toBeCloseTo(1, 3);
+  expect(camera.fov).toBe(58);
+  frameRef.current = null;
+  advanceCamera(1 / 60);
+  expect(camera.position.x).toBeLessThan(-2);
 });

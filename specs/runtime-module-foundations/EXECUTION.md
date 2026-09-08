@@ -7,9 +7,9 @@ Probe: `gh stack view --json` returned exit 6 because `main` belongs to multiple
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — in-progress
 - Phase 1 — Simulation bookkeeping: done
-- Phase 2 — Direct rendering updates: pending
+- Phase 2 — Direct rendering updates: in-progress
 - Phase 3 — Module integration and recovery areas: pending
 - Verification debt: none — serial Phase 1 gate rerun passed all 34 tests and typecheck.
 - Commit checkpoint: user explicitly authorized all commits and Phase 2; Phase 1 work committed.
@@ -56,17 +56,19 @@ Produces: `RaceFrameRef = { current: RaceSnapshot | null }` in `src/race/liveTyp
 
 Fresh review: not required
 
-- [ ] Add `RaceFrameRef` in `src/race/liveTypes.ts`; have `src/race/LiveRace.tsx` own a stable ref, publish snapshots into it without frame-frequency setState, retain outcome state and external callbacks, and clear the ref on Course/request reset and unmount.
-- [ ] Update `src/race/CoursePhysics.tsx`, `src/course/render/CourseScene.tsx`, `src/race/DecisiveCamera.tsx` and `src/ui/BroadcastRace.tsx` to consume the ref directly in the animation loop; migrate all LiveRace/CourseScene/DecisiveCamera callers found by symbol search, retaining snapshot props for isolated previews where needed.
-- [ ] In `src/course/render/CourseScene.tsx`, update marble meshes, labels and moving gate visuals from the same current snapshot; ensure physics publication precedes visual consumers without taking over R3F rendering.
-- [ ] Retain current damping constants in `src/course/render/CourseScene.tsx` and `src/race/DecisiveCamera.tsx` for this phase; record any confirmed smoothing delay in PERFORMANCE.md as an explicit follow-up rather than mixing an unmeasured camera redesign into the channel change.
-- [ ] Extend `src/race/CoursePhysics.test.tsx`, `src/course/render/CourseScene.test.tsx` and `src/race/DecisiveCamera.test.tsx` for ref-driven movement and restart/terminal lifecycle; add `src/race/LiveRace.test.tsx` to verify snapshot publication does not rerender children and outcome publication still does.
+- [x] Add `RaceFrameRef` in `src/race/liveTypes.ts`; have `src/race/LiveRace.tsx` own a stable ref, publish snapshots into it without frame-frequency setState, retain outcome state and external callbacks, and clear the ref on Course/request reset and unmount.
+- [x] Update `src/race/CoursePhysics.tsx`, `src/course/render/CourseScene.tsx`, `src/race/DecisiveCamera.tsx` and `src/ui/BroadcastRace.tsx` to consume the ref directly in the animation loop; migrate all LiveRace/CourseScene/DecisiveCamera callers found by symbol search, retaining snapshot props for isolated previews where needed.
+- [x] In `src/course/render/CourseScene.tsx`, update marble meshes, labels and moving gate visuals from the same current snapshot; ensure physics publication precedes visual consumers without taking over R3F rendering.
+- [x] Retain current damping constants in `src/course/render/CourseScene.tsx` and `src/race/DecisiveCamera.tsx` for this phase; record any confirmed smoothing delay in PERFORMANCE.md as an explicit follow-up rather than mixing an unmeasured camera redesign into the channel change.
+- [x] Extend `src/race/CoursePhysics.test.tsx`, `src/course/render/CourseScene.test.tsx` and `src/race/DecisiveCamera.test.tsx` for ref-driven movement and restart/terminal lifecycle; add `src/race/LiveRace.test.tsx` to verify snapshot publication does not rerender children and outcome publication still does.
 - [ ] Repeat browser observations and measurements in `specs/runtime-module-foundations/PERFORMANCE.md`, confirming labels, camera, gate, throttled telemetry and external callbacks still follow the race.
+
+- [x] (amended 2026-09-08) Extend `SpecVisuals.readTransforms` in `src/modules/render/ModuleColliders.tsx` for frame-driven gate motion; update `src/ui/BroadcastRace.test.tsx` for the frame-ref child contract and throttle harness telemetry in `src/dev/coursePreview.tsx`.
 
 **Phase gate (hard):**
 
-- [ ] Run `./node_modules/.bin/tsc -b` from the repository root.
-- [ ] Run `./node_modules/.bin/vitest related --run <changed-source-files>` with arguments derived from the real phase diff, including production subjects of changed tests.
+- [x] Run `./node_modules/.bin/tsc -b` from the repository root.
+- [x] Run `./node_modules/.bin/vitest related --run --maxWorkers=1 <changed-source-files>` with arguments derived from the real phase diff, including production subjects of changed tests.
 
 **Review checklist (user, at PR review):**
 

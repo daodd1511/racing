@@ -224,12 +224,13 @@ function applyVisualTransforms(
 export interface SpecVisualsProps {
   readonly spec: Spec;
   readonly transforms?: readonly KinematicTransform[];
+  readonly readTransforms?: () => readonly KinematicTransform[];
 }
 
 /** Render one materialized Spec without creating any physics bodies. Course
  * scenes own visual kinematics from the same transforms the raw live world
  * receives; meshes never feed changing positions back into RigidBody props. */
-export function SpecVisuals({ spec, transforms = [] }: SpecVisualsProps) {
+export function SpecVisuals({ spec, transforms = [], readTransforms }: SpecVisualsProps) {
   const kinematicVisuals = useRef(new Map<string, THREE.Mesh>());
   const kinematicIds = new Set(
     spec.colliders.filter((collider) => collider.kinematic).map((collider) => collider.id),
@@ -238,6 +239,9 @@ export function SpecVisuals({ spec, transforms = [] }: SpecVisualsProps) {
   useEffect(() => {
     applyVisualTransforms(transforms, kinematicVisuals.current);
   }, [transforms]);
+  useFrame(() => {
+    if (readTransforms) applyVisualTransforms(readTransforms(), kinematicVisuals.current);
+  });
 
   return (
     <>

@@ -1,5 +1,6 @@
-import type { RefObject } from "react";
-import type { Mesh } from "three";
+import { useEffect, useMemo, type RefObject } from "react";
+import { geometryForShape } from "../../modules/render/visualGeometry";
+import { Matrix4, type Mesh } from "three";
 import type { VisualSpec } from "../../modules/types";
 import { getAuthoredMesh } from "./useAuthoredAssets";
 
@@ -12,10 +13,18 @@ export function AuthoredVisualMesh({
 }) {
   if (!visual.authored) throw new Error("Authored visual reference is required");
   const resource = getAuthoredMesh(visual.authored.assetId, visual.authored.node);
+  // Geometry construction is expensive and owns a GPU resource across renders.
+  const owned = useMemo(() => {
+    if (!visual.authored?.deformed) return null;
+    return visual.authored.deformation
+      ? resource.geometry.clone().applyMatrix4(new Matrix4().fromArray(visual.authored.deformation))
+      : geometryForShape(visual.shape);
+  }, [resource.geometry, visual.authored?.deformed, visual.authored?.deformation, visual.shape]);
+  useEffect(() => () => owned?.dispose(), [owned]);
   return (
     <mesh
       ref={meshRef}
-      geometry={resource.geometry}
+      geometry={owned ?? resource.geometry}
       material={resource.material}
       position={visual.position}
       quaternion={visual.rotation}

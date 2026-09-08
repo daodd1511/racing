@@ -1,5 +1,7 @@
 import type { ParamValues } from "../modules/params";
 import { ALL_MODULES, type RegisteredModule } from "../modules/registry";
+import { moduleSettingsSchema } from "./settings";
+import type { ModuleId } from "./types";
 import { buildAuthoredSpec } from "./buildAuthoredSpec";
 import { loadAuthoredAsset } from "./catalog";
 import type { AssetId, ModuleTuning } from "./types";
@@ -12,9 +14,9 @@ export function authoredModule(id: string): RegisteredModule {
   if (!baseline) throw new Error(`${id} has no Module baseline`);
   return {
     ...original,
-    course: { defaults: { ...baseline.values } },
+    meta: { ...original.meta, params: moduleSettingsSchema(id as ModuleId) },
     buildSpec(params: ParamValues) {
-      // The pure builder checks every key/value against the typed captured baseline.
+      // The pure builder validates the Module-specific controls.
       return buildAuthoredSpec(asset, { ...baseline, values: params } as ModuleTuning);
     },
   };

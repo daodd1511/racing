@@ -109,6 +109,10 @@ export interface VisualSpec {
     readonly assetId: AssetId;
     readonly node: string;
     readonly bindings: readonly ControlBinding[];
+    /** Render the transformed saved mesh in shape; the immutable GLB supplies its material. */
+    readonly deformed?: boolean;
+    /** Column-major local affine transform applied to a cloned GLB mesh. */
+    readonly deformation?: readonly number[];
   };
   readonly id: string;
   readonly shape: Shape;

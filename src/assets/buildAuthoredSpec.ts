@@ -1,8 +1,13 @@
 import type { Spec } from "../modules/types";
 import { PHYSICS_PROFILES } from "./physicsProfiles";
+import { parseModuleTuning } from "./settings";
+import { tuneChute } from "./tuning/chute";
+import { tunePinField } from "./tuning/pinField";
+import { tuneStaircase } from "./tuning/staircase";
+import { tuneWhoops } from "./tuning/whoops";
 import type { AuthoredAsset, ModuleTuning } from "./types";
 
-/** Materialize saved rest geometry. Phase 2 accepts baseline values only. */
+/** Materialize saved geometry and apply supported controls relative to its captured rest state. */
 export function buildAuthoredSpec(
   asset: AuthoredAsset,
   tuning: ModuleTuning | null = asset.baseline,
@@ -12,20 +17,12 @@ export function buildAuthoredSpec(
   } else {
     if (!tuning || tuning.moduleId !== asset.id)
       throw new Error(`Tuning does not match ${asset.id}`);
-    const expected = Object.entries(asset.baseline.values);
-    const supplied = tuning.values as unknown as Record<string, unknown>;
-    if (
-      Object.keys(supplied).length !== expected.length ||
-      expected.some(([key, value]) => supplied[key] !== value)
-    )
-      throw new Error(
-        `${asset.id}: only captured baseline tuning is supported during asset comparison`,
-      );
+    tuning = parseModuleTuning(asset.baseline.moduleId, tuning.values);
   }
   const profiles: Readonly<
     Record<string, { readonly restitution: number; readonly friction: number }>
   > = PHYSICS_PROFILES;
-  return {
+  const spec: Spec = {
     footprint: structuredClone(asset.footprint),
     ...(asset.recoveryBoxes === undefined
       ? {}
@@ -46,4 +43,35 @@ export function buildAuthoredSpec(
       },
     })),
   };
+  const baseline = asset.baseline;
+  if (
+    !baseline ||
+    !tuning ||
+    Object.entries(baseline.values).every(
+      ([key, value]) => (tuning.values as unknown as Record<string, unknown>)[key] === value,
+    )
+  )
+    return spec;
+  if (spec.recoveryBoxes?.length && baseline.moduleId !== "chute")
+    throw new Error(
+      `${asset.id}: recovery boxes need explicit region bindings before non-affine tuning`,
+    );
+  // Each adapter consumes the same validated discriminant as the saved rest parameters.
+  switch (tuning.moduleId) {
+    case "chute":
+      if (baseline.moduleId === "chute") return tuneChute(spec, baseline.values, tuning.values);
+      break;
+    case "pin-field":
+      if (baseline.moduleId === "pin-field")
+        return tunePinField(spec, baseline.values, tuning.values, asset.controls);
+      break;
+    case "staircase":
+      if (baseline.moduleId === "staircase")
+        return tuneStaircase(spec, baseline.values, tuning.values, asset.controls);
+      break;
+    case "whoops":
+      if (baseline.moduleId === "whoops")
+        return tuneWhoops(spec, baseline.values, tuning.values, asset.controls);
+  }
+  throw new Error(`Tuning does not match ${asset.id}`);
 }

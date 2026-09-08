@@ -13,13 +13,14 @@ If initialization reports remote unavailability, apply the rulebook's sequential
 ## STATUS
 
 - Priority: next — runtime-module-foundations completed and merged on 2026-09-08; Phase 1 started on 2026-09-08.
-- Current phase: 1 — done
+- Current phase: 2 — done
 - Phase 1 — Extract and export authored assets: done
-- Phase 2 — Load unchanged assets alongside the baseline: pending
+- Phase 2 — Load unchanged assets alongside the baseline: done
 - Phase 3 — Tune all Modules and reassemble the Course: pending
 - Phase 4 — Tune and save from development views: pending
 - Phase 5 — Promote reviewed assets and retire the old path: pending
 - Verification debt: none
+- Phase 2 checkpoint: implementation and phase gate passed on 2026-09-08 (18 files, 67 tests); browser checks exercised the authored Course and all four Showcase Module selectors. Fresh review remains not required after actual-diff assessment. You explicitly authorized local commits on 2026-09-08. Runtime and comparison changes are committed in `c4af673` and `bc08a22`; this completion record is the third Phase 2 commit. All eight new files are included, and all Phase 2 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. No push or PR.
 - Phase 1 checkpoint: implementation and phase gate passed; fresh re-review found no remaining actionable findings. User explicitly authorized local commits on 2026-09-08. Three local commits record implementation and completion; no push or PR. All new Phase 1 files are committed. Pre-existing edits in other spec documents remain outside these commits.
 
 ## Phase 1 — Extract and export authored assets
@@ -73,23 +74,33 @@ Branch: `blender-asset-migration/phase-2-asset-runtime` (stacked: `gh stack add`
 Prove the unchanged asset round trip through the existing runtime before introducing geometry tuning.
 
 Consumes: existing `Spec` from `src/modules/types.ts`, `AuthoredAsset`, `AuthoredCatalog`, `ModuleTuning`, `parseAuthoredAsset(value: unknown): AuthoredAsset` and exported version-1 packages.
-Produces: `buildAuthoredSpec(asset: AuthoredAsset, tuning: ModuleTuning): Spec` (baseline values only in this phase); `loadAuthoredCatalog(): AuthoredCatalog`; `CourseAssemblyOptions` with `source?: "legacy" | "authored"`; `assembleCourse(seed: number, options?: CourseAssemblyOptions): Course`.
+Produces: `buildAuthoredSpec(asset: AuthoredAsset, tuning?: ModuleTuning | null): Spec` (defaults to the captured baseline; null for infrastructure; baseline values only in this phase); `loadAuthoredCatalog(): AuthoredCatalog`; `CourseAssemblyOptions` with `source?: "legacy" | "authored"`; `assembleCourse(seed: number, options?: CourseAssemblyOptions): Course`.
 
 Fresh review: not required
 
-- [ ] Create `src/assets/catalog.ts` and `src/assets/buildAuthoredSpec.ts`; synchronously import validated JSON and resolve physical profiles into a pure `Spec` with the captured collision types, geometry, route and markers; reject non-baseline tuning until Phase 3.
-- [ ] Extend `src/modules/types.ts` with authored mesh references/deformation bindings while retaining procedural visuals; create `src/assets/render/AuthoredVisuals.tsx` and `src/assets/render/useAuthoredAssets.ts` to load GLBs through Vite-resolved URLs, reuse immutable assets and dispose only owned replacements.
-- [ ] Update `src/modules/render/{ModuleColliders,StaticSpecVisuals}.tsx`, `src/course/transformSpec.ts`, `src/course/render/{CourseScene.tsx,raceVisuals.ts}` and `src/modules/render/visualGeometry.ts` to render authored visuals in the same placement frame without reapplying old appearance replacements to imported meshes.
-- [ ] Add `src/assets/authoredRegistry.ts` and the optional source selection in `src/course/assembleCourse.ts`; use authored start/finish Specs and gate pivot while keeping timing, sensor semantics, live Rapier stepping and headless consumers shared.
-- [ ] Update marble rendering in `src/course/render/CourseScene.tsx` and `src/showcase/Feeder.tsx` to support the captured marble visual asset, retaining Roster identity, existing stripe designs, spherical colliders and physical radius.
-- [ ] Add `src/dev/AssetComparison.tsx` and wire it into `src/dev/coursePreview.tsx` and `src/showcase/Showcase.tsx`; offer explicit old/new comparison at matched baseline settings, retain the legacy default, and keep comparison code development-only.
-- [ ] Show loading/error/retry state before starting authored races in `src/dev/coursePreview.tsx`, `src/showcase/Showcase.tsx` and `src/assets/render/useAuthoredAssets.ts`; never silently load legacy assets on authored failure.
-- [ ] Add `src/assets/buildAuthoredSpec.test.ts` for baseline geometry/marker preservation and adapt `src/course/transformSpec.test.ts` for authored placement; retain existing physics tests without creating a seed matrix.
+- [x] Create `src/assets/catalog.ts` and `src/assets/buildAuthoredSpec.ts`; synchronously import validated JSON and resolve physical profiles into a pure `Spec` with the captured collision types, geometry, route and markers; reject non-baseline tuning until Phase 3.
+- [x] Extend `src/modules/types.ts` with authored mesh references/deformation bindings while retaining procedural visuals; create `src/assets/render/AuthoredVisuals.tsx` and `src/assets/render/useAuthoredAssets.ts` to load GLBs through Vite-resolved URLs, reuse immutable assets and dispose only owned replacements.
+- [x] Update `src/modules/render/{ModuleColliders,StaticSpecVisuals}.tsx`, `src/course/transformSpec.ts`, `src/course/render/{CourseScene.tsx,raceVisuals.ts}` and `src/modules/render/visualGeometry.ts` to render authored visuals in the same placement frame without reapplying old appearance replacements to imported meshes.
+- [x] Add `src/assets/authoredRegistry.ts` and the optional source selection in `src/course/assembleCourse.ts`; use authored start/finish Specs and gate pivot while keeping timing, sensor semantics, live Rapier stepping and headless consumers shared.
+- [x] Update marble rendering in `src/course/render/CourseScene.tsx` and `src/showcase/Feeder.tsx` to support the captured marble visual asset, retaining Roster identity, existing stripe designs, spherical colliders and physical radius.
+- [x] Add `src/dev/AssetComparison.tsx` and wire it into `src/dev/coursePreview.tsx` and `src/showcase/Showcase.tsx`; offer explicit old/new comparison at matched baseline settings, retain the legacy default, and keep comparison code development-only.
+- [x] Show loading/error/retry state before starting authored races in `src/dev/coursePreview.tsx`, `src/showcase/Showcase.tsx` and `src/assets/render/useAuthoredAssets.ts`; never silently load legacy assets on authored failure.
+- [x] (amended 2026-09-08) Keep source/error status inside the existing header in `src/dev/coursePreview.tsx` and distinguish selected comparison buttons in `src/dev/AssetComparison.tsx`; browser inspection exposed shifted grid placement from adding a new direct child.
+- [x] (amended 2026-09-08) Place the comparison toolbar above the Canvas in `src/showcase/Showcase.tsx` so it does not extend the Canvas beyond the viewport.
+- [x] (amended 2026-09-08) Use existing parameter labels and readable display precision for captured settings in `src/showcase/Showcase.tsx`.
+- [x] (amended 2026-09-08) Add `src/assets/render/useAuthoredAssets.test.tsx` to verify failed GLB loading, retry, immutable cache reuse and baseline local mesh bounds with the real GLB parser.
+- [x] (amended 2026-09-08) Resolve GLB test fixture paths from the repository root in `src/assets/render/useAuthoredAssets.test.tsx`; Vite rewrites asset URL expressions to browser-root paths that Node cannot read.
+- [x] (amended 2026-09-08) Update `docs/blender-authoring.md` with the implemented Course/Showcase comparison, loading/retry and baseline-only tuning workflow.
+- [x] Add `src/assets/buildAuthoredSpec.test.ts` for baseline geometry/marker preservation and adapt `src/course/transformSpec.test.ts` for authored placement; retain existing physics tests without creating a seed matrix.
 
 **Phase gate (hard):**
 
-- [ ] `./node_modules/.bin/tsc -b`
-- [ ] `./node_modules/.bin/vitest related --run <changed-source-files>` — resolve arguments from the actual phase diff.
+- [x] `./node_modules/.bin/tsc -b` — passed 2026-09-08
+- [x] `./node_modules/.bin/vitest related --run <changed-source-files>` — actual 20-file source diff; passed 2026-09-08: 18 files, 67 tests. An earlier run hit the existing 15-second simulation timeout while browser simulations were active; the unchanged complete gate passed after closing those test tabs.
+
+**Completion checkpoint:**
+
+- [x] Commit verified Phase 2 files and check commit integrity after explicit authorization. Both implementation commits include all eight new files; the remaining Phase 2 change is this completion record. Pre-existing unrelated spec edits remain uncommitted.
 
 **Review checklist (user, at PR review):**
 

@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { BallCollider, RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AuthoredMarbleGeometry } from "../assets/render/AuthoredVisuals";
 import type { Anchor } from "../modules/types";
 import { exitPlaneDistance } from "../validator/metrics";
 import { SCALE } from "../race/scale";
@@ -47,6 +48,7 @@ function dropBelow(origin: Vector3, up: Vector3, position: Vector3): number {
 }
 
 interface MarbleProps {
+  readonly authored?: boolean;
   readonly id: number;
   readonly exit: Anchor;
   readonly spawnPosition: Vector3;
@@ -55,7 +57,15 @@ interface MarbleProps {
   readonly onSettled: (id: number) => void;
 }
 
-function Marble({ id, exit, spawnPosition, onExit, onStall, onSettled }: MarbleProps) {
+function Marble({
+  id,
+  exit,
+  spawnPosition,
+  onExit,
+  onStall,
+  onSettled,
+  authored = false,
+}: MarbleProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const spawnedAtRef = useRef<number | null>(null);
   const previousRef = useRef<{ tSeconds: number; position: Vector3 } | null>(null);
@@ -116,7 +126,11 @@ function Marble({ id, exit, spawnPosition, onExit, onStall, onSettled }: MarbleP
         friction={SCALE.defaultFriction}
       />
       <mesh castShadow>
-        <sphereGeometry args={[SCALE.marbleRadius, 24, 16]} />
+        {authored ? (
+          <AuthoredMarbleGeometry />
+        ) : (
+          <sphereGeometry args={[SCALE.marbleRadius, 24, 16]} />
+        )}
         <meshStandardMaterial color="#eef3f6" metalness={0.9} roughness={0.15} />
       </mesh>
     </RigidBody>
@@ -124,6 +138,7 @@ function Marble({ id, exit, spawnPosition, onExit, onStall, onSettled }: MarbleP
 }
 
 export interface FeederProps {
+  readonly authored?: boolean;
   readonly entry: Anchor;
   readonly exit: Anchor;
   readonly mode: FeedMode;
@@ -157,7 +172,15 @@ interface SpawnedMarble {
  * Validator uses) and reports dwell time and exit speed once, then
  * despawns itself shortly after so a long continuous feed doesn't
  * accumulate free-falling bodies forever. */
-export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: FeederProps) {
+export function Feeder({
+  entry,
+  exit,
+  mode,
+  triggerNonce,
+  onExit,
+  onStall,
+  authored = false,
+}: FeederProps) {
   const [marbles, setMarbles] = useState<readonly SpawnedMarble[]>([]);
   const nextIdRef = useRef(0);
   const lastTriggerRef = useRef(triggerNonce);
@@ -237,6 +260,7 @@ export function Feeder({ entry, exit, mode, triggerNonce, onExit, onStall }: Fee
       {marbles.map(({ id, spawnPosition }) => {
         return (
           <Marble
+            authored={authored}
             key={id}
             id={id}
             exit={exit}

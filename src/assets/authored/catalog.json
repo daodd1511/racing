@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "assets": {
+    "chute": {
+      "revision": "018b82a4741121b4695de0034d2dfa31d6b0c99601d24268a91564a9d3eb26ea",
+      "sourceHash": "00da8d65ac9a7306cc5f405412efeccedced8fcc5aa086ea42f68c655db5ff52",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "0e459893e8b9aa7c8d22b6ef9d5787f58c3e55b646a22cd9ef839b173478d27b",
+      "visualHash": "b2c83441504c05522dfa8be1f34ce74f063f53dcfaf48e8aeef58306fd9162aa"
+    },
+    "pin-field": {
+      "revision": "c32b42b15d7936bc9d0e9039fd8ef8d9fe014814fa1a0caa7fc0c37253bf0919",
+      "sourceHash": "5618d1d91cf46f76e5d136de549bb431b404ada0444c67e8d2f95562489e77c9",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "7a566716b530066f21645f9479a5783ef637f0b50fc815afdb0e82ce3cf82bb4",
+      "visualHash": "91d3c3c8130c32bcc2bd24c69b124d885b6f827bc010f8ea225896f90e5a1443"
+    },
+    "staircase": {
+      "revision": "7475527e180e9369de9f99cc9059241da8013af3bdf5533fbaa7d7813c58803f",
+      "sourceHash": "63dfbff2c7493880d44daa4cb249636ddaba0cd4c75b76dd3a0f4cd8501a563b",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "c4d2af742f1255d3035bbc5e422cff67246e70dfbcbad75194d67cbfc8723526",
+      "visualHash": "ad35f586d8ec7750f167cc97a249b3b8b1c3459c21e8901330328ebc01fcb679"
+    },
+    "whoops": {
+      "revision": "122ed4e8bccec0289a946453543b418ed646a35e2589e7b2eabbe525094f6237",
+      "sourceHash": "66b3e775bb7f0b2c3bbf62f263e24c50e5d5a9e216932dcb6dac523a44a0af8d",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "11f32d11f2bb73b36e00edef9e527a5b1a62f467c722780a2e1b39a33ef7ce1d",
+      "visualHash": "634d66a18a92af62e3663001e69015093fc7bd2e0294a3ef54d05dfd34bf1070"
+    },
+    "start": {
+      "revision": "259a2e0cd7c92c9626bf1af060f286085eccbb331f744d0dc6f1b08cd7ea5d5e",
+      "sourceHash": "b00c9ca553cdb8b878721693fcc985adee51795e8d40baad276518951f63618a",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "3d49af22895db8981756ac794696ed277ebc98b52b618e381b32d74555621c74",
+      "visualHash": "b7339cac36a250c05eaa72071591cc9d77d2351d8ef99830e49d2f6d946ba930"
+    },
+    "finish": {
+      "revision": "9ded0fb17bf6c5eb3120ab93fe6a9078a361181bdc71e3bd814b32d8501ee0ec",
+      "sourceHash": "9050018fa780c6678b2fa4af497f658980b92ff7999e7236b76a9404b2eb0f6c",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "58b319d6945bdbbe29c994f857614dfb5713506ce90a44a7751d04f97474104d",
+      "visualHash": "3082596a7e7d7c36170f946820f2874a0e86ab7de590c29c51860def8567eab1"
+    },
+    "marble": {
+      "revision": "7e5bc491134df994534e3b6c967a0fd9f2128f3c9ee67754312e149701fcbcd2",
+      "sourceHash": "78456676e6c6c36fda2ebdf2fbae07a074c44503a56b76cc53911230503490c8",
+      "exporterHash": "91c8853c2d84c16f23118ae3debe1ec133d38aadc50be438da341eee53157cc2",
+      "assetHash": "4f6d4b1435a4e536f178c95301b7541caf1fec791370b878b228198956145309",
+      "visualHash": "fcd56bd6886a65e9cba5f92826b6f99afa7acf200158c18e847fd627baae6baf"
+    }
+  }
+}

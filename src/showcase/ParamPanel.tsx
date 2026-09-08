@@ -41,9 +41,10 @@ export function ParamPanel({ schema, values, onChange }: ParamPanelProps) {
               style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
             >
               <span>
-                {field.label} ({value})
+                {field.label} ({Number(value.toPrecision(5))})
               </span>
               <input
+                aria-label={field.label}
                 type="range"
                 min={field.min}
                 max={field.max}

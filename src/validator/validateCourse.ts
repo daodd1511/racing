@@ -2,7 +2,10 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import { enumerateRoleSelections, type RoleSelection } from "../course/arc";
-import { assembleCourseFromRoleSelection } from "../course/assembleCourse";
+import {
+  assembleCourseFromRoleSelection,
+  type CourseAssemblyOptions,
+} from "../course/assembleCourse";
 import { stepCourse } from "../course/stepCourse";
 import type { Course } from "../course/types";
 import type { ColliderSpec } from "../modules/types";
@@ -153,9 +156,10 @@ export function runCourseRaceValidation(
   selection: RoleSelection,
   shapeIndex: number,
   startSeed: number,
+  options: CourseAssemblyOptions = {},
 ): CourseRaceValidation {
   const seed = shapeIndex * VALIDATION_START_SEEDS + startSeed;
-  const course = assembleCourseFromRoleSelection(seed, selection);
+  const course = assembleCourseFromRoleSelection(seed, selection, options);
   const assignments = assignStartPositions(seed, VALIDATION_MARBLES);
   const request: RaceRequest = {
     seed,
@@ -248,13 +252,15 @@ export function runCourseRaceValidation(
   });
 }
 
-export async function validateCourseVariants(): Promise<CourseValidationReport> {
+export async function validateCourseVariants(
+  options: CourseAssemblyOptions = {},
+): Promise<CourseValidationReport> {
   await RAPIER.init();
   const races: CourseRaceValidation[] = [];
   const validatedSelections = enumeratePhysicsValidatedSelections();
   for (const { selection, shapeIndex } of validatedSelections) {
     for (let startSeed = 0; startSeed < VALIDATION_START_SEEDS; startSeed += 1) {
-      races.push(runCourseRaceValidation(selection, shapeIndex, startSeed));
+      races.push(runCourseRaceValidation(selection, shapeIndex, startSeed, options));
     }
   }
   const finishTimes = races.flatMap(({ finishTimes: times }) => times);

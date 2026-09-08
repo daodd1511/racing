@@ -202,6 +202,7 @@ function smoothConnectorVisuals(prefix: string, route: readonly Vector3[]): read
 
 /** Keeps physical connector walls/covers while replacing their collider tiling with a smooth raceway. */
 export function raceVisibleSpec(spec: Spec): Spec {
+  if (spec.visuals.some((visual) => visual.authored !== undefined)) return spec;
   const prefix = spec.visuals
     .map(({ id }) => CONNECTOR_PREFIX.exec(id)?.[1])
     .find((candidate): candidate is string => candidate !== undefined);

@@ -1,5 +1,8 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 
+import { authoredModule } from "../assets/authoredRegistry";
+import { loadSavedModuleSettings, parseModuleSettings } from "../assets/settings";
+import type { ModuleId, ModuleSettings } from "../assets/types";
 import type { ModuleDefinition, Spec } from "../modules/types";
 import {
   INITIAL_KINEMATIC_CLOCK,
@@ -224,4 +227,13 @@ export async function validateModule<P>(
     minDisplacementPerSecond: anyExited ? minDisplacementPerSecond : 0,
     shuffleCoefficients: allShuffleCoefficients,
   };
+}
+
+export function validateAuthoredModule(
+  id: ModuleId,
+  options: ValidateModuleOptions,
+  settings: ModuleSettings = loadSavedModuleSettings(),
+): Promise<ValidationReport> {
+  const parsed = parseModuleSettings(settings);
+  return validateModule(authoredModule(id), { ...parsed[id] }, options);
 }

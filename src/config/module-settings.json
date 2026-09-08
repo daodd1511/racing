@@ -1,0 +1,28 @@
+{
+  "chute": {
+    "length": 0.6,
+    "grade": 0.12,
+    "width": 0.5
+  },
+  "pin-field": {
+    "rowCount": 10,
+    "postSpacing": 0.10463746025267581,
+    "postHeight": 0.0511872,
+    "postWidth": 0.027264,
+    "rowPitch": 0.12033307929057717,
+    "courseGrade": 0.12
+  },
+  "staircase": {
+    "stepCount": 10,
+    "tread": 0.2,
+    "riseHeight": 0.048,
+    "width": 0.5
+  },
+  "whoops": {
+    "amplitude": 0.016,
+    "wavelength": 0.4,
+    "length": 2.4,
+    "grade": 0.12,
+    "width": 0.5
+  }
+}

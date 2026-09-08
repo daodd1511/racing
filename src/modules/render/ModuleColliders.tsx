@@ -22,6 +22,7 @@ import {
 } from "../kinematics";
 import type { ColliderSpec, KinematicTransform, Spec, VisualSpec } from "../types";
 import { applyStep } from "../../validator/applyStep";
+import { AuthoredVisualMesh } from "../../assets/render/AuthoredVisuals";
 import { geometryForShape } from "./visualGeometry";
 
 const ORIGIN: [number, number, number] = [0, 0, 0];
@@ -99,7 +100,7 @@ function ColliderPrimitive({
   }
 }
 
-function VisualMesh({
+function ProceduralVisualMesh({
   visual,
   meshRef,
 }: {
@@ -132,6 +133,17 @@ function VisualMesh({
         roughness={visual.material.roughness}
       />
     </mesh>
+  );
+}
+
+function VisualMesh(props: {
+  readonly visual: VisualSpec;
+  readonly meshRef?: RefObject<THREE.Mesh | null>;
+}) {
+  return props.visual.authored ? (
+    <AuthoredVisualMesh {...props} />
+  ) : (
+    <ProceduralVisualMesh {...props} />
   );
 }
 

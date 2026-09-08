@@ -1,0 +1,146 @@
+# Blender asset authoring
+
+Phase 1 preserves the live Course geometry in seven editable sources under
+`assets/blender/`. The game defaults to its existing generators. Development views can load the
+authored baseline for comparison. Do your visual and behavioral comparison before
+retiring the original generators.
+
+## Export a saved edit
+
+1. Open the relevant `.blend` and preserve its named structure.
+2. Save your changes in Blender.
+3. Run `pnpm assets:export` from the repository root.
+4. Run `pnpm assets:check` and review the source and catalog changes in Git.
+
+The wrapper uses `BLENDER_BIN` when you set it; otherwise it uses
+`/Applications/Blender.app/Contents/MacOS/Blender`. Blender 5.2.1 LTS was used for the
+initial migration. Normal builds will consume checked-in exports; Phase 5 adds the
+freshness check to the build.
+
+Export reads saved models. It never runs capture or bootstrap, saves the source,
+changes physics values, or prunes previous revisions. All seven packages must
+validate before one atomic catalog replacement. An error preserves the previous
+catalog and every referenced package. A concurrent export fails on the export lock;
+if a process crashes, verify that it has stopped before removing its `.export.lock`.
+Unpublished staging directories remain available for diagnosis and are ignored by Git.
+
+## Preserve the authored structure
+
+- `visuals`: meshes with stable part IDs and matching GLB node names. Each mesh uses
+  one Principled material. Apply modifiers before export. Keep the supported control
+  structure when editing vertices.
+- `colliders`: explicit collision meshes named `collision__<part-id>`. The `part`
+  metadata retains the primitive tag, physical profile and motion/sensor flags.
+  Move or rotate these objects to edit their frames. Primitive vertex edits and
+  non-unit object scale are rejected because export cannot safely infer the intended
+  primitive. Triangle-mesh colliders export their saved vertices. Do not infer
+  collision geometry from decorative meshes.
+- `markers`: `entry`, `exit`, ordered `route-0000` points, `bounds-min` and
+  `bounds-max`. Start adds `gate-pivot`; finish adds `finish-sensor`, which must stay
+  aligned with the sensor collider. Optional `recovery-0000` markers retain explicit
+  position, rotation and half-extents. Baseline Specs do not acquire recovery boxes.
+- `controls`: named binding objects carry the target part, supported region and
+  repeat index where applicable. Preserve those bindings when editing the model.
+  Runtime adapters consume the exported rest mesh and these bindings.
+
+JSON uses meters in the existing game frame: X lateral, Y up, Z longitudinal;
+quaternions use XYZW. Blender stores the equivalent frame as `(x, -z, y)` with
+Z up. Bootstrap applies that rotation to vertices and conjugates object rotations;
+export reverses it for JSON and uses glTF's Y-up conversion for GLB. Shear and
+non-unit scale fail explicitly.
+
+Physics profiles in `src/assets/physicsProfiles.ts` retain the captured effective
+friction and restitution. The game owns gate timing, finish detection, marble
+identity and spherical collision radius. The marble source preserves live sphere
+UVs and captured stripe data; identity-specific skins remain available through the
+existing game style functions during migration.
+
+## Reproduce the original capture
+
+The checked-in `assets/baseline/README.md` records capture provenance. Capture uses
+`courseParamValues`, registered generators, start/finish Specs, `raceVisibleSpec`,
+and live marble geometry and stripe data. It never edits those generators.
+
+For a fresh destination with no captured files or settings, run
+`pnpm assets:capture`. Then bootstrap each asset using:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender --background --python-exit-code 1 \
+  --python scripts/blender/bootstrap.py -- \
+  assets/baseline/chute.json assets/blender/chute.blend
+```
+
+Repeat for `pin-field`, `staircase`, `whoops`, `start`, `finish` and `marble`.
+Both capture and bootstrap refuse existing output files. Never remove a manually
+edited source to rerun bootstrap; export that saved source instead.
+
+## Compare the authored baseline
+
+In the development Course view (`course.html`), select **Blender baseline** and
+wait for loading to finish. Use **Start or restart** to apply it with the selected
+seed and Selection Mode; the fixed Roster stays the same. The header identifies
+the active source. Select **Original baseline** and restart to compare that source.
+A loading error offers **Retry assets** and prevents an authored restart.
+
+In the Showcase (`showcase.html`), select **Original baseline** or **Blender baseline**.
+Both use the captured Course settings for the selected Module. **Use applied settings**
+returns to the most recently restarted draft. Changing sources restarts the Showcase
+physics world while retaining the Feeder and metrics controls.
+
+Authored meshes share immutable cached geometry and materials. Course placement
+and gate motion still come from the same plain-data Spec used by physics.
+The marble visual uses the captured mesh while the game retains its spherical
+collider, radius and Roster stripe identities.
+
+## Apply shared settings in code
+
+`loadSavedModuleSettings()` reads `src/config/module-settings.json` into an independent,
+validated settings object. Pass settings to `assembleCourse(seed, { settings })` to build
+all authored instances from those values. `assembleCourse(seed)` retains the original
+path during comparison; `{ source: "authored" }` uses the saved settings.
+
+Use `parseModuleSettings(value)` to check the complete control schema, and
+`validateCourseSettings(settings)` for a geometry-only Assembler preflight. Assembly also
+checks each requested seed's placements and connections. Neither function runs a race or
+writes settings.
+
+## Tune shared Module settings
+
+Use the **Shared Module tuning** panel in `course.html` or `showcase.html`. Select a Module
+and adjust its supported sliders. Slider changes update only the draft; they do not mutate
+the running physics world. **Restart with draft** validates and applies the complete shared
+configuration. In the Course view, this rebuilds every matching placement with the active
+seed, fixed Roster and active Selection Mode. An unusable draft leaves the last runnable
+Course active.
+
+**Save settings** validates the draft and writes `src/config/module-settings.json` without
+restarting or hot-reloading the active physics world. The development server accepts this
+write only from its same-origin loopback page. Builds and preview servers do not expose the
+write endpoint or active Save controls.
+
+The panel loads a content revision with the saved settings. If another tab saves first, your
+stale save fails and preserves your draft. Choose **Reload saved revision**, review the
+still-visible draft against the new saved state, then save explicitly. Choose **Reset draft
+to saved** only when you want to discard the draft values.
+
+Use Blender for mesh shape, named parts, bindings, markers and collider-frame edits. Use the
+shared sliders for the supported parametric transformations below. Export Blender changes
+before tuning them; saving settings never writes a `.blend` file or exported asset package.
+
+Tuning transforms saved parts relative to their captured control frames. Baseline values
+return the unchanged saved geometry. Chute supports length, width and grade; Pin field
+supports its existing post dimensions, row count and spacing; Staircase supports tread,
+riser and repetition controls; Whoops supports its sampled wave controls. Ranges retain
+existing limits and include the captured Course values. Pin field rejects combinations
+whose four posts and required rail gaps do not fit.
+
+Affine visual transforms clone GLB geometry, preserving mesh attributes and shared
+materials. Whoops resamples its explicitly bound two-vertex floor strip and retains saved
+offsets; preserve that strip's vertex order and triangle topology when editing it.
+Unsupported primitive shear or nonuniform round-collider scaling reports an error.
+Recovery boxes support Chute's affine frame transformation. Other Modules reject changed
+tuning when recovery boxes lack explicit region bindings; baseline recovery remains intact.
+
+`validateAuthoredModule(id, options, settings)` and the optional assembly settings on
+Course validation use the same authored Specs as rendering. These are simulation APIs;
+use the geometry-only preflight when validating an edit before starting a race.

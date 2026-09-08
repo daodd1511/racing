@@ -1,8 +1,12 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
+import type { ModuleId, ModuleSettings } from "../assets/types";
+import { AssetComparison, type ComparisonSource } from "../dev/AssetComparison";
+import { useAuthoredAssets } from "../assets/render/useAuthoredAssets";
+import { courseParamValues } from "../course/courseModules";
 import { ModuleColliders } from "../modules/render/ModuleColliders";
 import { INITIAL_KINEMATIC_CLOCK, KINEMATIC_FIXED_STEP_SECONDS } from "../modules/kinematics";
 import { SCALE } from "../race/scale";
@@ -11,8 +15,14 @@ import { CameraFraming } from "./CameraFraming";
 import { Feeder, type FeedMode } from "./Feeder";
 import { KinematicClock } from "./KinematicClock";
 import { EMPTY_LIVE_METRICS, MetricsReadout, type LiveMetricsState } from "./MetricsReadout";
-import { defaultParamValues, ParamPanel, type ParamValues } from "./ParamPanel";
-import { MODULES, type ShowcaseEntry } from "./registry";
+
+import { MODULES, authoredModule, type ShowcaseEntry } from "./registry";
+
+const ModuleTuningPanel = import.meta.env.DEV
+  ? lazy(() =>
+      import("../dev/ModuleTuningPanel").then((module) => ({ default: module.ModuleTuningPanel })),
+    )
+  : null;
 
 const FEED_MODES: readonly FeedMode[] = ["continuous", "burst15", "single"];
 
@@ -26,9 +36,12 @@ function findEntry(id: string): ShowcaseEntry {
  * surface that can answer "do 32mm marbles look fast?" without waiting for
  * a whole Course to exist. */
 export function Showcase() {
+  const [comparisonSource, setComparisonSource] = useState<ComparisonSource | null>("legacy");
+  const assets = useAuthoredAssets(comparisonSource !== "legacy");
   const [selectedId, setSelectedId] = useState(MODULES[0].id);
   const selected = findEntry(selectedId);
-  const [params, setParams] = useState<ParamValues>(() => defaultParamValues(selected.meta.params));
+  const [appliedSettings, setAppliedSettings] = useState<ModuleSettings | null>(null);
+  const [runNumber, setRunNumber] = useState(0);
   const [feedMode, setFeedMode] = useState<FeedMode>("continuous");
   const [triggerNonce, setTriggerNonce] = useState(0);
   const [metrics, setMetrics] = useState<LiveMetricsState>(EMPTY_LIVE_METRICS);
@@ -41,19 +54,28 @@ export function Showcase() {
   const exitSpeedsRef = useRef<number[]>([]);
   const kinematicClockRef = useRef(INITIAL_KINEMATIC_CLOCK);
 
-  const spec = useMemo(() => selected.buildSpec(params), [selected, params]);
-
-  // Deliberately built from the Module's *default* params, not the live
-  // `params` state: this decides how the camera frames a Module, and
-  // recomputing it on every param edit -- `spec.footprint.bounds` does
-  // change with params, e.g. the chute's `length` -- would yank the camera
-  // back to a fresh fit on every slider drag, fighting any zoom the user
-  // just set by hand. It only needs to change identity when the Module
-  // itself does, which `[selected]` alone guarantees.
-  const framingBounds = useMemo(
-    () => selected.buildSpec(defaultParamValues(selected.meta.params)).footprint.bounds,
-    [selected],
-  );
+  const comparison = useMemo(() => {
+    try {
+      const authored = authoredModule(selected.id);
+      const values = courseParamValues(
+        authored,
+        comparisonSource === null ? (appliedSettings ?? undefined) : undefined,
+      );
+      return {
+        spec:
+          comparisonSource !== "legacy" ? authored.buildSpec(values) : selected.buildSpec(values),
+        values,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        spec: null,
+        values: courseParamValues(selected),
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }, [selected, appliedSettings, comparisonSource]);
+  const spec = comparison.spec;
 
   const resetMetrics = useCallback(() => {
     dwellSecondsByIdRef.current = new Map();
@@ -107,19 +129,19 @@ export function Showcase() {
     (id: string) => {
       const entry = findEntry(id);
       setSelectedId(entry.id);
-      setParams(defaultParamValues(entry.meta.params));
       resetMetrics();
     },
     [resetMetrics],
   );
 
-  const updateParam = useCallback(
-    (key: string, value: number | boolean) => {
-      setParams((previous) => ({ ...previous, [key]: value }));
-      resetMetrics();
-    },
-    [resetMetrics],
-  );
+  function applySettings(settings: ModuleSettings): void {
+    authoredModule(selectedId).buildSpec(courseParamValues(authoredModule(selectedId), settings));
+    setAppliedSettings(settings);
+    setComparisonSource(null);
+    setRunNumber((number) => number + 1);
+    kinematicClockRef.current = INITIAL_KINEMATIC_CLOCK;
+    resetMetrics();
+  }
 
   const changeFeedMode = useCallback((mode: FeedMode) => {
     setFeedMode(mode);
@@ -167,38 +189,77 @@ export function Showcase() {
       </aside>
 
       <div style={{ position: "relative", background: "#0b0c0d" }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "0.75rem",
+            left: "0.75rem",
+            right: "0.75rem",
+            zIndex: 1,
+          }}
+        >
+          {import.meta.env.DEV && (
+            <AssetComparison
+              source={comparisonSource}
+              onChange={(source) => {
+                setComparisonSource(source);
+                resetMetrics();
+              }}
+              state={assets.state}
+              onRetry={() => {
+                void assets.retry();
+              }}
+            />
+          )}
+          {comparison.error && <p role="alert">Could not load comparison: {comparison.error}</p>}
+          {comparisonSource !== null && (
+            <button
+              type="button"
+              onClick={() => {
+                setComparisonSource(null);
+                resetMetrics();
+              }}
+            >
+              Use applied settings
+            </button>
+          )}
+        </div>
         {/* `position` here is only a fallback for the first frame, before
          * `<CameraFraming>`'s effect runs and overwrites it -- keeps that
          * frame from flashing R3F's own generic default camera position. */}
-        <Canvas camera={{ position: [0, 0.3, 0.6], fov: 50 }} shadows="percentage">
-          {/* Dark charcoal per PLAN.md -> "Art direction" -- set on the
-           * scene itself, not left to the page's CSS behind a possibly-
-           * transparent canvas. */}
-          <color attach="background" args={["#0b0c0d"]} />
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[0.6, 1, 0.4]} intensity={1.4} castShadow />
-          {/* Fits the camera to the selected Module and then lets the user
-           * zoom/pan/orbit freely -- see CameraFraming.tsx. */}
-          <CameraFraming bounds={framingBounds} />
-          <Physics
-            gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}
-            timeStep={KINEMATIC_FIXED_STEP_SECONDS}
-          >
-            <KinematicClock clockRef={kinematicClockRef} />
-            <ModuleColliders spec={spec} step={selected.step} clockRef={kinematicClockRef} />
-            <Feeder
-              entry={spec.footprint.entry}
-              exit={spec.footprint.exit}
-              mode={feedMode}
-              triggerNonce={triggerNonce}
-              onExit={handleExit}
-              onStall={handleStall}
-            />
-          </Physics>
-          <EffectComposer>
-            <Bloom intensity={0.6} luminanceThreshold={0.4} luminanceSmoothing={0.2} mipmapBlur />
-          </EffectComposer>
-        </Canvas>
+        {spec && assets.state.status === "ready" && (
+          <Canvas camera={{ position: [0, 0.3, 0.6], fov: 50 }} shadows="percentage">
+            {/* Dark charcoal per PLAN.md -> "Art direction" -- set on the
+             * scene itself, not left to the page's CSS behind a possibly-
+             * transparent canvas. */}
+            <color attach="background" args={["#0b0c0d"]} />
+            <ambientLight intensity={0.5} />
+            <directionalLight position={[0.6, 1, 0.4]} intensity={1.4} castShadow />
+            {/* Fits the camera to the selected Module and then lets the user
+             * zoom/pan/orbit freely -- see CameraFraming.tsx. */}
+            <CameraFraming bounds={spec.footprint.bounds} />
+            <Physics
+              key={`${selectedId}:${comparisonSource ?? "tuning"}:${runNumber}`}
+              gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}
+              timeStep={KINEMATIC_FIXED_STEP_SECONDS}
+            >
+              <KinematicClock clockRef={kinematicClockRef} />
+              <ModuleColliders spec={spec} step={selected.step} clockRef={kinematicClockRef} />
+              <Feeder
+                authored={comparisonSource !== "legacy"}
+                entry={spec.footprint.entry}
+                exit={spec.footprint.exit}
+                mode={feedMode}
+                triggerNonce={triggerNonce}
+                onExit={handleExit}
+                onStall={handleStall}
+              />
+            </Physics>
+            <EffectComposer>
+              <Bloom intensity={0.6} luminanceThreshold={0.4} luminanceSmoothing={0.2} mipmapBlur />
+            </EffectComposer>
+          </Canvas>
+        )}
         <div
           style={{
             position: "absolute",
@@ -250,13 +311,25 @@ export function Showcase() {
           display: "flex",
           flexDirection: "column",
           gap: "1rem",
+          overflowY: "auto",
         }}
       >
         <section>
           <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Params
           </h2>
-          <ParamPanel schema={selected.meta.params} values={params} onChange={updateParam} />
+          {import.meta.env.DEV && ModuleTuningPanel ? (
+            <Suspense fallback={<p>Loading tuning controls…</p>}>
+              <ModuleTuningPanel
+                applied={comparisonSource === null ? appliedSettings : null}
+                onApply={applySettings}
+                selectedId={selectedId as ModuleId}
+                onSelect={selectModule}
+              />
+            </Suspense>
+          ) : (
+            <p>Module settings are read-only in this built viewer.</p>
+          )}
         </section>
         <section>
           <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>

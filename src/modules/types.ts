@@ -1,3 +1,4 @@
+import type { AssetId, ControlBinding } from "../assets/types";
 import type { Quaternion, Vector3 } from "../race/types";
 
 // The Module contract -- see PLAN.md -> "The Module contract" and
@@ -103,6 +104,16 @@ export interface VisualMaterial {
 }
 
 export interface VisualSpec {
+  /** Immutable GLB mesh in this visual's local frame; bindings retain authored rest regions. */
+  readonly authored?: {
+    readonly assetId: AssetId;
+    readonly node: string;
+    readonly bindings: readonly ControlBinding[];
+    /** Render the transformed saved mesh in shape; the immutable GLB supplies its material. */
+    readonly deformed?: boolean;
+    /** Column-major local affine transform applied to a cloned GLB mesh. */
+    readonly deformation?: readonly number[];
+  };
   readonly id: string;
   readonly shape: Shape;
   readonly material: VisualMaterial;

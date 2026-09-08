@@ -16,6 +16,9 @@ function assertFiniteBounds(footprint: Footprint, board: BoardSpec): void {
   }
 
   for (let axis = 0; axis < 3; axis += 1) {
+    if (board.bounds.min[axis] >= board.bounds.max[axis]) {
+      throw new Error("Board bounds must have positive dimensions");
+    }
     if (footprint.bounds.min[axis] > footprint.bounds.max[axis]) {
       throw new Error("Footprint bounds min must not exceed max");
     }

@@ -11,7 +11,10 @@
     "test": "vitest run",
     "lint": "oxlint src",
     "format": "oxfmt --write .",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "assets:capture": "tsx scripts/assets/captureBaseline.ts",
+    "assets:export": "tsx scripts/assets/exportAssets.ts",
+    "assets:check": "tsx scripts/assets/checkAssets.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.19.2",
@@ -36,6 +39,7 @@
     "happy-dom": "^20.11.2",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"

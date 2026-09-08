@@ -81,3 +81,17 @@ describe("CourseRaceRuntime", () => {
     runtime.dispose();
   });
 });
+
+it("retains unread step snapshots after later steps and world disposal", () => {
+  const runtime = new CourseRaceRuntime(assembleCourse(7), {
+    seed: 7,
+    roster: ["A", "B"],
+    selectionMode: "last",
+  });
+  const retained = runtime.step(1 / 60);
+  const expected = runtime.currentSnapshot;
+  runtime.step(2 / 60);
+  runtime.dispose();
+  expect(retained.snapshot).toEqual(expected);
+  expect(retained.snapshot).toBe(retained.snapshot);
+});

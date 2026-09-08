@@ -40,16 +40,35 @@ function assertElapsed(state: RaceProgressState, elapsedSeconds: number): void {
   }
 }
 
-function routeLength(route: readonly Vector3[]): number {
-  let length = 0;
+interface RouteSegment {
+  readonly start: Vector3;
+  readonly delta: Vector3;
+  readonly length: number;
+  readonly from: number;
+  readonly to: number;
+}
+
+const routeCache = new WeakMap<readonly Vector3[], readonly RouteSegment[]>();
+
+function routeSegments(route: readonly Vector3[]): readonly RouteSegment[] {
+  const cached = routeCache.get(route);
+  if (cached) return cached;
+  const segments: RouteSegment[] = [];
+  let cumulative = 0;
   for (let index = 1; index < route.length; index += 1) {
-    length += Math.hypot(
-      route[index][0] - route[index - 1][0],
-      route[index][1] - route[index - 1][1],
-      route[index][2] - route[index - 1][2],
-    );
+    const start = route[index - 1];
+    const end = route[index];
+    const delta: Vector3 = [end[0] - start[0], end[1] - start[1], end[2] - start[2]];
+    const length = Math.hypot(...delta);
+    segments.push({ start, delta, length, from: cumulative, to: cumulative + length });
+    cumulative += length;
   }
-  return length;
+  routeCache.set(route, segments);
+  return segments;
+}
+
+function routeLength(route: readonly Vector3[]): number {
+  return routeSegments(route).at(-1)?.to ?? 0;
 }
 
 function projectionInterval(
@@ -70,21 +89,22 @@ function projectOntoRoute(
   position: Vector3,
   interval: readonly [number, number],
 ): MarbleRouteProjection {
-  let cumulative = 0;
   let closestDistanceSquared = Infinity;
   let closestRouteDistance = interval[0];
   let closestPoint: Vector3 = route[0] ?? [0, 0, 0];
-  for (let index = 1; index < route.length; index += 1) {
-    const start = route[index - 1];
-    const end = route[index];
-    const delta: Vector3 = [end[0] - start[0], end[1] - start[1], end[2] - start[2]];
-    const segmentLength = Math.hypot(...delta);
-    const segmentStart = cumulative;
-    const segmentEnd = cumulative + segmentLength;
-    cumulative = segmentEnd;
-    if (segmentEnd < interval[0] - EPSILON || segmentStart > interval[1] + EPSILON) {
-      continue;
-    }
+  const segments = routeSegments(route);
+  let low = 0;
+  let high = segments.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (segments[middle].to < interval[0] - EPSILON) low = middle + 1;
+    else high = middle;
+  }
+  for (let index = low; index < segments.length; index += 1) {
+    const { start, delta, length: segmentLength, from: segmentStart } = segments[index];
+    if (segmentStart > interval[1] + EPSILON) break;
+    // Duplicate route points contributed no candidate in the original projection.
+    if (segmentLength === 0) continue;
     const minimumT = Math.max(0, (interval[0] - segmentStart) / segmentLength);
     const maximumT = Math.min(1, (interval[1] - segmentStart) / segmentLength);
     const rawT =
@@ -154,14 +174,35 @@ function decisiveIndex(
   );
 }
 
+function progressData(
+  state: RaceProgressState,
+): Omit<RaceProgressState, "ranking" | "decisiveMarbleIndex"> {
+  return {
+    request: state.request,
+    course: state.course,
+    elapsedSeconds: state.elapsedSeconds,
+    passedCheckpoints: state.passedCheckpoints,
+    splitTimes: state.splitTimes,
+    routeDistances: state.routeDistances,
+    finishOrder: state.finishOrder,
+    outcome: state.outcome,
+  };
+}
+
 function immutableState(
   state: Omit<RaceProgressState, "ranking" | "decisiveMarbleIndex">,
 ): RaceProgressState {
-  const ranking = rankedIndices(state.routeDistances, state.finishOrder);
+  let ranking: readonly number[] | undefined;
+  const readRanking = (): readonly number[] =>
+    (ranking ??= rankedIndices(state.routeDistances, state.finishOrder));
   return Object.freeze({
     ...state,
-    ranking,
-    decisiveMarbleIndex: decisiveIndex(state.request.selectionMode, ranking, state.finishOrder),
+    get ranking() {
+      return readRanking();
+    },
+    get decisiveMarbleIndex() {
+      return decisiveIndex(state.request.selectionMode, readRanking(), state.finishOrder);
+    },
   });
 }
 
@@ -217,7 +258,7 @@ export function recordProjectedMarbleProgress(
   const routeDistances = [...state.routeDistances];
   routeDistances[marbleIndex] = Math.max(routeDistances[marbleIndex], projection.routeDistance);
   return immutableState({
-    ...state,
+    ...progressData(state),
     elapsedSeconds,
     routeDistances: Object.freeze(routeDistances),
   });
@@ -251,7 +292,7 @@ export function recordCheckpoint(
     state.course.checkpoints[checkpointIndex].routeDistance,
   );
   return immutableState({
-    ...state,
+    ...progressData(state),
     elapsedSeconds,
     passedCheckpoints: Object.freeze(passedCheckpoints),
     splitTimes: Object.freeze(splitTimes),
@@ -288,7 +329,7 @@ export function recordFinish(
       })
     : null;
   return immutableState({
-    ...state,
+    ...progressData(state),
     elapsedSeconds,
     routeDistances: Object.freeze(routeDistances),
     finishOrder,
@@ -305,14 +346,14 @@ export function advanceWatchdog(
     return state;
   }
   if (elapsedSeconds < DEFAULT_RACE_CONFIG.maximumSimulationSeconds) {
-    return immutableState({ ...state, elapsedSeconds });
+    return immutableState({ ...progressData(state), elapsedSeconds });
   }
   const finished = new Set(state.finishOrder);
   const unfinishedMarbleIndices = Object.freeze(
     state.request.roster.map((_, index) => index).filter((index) => !finished.has(index)),
   );
   return immutableState({
-    ...state,
+    ...progressData(state),
     elapsedSeconds,
     outcome: Object.freeze({
       kind: "watchdog",

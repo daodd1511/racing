@@ -1,7 +1,16 @@
 import { Canvas } from "@react-three/fiber";
-import { StrictMode, useMemo, useState, type ReactNode, type ChangeEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  StrictMode,
+  useMemo,
+  useState,
+  type ReactNode,
+  type ChangeEvent,
+} from "react";
 import { createRoot } from "react-dom/client";
 
+import type { ModuleSettings } from "../assets/types";
 import { useAuthoredAssets } from "../assets/render/useAuthoredAssets";
 import { AssetComparison, type ComparisonSource } from "./AssetComparison";
 import { assembleCourse } from "../course/assembleCourse";
@@ -14,6 +23,12 @@ import type { RaceOutcome, RaceSnapshot } from "../race/liveTypes";
 import { createMarbleStyles } from "../render/marbleStyles";
 import type { CameraMode, SelectionMode } from "../race/types";
 import "../styles/course.css";
+
+const ModuleTuningPanel = import.meta.env.DEV
+  ? lazy(() =>
+      import("./ModuleTuningPanel").then((module) => ({ default: module.ModuleTuningPanel })),
+    )
+  : null;
 
 export const FIXED_ROSTER = Object.freeze([
   "Avery",
@@ -97,6 +112,8 @@ export function CourseControls({
 }
 
 export function CoursePreview() {
+  const [appliedSettings, setAppliedSettings] = useState<ModuleSettings | null>(null);
+  const [pendingUsesAppliedSettings, setPendingUsesAppliedSettings] = useState(false);
   const [pendingSource, setPendingSource] = useState<ComparisonSource>("legacy");
   const [activeSource, setActiveSource] = useState<ComparisonSource>("legacy");
   const [assemblyError, setAssemblyError] = useState<string | null>(null);
@@ -133,7 +150,12 @@ export function CoursePreview() {
   function startRace(): void {
     if (pendingSource === "authored" && assets.state.status !== "ready") return;
     try {
-      const next = assembleCourse(pendingSeed, { source: pendingSource });
+      const next = assembleCourse(pendingSeed, {
+        source: pendingSource,
+        ...(pendingSource === "authored" && pendingUsesAppliedSettings && appliedSettings
+          ? { settings: appliedSettings }
+          : {}),
+      });
       setCourse(next);
     } catch (error) {
       setAssemblyError(error instanceof Error ? error.message : String(error));
@@ -141,10 +163,24 @@ export function CoursePreview() {
     }
     setAssemblyError(null);
     setActiveSource(pendingSource);
+    if (!pendingUsesAppliedSettings) setAppliedSettings(null);
     setActiveSeed(pendingSeed);
     setActiveSelectionMode(pendingSelectionMode);
     setSnapshot(null);
     setOutcome(null);
+    setRunNumber((previous) => previous + 1);
+  }
+
+  function applySettings(settings: ModuleSettings): void {
+    const next = assembleCourse(activeSeed, { source: "authored", settings });
+    setCourse(next);
+    setAppliedSettings(settings);
+    setPendingUsesAppliedSettings(true);
+    setPendingSource("authored");
+    setActiveSource("authored");
+    setSnapshot(null);
+    setOutcome(null);
+    setAssemblyError(null);
     setRunNumber((previous) => previous + 1);
   }
 
@@ -155,7 +191,7 @@ export function CoursePreview() {
           <p className="course-preview__eyebrow">Development harness</p>
           <h1>Course review</h1>
           <p>
-            Active source: {activeSource === "authored" ? "Blender baseline" : "Original baseline"}.
+            Active source: {activeSource === "authored" ? "Blender assets" : "Original baseline"}.
             Apply the selected source with Start or restart.
           </p>
           {assemblyError && (
@@ -180,7 +216,10 @@ export function CoursePreview() {
         {import.meta.env.DEV && (
           <AssetComparison
             source={pendingSource}
-            onChange={setPendingSource}
+            onChange={(source) => {
+              setPendingSource(source);
+              setPendingUsesAppliedSettings(false);
+            }}
             state={assets.state}
             onRetry={() => {
               void assets.retry();
@@ -227,6 +266,11 @@ export function CoursePreview() {
         </Canvas>
       </section>
       <section aria-label="Course overview" className="course-preview__overview">
+        {import.meta.env.DEV && ModuleTuningPanel && (
+          <Suspense fallback={<p>Loading tuning controls…</p>}>
+            <ModuleTuningPanel applied={appliedSettings} onApply={applySettings} />
+          </Suspense>
+        )}
         <CourseMinimap
           board={course.board}
           course={course}

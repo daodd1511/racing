@@ -74,7 +74,6 @@ Repeat for `pin-field`, `staircase`, `whoops`, `start`, `finish` and `marble`.
 Both capture and bootstrap refuse existing output files. Never remove a manually
 edited source to rerun bootstrap; export that saved source instead.
 
-
 ## Compare the authored baseline
 
 In the development Course view (`course.html`), select **Blender baseline** and
@@ -84,9 +83,9 @@ the active source. Select **Original baseline** and restart to compare that sour
 A loading error offers **Retry assets** and prevents an authored restart.
 
 In the Showcase (`showcase.html`), select **Original baseline** or **Blender baseline**.
-Both use the captured Course settings for the selected Module. Parameter tuning
-is disabled during baseline comparison; **Return to live tuning** restores the
-existing Showcase controls. Changing sources restarts the Showcase physics world.
+Both use the captured Course settings for the selected Module. **Use applied settings**
+returns to the most recently restarted draft. Changing sources restarts the Showcase
+physics world while retaining the Feeder and metrics controls.
 
 Authored meshes share immutable cached geometry and materials. Course placement
 and gate motion still come from the same plain-data Spec used by physics.
@@ -103,7 +102,30 @@ path during comparison; `{ source: "authored" }` uses the saved settings.
 Use `parseModuleSettings(value)` to check the complete control schema, and
 `validateCourseSettings(settings)` for a geometry-only Assembler preflight. Assembly also
 checks each requested seed's placements and connections. Neither function runs a race or
-writes settings. Development apply/save controls arrive in Phase 4.
+writes settings.
+
+## Tune shared Module settings
+
+Use the **Shared Module tuning** panel in `course.html` or `showcase.html`. Select a Module
+and adjust its supported sliders. Slider changes update only the draft; they do not mutate
+the running physics world. **Restart with draft** validates and applies the complete shared
+configuration. In the Course view, this rebuilds every matching placement with the active
+seed, fixed Roster and active Selection Mode. An unusable draft leaves the last runnable
+Course active.
+
+**Save settings** validates the draft and writes `src/config/module-settings.json` without
+restarting or hot-reloading the active physics world. The development server accepts this
+write only from its same-origin loopback page. Builds and preview servers do not expose the
+write endpoint or active Save controls.
+
+The panel loads a content revision with the saved settings. If another tab saves first, your
+stale save fails and preserves your draft. Choose **Reload saved revision**, review the
+still-visible draft against the new saved state, then save explicitly. Choose **Reset draft
+to saved** only when you want to discard the draft values.
+
+Use Blender for mesh shape, named parts, bindings, markers and collider-frame edits. Use the
+shared sliders for the supported parametric transformations below. Export Blender changes
+before tuning them; saving settings never writes a `.blend` file or exported asset package.
 
 Tuning transforms saved parts relative to their captured control frames. Baseline values
 return the unchanged saved geometry. Chute supports length, width and grade; Pin field

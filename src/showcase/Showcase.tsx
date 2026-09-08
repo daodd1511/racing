@@ -1,8 +1,9 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
+import type { ModuleId, ModuleSettings } from "../assets/types";
 import { AssetComparison, type ComparisonSource } from "../dev/AssetComparison";
 import { useAuthoredAssets } from "../assets/render/useAuthoredAssets";
 import { courseParamValues } from "../course/courseModules";
@@ -14,8 +15,14 @@ import { CameraFraming } from "./CameraFraming";
 import { Feeder, type FeedMode } from "./Feeder";
 import { KinematicClock } from "./KinematicClock";
 import { EMPTY_LIVE_METRICS, MetricsReadout, type LiveMetricsState } from "./MetricsReadout";
-import { defaultParamValues, ParamPanel, type ParamValues } from "./ParamPanel";
+
 import { MODULES, authoredModule, type ShowcaseEntry } from "./registry";
+
+const ModuleTuningPanel = import.meta.env.DEV
+  ? lazy(() =>
+      import("../dev/ModuleTuningPanel").then((module) => ({ default: module.ModuleTuningPanel })),
+    )
+  : null;
 
 const FEED_MODES: readonly FeedMode[] = ["continuous", "burst15", "single"];
 
@@ -29,11 +36,12 @@ function findEntry(id: string): ShowcaseEntry {
  * surface that can answer "do 32mm marbles look fast?" without waiting for
  * a whole Course to exist. */
 export function Showcase() {
-  const [comparisonSource, setComparisonSource] = useState<ComparisonSource | null>(null);
-  const assets = useAuthoredAssets(comparisonSource === "authored");
+  const [comparisonSource, setComparisonSource] = useState<ComparisonSource | null>("legacy");
+  const assets = useAuthoredAssets(comparisonSource !== "legacy");
   const [selectedId, setSelectedId] = useState(MODULES[0].id);
   const selected = findEntry(selectedId);
-  const [params, setParams] = useState<ParamValues>(() => defaultParamValues(selected.meta.params));
+  const [appliedSettings, setAppliedSettings] = useState<ModuleSettings | null>(null);
+  const [runNumber, setRunNumber] = useState(0);
   const [feedMode, setFeedMode] = useState<FeedMode>("continuous");
   const [triggerNonce, setTriggerNonce] = useState(0);
   const [metrics, setMetrics] = useState<LiveMetricsState>(EMPTY_LIVE_METRICS);
@@ -48,40 +56,26 @@ export function Showcase() {
 
   const comparison = useMemo(() => {
     try {
-      if (comparisonSource === null)
-        return { spec: selected.buildSpec(params), values: params, error: null };
       const authored = authoredModule(selected.id);
-      const values = courseParamValues(authored);
+      const values = courseParamValues(
+        authored,
+        comparisonSource === null ? (appliedSettings ?? undefined) : undefined,
+      );
       return {
         spec:
-          comparisonSource === "authored" ? authored.buildSpec(values) : selected.buildSpec(values),
+          comparisonSource !== "legacy" ? authored.buildSpec(values) : selected.buildSpec(values),
         values,
         error: null,
       };
     } catch (error) {
       return {
         spec: null,
-        values: params,
+        values: courseParamValues(selected),
         error: error instanceof Error ? error.message : String(error),
       };
     }
-  }, [selected, params, comparisonSource]);
+  }, [selected, appliedSettings, comparisonSource]);
   const spec = comparison.spec;
-
-  // Deliberately built from the Module's *default* params, not the live
-  // `params` state: this decides how the camera frames a Module, and
-  // recomputing it on every param edit -- `spec.footprint.bounds` does
-  // change with params, e.g. the chute's `length` -- would yank the camera
-  // back to a fresh fit on every slider drag, fighting any zoom the user
-  // just set by hand. It only needs to change identity when the Module
-  // itself does, which `[selected]` alone guarantees.
-  const framingBounds = useMemo(
-    () =>
-      comparisonSource !== null && spec
-        ? spec.footprint.bounds
-        : selected.buildSpec(defaultParamValues(selected.meta.params)).footprint.bounds,
-    [selected, comparisonSource, comparisonSource === null ? null : spec],
-  );
 
   const resetMetrics = useCallback(() => {
     dwellSecondsByIdRef.current = new Map();
@@ -135,19 +129,19 @@ export function Showcase() {
     (id: string) => {
       const entry = findEntry(id);
       setSelectedId(entry.id);
-      setParams(defaultParamValues(entry.meta.params));
       resetMetrics();
     },
     [resetMetrics],
   );
 
-  const updateParam = useCallback(
-    (key: string, value: number | boolean) => {
-      setParams((previous) => ({ ...previous, [key]: value }));
-      resetMetrics();
-    },
-    [resetMetrics],
-  );
+  function applySettings(settings: ModuleSettings): void {
+    authoredModule(selectedId).buildSpec(courseParamValues(authoredModule(selectedId), settings));
+    setAppliedSettings(settings);
+    setComparisonSource(null);
+    setRunNumber((number) => number + 1);
+    kinematicClockRef.current = INITIAL_KINEMATIC_CLOCK;
+    resetMetrics();
+  }
 
   const changeFeedMode = useCallback((mode: FeedMode) => {
     setFeedMode(mode);
@@ -226,7 +220,7 @@ export function Showcase() {
                 resetMetrics();
               }}
             >
-              Return to live tuning
+              Use applied settings
             </button>
           )}
         </div>
@@ -243,16 +237,16 @@ export function Showcase() {
             <directionalLight position={[0.6, 1, 0.4]} intensity={1.4} castShadow />
             {/* Fits the camera to the selected Module and then lets the user
              * zoom/pan/orbit freely -- see CameraFraming.tsx. */}
-            <CameraFraming bounds={framingBounds} />
+            <CameraFraming bounds={spec.footprint.bounds} />
             <Physics
-              key={`${selectedId}:${comparisonSource ?? "tuning"}`}
+              key={`${selectedId}:${comparisonSource ?? "tuning"}:${runNumber}`}
               gravity={[SCALE.gravity[0], SCALE.gravity[1], SCALE.gravity[2]]}
               timeStep={KINEMATIC_FIXED_STEP_SECONDS}
             >
               <KinematicClock clockRef={kinematicClockRef} />
               <ModuleColliders spec={spec} step={selected.step} clockRef={kinematicClockRef} />
               <Feeder
-                authored={comparisonSource === "authored"}
+                authored={comparisonSource !== "legacy"}
                 entry={spec.footprint.entry}
                 exit={spec.footprint.exit}
                 mode={feedMode}
@@ -317,36 +311,24 @@ export function Showcase() {
           display: "flex",
           flexDirection: "column",
           gap: "1rem",
+          overflowY: "auto",
         }}
       >
         <section>
           <h2 style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Params
           </h2>
-          {comparisonSource === null ? (
-            <ParamPanel schema={selected.meta.params} values={params} onChange={updateParam} />
+          {import.meta.env.DEV && ModuleTuningPanel ? (
+            <Suspense fallback={<p>Loading tuning controls…</p>}>
+              <ModuleTuningPanel
+                applied={comparisonSource === null ? appliedSettings : null}
+                onApply={applySettings}
+                selectedId={selectedId as ModuleId}
+                onSelect={selectModule}
+              />
+            </Suspense>
           ) : (
-            <>
-              <p>
-                Both sources use the captured Course settings. Tuning is disabled during baseline
-                comparison.
-              </p>
-              <dl>
-                {Object.entries(comparison.values).map(([key, value]) => (
-                  <div key={key}>
-                    <dt>
-                      {selected.meta.params.fields.find((field) => field.key === key)?.label ??
-                        "Course grade"}
-                    </dt>
-                    <dd>
-                      {typeof value === "number"
-                        ? String(Number(value.toPrecision(5)))
-                        : String(value)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </>
+            <p>Module settings are read-only in this built viewer.</p>
           )}
         </section>
         <section>

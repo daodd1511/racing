@@ -279,3 +279,7 @@ body {
     min-height: 26rem;
   }
 }
+
+.course-preview__overview .module-tuning {
+  border-bottom: 1px solid #33414a;
+}

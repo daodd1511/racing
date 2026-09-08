@@ -1,0 +1,40 @@
+.module-tuning {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+}
+.module-tuning h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+.module-tuning p {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+}
+.module-tuning fieldset {
+  min-width: 0;
+  border: 1px solid #51616d;
+  padding: 0.65rem;
+}
+.module-tuning label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+.module-tuning select,
+.module-tuning button {
+  color: inherit;
+  background: #182028;
+  border: 1px solid #51616d;
+  padding: 0.5rem;
+  border-radius: 0.3rem;
+}
+.module-tuning button:disabled {
+  opacity: 0.5;
+}
+.module-tuning__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}

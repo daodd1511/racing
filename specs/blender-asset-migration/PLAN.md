@@ -151,7 +151,7 @@ execution planning. They preserve the agreed product scope.
   effective settings. Do not replace distinct current materials with one generic profile.
 - Export JSON in the existing game coordinate frame and meters. Explicitly convert
   Blender coordinates; preserve stable part IDs, transforms, entry/exit frames, route,
-  bounds, collider shape tags, physical-material references and gate pivot. Normalize
+  bounds, optional `Spec.recoveryBoxes`, collider shape tags, physical-material references and gate pivot. Normalize
   scale only when it preserves the represented shape; reject unsupported shear or scale
   rather than approximate it. Preserve floor/rail separation and existing primitive types.
 - Use named Blender collections `visuals`, `colliders`, `markers` and `controls`.
@@ -195,7 +195,7 @@ execution planning. They preserve the agreed product scope.
   are identity and geometry remains unchanged. For supported edits, deform saved geometry
   relative to its authored rest state rather than regenerate an idealized replacement.
   The same placement/deformation math updates colliders, visual bindings, route, markers
-  and bounds. Recompute occupied Cells from the resulting Footprint.
+  recovery boxes and bounds. Recompute occupied Cells from the resulting Footprint.
 - Chute binds floor and rails to longitudinal, width and slope controls. Pin field binds
   authored posts and rail bumpers to rows and placement controls, preserving alternating
   spacing and required gaps. Staircase binds authored tread/riser groups to step placement
@@ -284,3 +284,15 @@ representations. The migration does not change the Board topology decision in AD
 
 [Video-inspired Module shortlist](../../docs/references/2026-09-08-marble-module-shortlist.html)
 records possible future additions. It does not expand this migration's scope.
+
+## Runtime foundations integration
+
+Use `RegisteredModule.course.defaults` as the effective Course parameter source.
+`courseParamValues` remains its public accessor; do not restore a second eligibility
+whitelist during migration. Preserve optional `Spec.recoveryBoxes` as local-space
+position/rotation/half-extents metadata in asset.json and in buildAuthoredSpec.
+Box collections form a union, apply only to the active Module section, and remain
+independent from colliders and ranking routes. Omitted/empty collections retain
+legacy corridor recovery. Supported tuning must transform boxes consistently;
+reject unsupported box deformation instead of silently widening valid space.
+Existing Module baseline Specs omit boxes, and baseline export must preserve that.

@@ -112,3 +112,36 @@ there is no measured percentage speedup for phase 2. Phase 1 headless results ar
 unchanged evidence, not a measurement of this rendering change. Full-race feel,
 labels and close-following delay remain explicit user review items. No smoothing
 fix or elimination of perceived lag is claimed.
+
+## Phase 3 — Module foundations
+
+Catalog migration preserves complete serialized Course output for seeds 7 and 17.
+Before/after SHA-256 hashes of JSON.stringify(assembleCourse(seed)):
+
+- Seed 7: `3dbeaf342e9677c8ebb71cb19d22396cf2d6dea4dd0d1b94e393e2f1a0219ae9`
+- Seed 17: `cdc6c1baf0a655a12ddcc5826fc2bbae6c4ea14d7075866f295d942bd0749c3f`
+
+This checks exact preservation for two examples, not general physics equivalence.
+No current Module defines custom recovery boxes. The runtime checks boxes only
+when the active Module supplies them; geometry, Course composition, camera
+damping and physics settings remain unchanged.
+
+Phase 3 dependency-aware verification passed 90 tests across 22 files (94.77 s), plus project typecheck. Full-suite/build results follow after the final spec gate.
+
+Final spec gate passed 197 tests across 52 files (96.28 s), plus project typecheck
+and the production build. Vite reported its shared chunk size warning; bundle
+splitting was not changed in this spec.
+
+Final snapshot-consuming headless sample, same seed/roster/step configuration:
+2.249 ms mean total step, 1.999 ms physics, 0.250 ms surrounding work, 5.603 ms
+p95 and zero recoveries over 1,800 steps. The runtime overhead remains near the
+phase 1 optimized sample; variation in physics timing prevents attributing the
+whole difference between runs to code changes. These remain CPU results, not FPS.
+
+The production-built Course harness at localhost:5180/course.html loaded the
+staged marbles and gate in Close up with seed 7 / 15 marbles / Last. Browser
+frame-time counters remain unavailable; no claim that all perceived lag is gone.
+
+The production browser race advanced to 19.10 simulated seconds, showing marbles
+rounding a connector in Close up and matching minimap progress. This is a visual
+smoke check, not full-race or frame-time verification.

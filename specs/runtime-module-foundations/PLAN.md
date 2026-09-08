@@ -2,7 +2,8 @@
 
 ## Status and priority
 
-Planned on 2026-09-08 at the user's request. No implementation has started.
+Planned and implemented on 2026-09-08. All three execution phases passed their
+local gates; the full suite and production build passed. User review remains.
 This work takes priority over Blender asset migration. Blender and new Obstacle
 Modules remain deferred until this work is reviewed. The user requested a saved
 plan before ending the session; do not interpret this document as a phase-start

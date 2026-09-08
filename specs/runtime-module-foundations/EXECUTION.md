@@ -7,12 +7,12 @@ Probe: `gh stack view --json` returned exit 6 because `main` belongs to multiple
 
 ## STATUS
 
-- Current phase: 3 — in-progress
+- Current phase: 3 — done
 - Phase 1 — Simulation bookkeeping: done
 - Phase 2 — Direct rendering updates: done
-- Phase 3 — Module integration and recovery areas: in-progress
-- Verification debt: none — Phase 1 passed 34 related tests; Phase 2 passed 29 related tests; both passed project typecheck.
-- Commit checkpoint: user explicitly authorized all commits and Phase 2; Phase 1 work committed.
+- Phase 3 — Module integration and recovery areas: done
+- Verification debt: none — all phase gates passed; final spec gate passed 197 tests and the production build.
+- Commit checkpoint: all three phases implemented locally; Phase 3 awaits push/PR authorization and user review.
 
 ## Phase 1 — Simulation bookkeeping
 
@@ -98,7 +98,7 @@ Fresh review: not required
 - [x] In `src/race/CourseRaceRuntime.ts`, keep legacy last-safe updates and reset mechanics initially; custom boxes widen permitted motion without automatically saving an airborne marble as a safe respawn position, and leaving the union resumes legacy escape/below-route checks.
 - [x] Add focused `src/race/recoveryAreas.test.ts` coverage for unions and boundaries; extend `src/course/transformSpec.test.ts` and `src/race/CourseRaceRuntime.test.ts` for a placed wide area and fallback behavior, and `src/course/assembleCourse.test.ts` for unchanged catalog-driven defaults/inventory.
 - [x] Write `docs/adding-modules.md` with the concrete registration, geometry/collider, tuning, connection, route, recovery-box and optional-motion steps; update `specs/blender-asset-migration/PLAN.md` and its pending `EXECUTION.md` to carry recovery boxes and catalog defaults through extraction/export/tuning without starting migration.
-- [ ] Record final comparable runtime/browser evidence and remaining limitations in `specs/runtime-module-foundations/PERFORMANCE.md`; update `specs/README.md` with the review status and keep Blender deferred until user review.
+- [x] Record final comparable runtime/browser evidence and remaining limitations in `specs/runtime-module-foundations/PERFORMANCE.md`; update `specs/README.md` with the review status and keep Blender deferred until user review.
 
 **Phase gate (hard):**
 
@@ -115,5 +115,5 @@ Fresh review: not required
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] Run `./node_modules/.bin/vitest run --maxWorkers=1` (amended 2026-09-08: serial workers avoid the contention observed in phase 1; test scope unchanged) over the accumulated spec changes.
-- [ ] Run `./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build` to verify the changed scene consumers and all application entry points bundle together.
+- [x] Run `./node_modules/.bin/vitest run --maxWorkers=1` (amended 2026-09-08: serial workers avoid the contention observed in phase 1; test scope unchanged) over the accumulated spec changes.
+- [x] Run `./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build` to verify the changed scene consumers and all application entry points bundle together.

@@ -3,8 +3,9 @@
 ## Active specs
 
 [Runtime performance and Module foundations](runtime-module-foundations/PLAN.md) —
-current priority; [three execution phases](runtime-module-foundations/EXECUTION.md)
-are pending. Implementation has not started.
+current priority; [execution status](runtime-module-foundations/EXECUTION.md):
+all three phases implemented and verified; Phase 3 awaits PR submission and user review.
+Blender migration remains deferred.
 
 [Blender asset migration](blender-asset-migration/PLAN.md) — deferred until runtime
 and Module foundations are reviewed; [five execution phases](blender-asset-migration/EXECUTION.md)

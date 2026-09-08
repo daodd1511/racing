@@ -31,6 +31,7 @@ Produces: `AssetId`, `ModuleId`, `AuthoredAsset`, `AuthoredCatalog`, `ModuleTuni
 
 Fresh review: required — export publication and failure paths protect existing authored files and valid exports.
 
+- [ ] Preserve optional `Spec.recoveryBoxes` in `src/assets/types.ts`, `src/assets/parseAuthoredAsset.ts` and `scripts/blender/export.py` as explicit position/rotation/half-extents metadata; capture `RegisteredModule.course.defaults` through `courseParamValues`, without adding boxes to existing baseline Specs.
 - [ ] Create `src/assets/types.ts` and `src/assets/parseAuthoredAsset.ts` per PLAN.md → "Export and authoring contract" and "Shared tuning contract"; represent markers, collider kinds, physical profiles, authored visual IDs, rest geometry and control bindings as strict plain data.
 - [ ] Add `scripts/assets/captureBaseline.ts`, `assets/baseline/` and `src/config/module-settings.json`; extract `courseParamValues`, each current Module's `buildSpec`, `buildStartSpec`, `buildFinishSpec`, marble styles and `raceVisibleSpec` visual adjustments without editing their existing generators.
 - [ ] Add `tsx` as a development dependency in `package.json` and update `pnpm-lock.yaml`; provide `assets:capture` as `tsx scripts/assets/captureBaseline.ts` and record capture provenance in `assets/baseline/README.md`.
@@ -99,6 +100,7 @@ Produces: existing `BoardSpec` from `src/course/types.ts`; `parseModuleSettings(
 
 Fresh review: not required
 
+- [ ] In `src/assets/buildAuthoredSpec.ts`, preserve/deform optional recovery boxes alongside authored geometry and keep `RegisteredModule.course.defaults` as the Course defaults source; reject unsupported deformation rather than changing recovery semantics.
 - [ ] Create `src/assets/tuning/{chute,pinField,staircase,whoops}.ts` and extend `src/assets/buildAuthoredSpec.ts` with every agreed control; transform saved rest parts and collider frames together, preserve baseline identity, and use explicit authored repeat/deformation bindings per PLAN.md → "Shared tuning contract".
 - [ ] Create `src/assets/settings.ts` with strict parsing, saved defaults and existing ranges extended to include current Course settings; create `src/assets/validateCourseSettings.ts` to reject unusable dimensions/connections through the actual Assembler without running a race simulation.
 - [ ] Update `src/course/{assembleCourse,board,courseModules,occupancy}.ts` to derive Board dimensions from configured Specs, preserve seeded inventory ordering and regenerate placement, Cells, connectors, checkpoints and routes for shared settings; eliminate hidden Course-specific parameter overrides for authored assets.

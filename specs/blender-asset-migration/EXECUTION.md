@@ -13,15 +13,16 @@ If initialization reports remote unavailability, apply the rulebook's sequential
 ## STATUS
 
 - Priority: next — runtime-module-foundations completed and merged on 2026-09-08; Phase 1 started on 2026-09-08.
-- Current phase: 2 — done
+- Current phase: 3 — done
 - Phase 1 — Extract and export authored assets: done
 - Phase 2 — Load unchanged assets alongside the baseline: done
-- Phase 3 — Tune all Modules and reassemble the Course: pending
+- Phase 3 — Tune all Modules and reassemble the Course: done
 - Phase 4 — Tune and save from development views: pending
 - Phase 5 — Promote reviewed assets and retire the old path: pending
 - Verification debt: none
-- Phase 2 checkpoint: implementation and phase gate passed on 2026-09-08 (18 files, 67 tests); browser checks exercised the authored Course and all four Showcase Module selectors. Fresh review remains not required after actual-diff assessment. You explicitly authorized local commits on 2026-09-08. Runtime and comparison changes are committed in `c4af673` and `bc08a22`; this completion record is the third Phase 2 commit. All eight new files are included, and all Phase 2 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. No push or PR.
-- Phase 1 checkpoint: implementation and phase gate passed; fresh re-review found no remaining actionable findings. User explicitly authorized local commits on 2026-09-08. Three local commits record implementation and completion; no push or PR. All new Phase 1 files are committed. Pre-existing edits in other spec documents remain outside these commits.
+- Phase 3 checkpoint: the complete phase gate passed after two fresh-review marker corrections on 2026-09-08 (25 files, 122 tests; 37.37 seconds). The single fresh re-review found no remaining actionable findings. Implementation is committed in `61f994f` and `f4e7fc0`; this completion record is the third Phase 3 commit. All nine new files appear in branch commits; Phase 3 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. No Phase 3 push or PR.
+- Phase 2 checkpoint: implementation and phase gate passed on 2026-09-08 (18 files, 67 tests); browser checks exercised the authored Course and all four Showcase Module selectors. Fresh review remains not required after actual-diff assessment. You explicitly authorized local commits on 2026-09-08. Runtime and comparison changes are committed in `c4af673` and `bc08a22`; this completion record is the third Phase 2 commit. All eight new files are included, and all Phase 2 implementation files are clean. Pre-existing unrelated spec edits remain uncommitted. Published as PR #29 on 2026-09-08.
+- Phase 1 checkpoint: implementation and phase gate passed; fresh re-review found no remaining actionable findings. User explicitly authorized local commits on 2026-09-08. Three commits record implementation and completion; published as PR #28 on 2026-09-08. All new Phase 1 files are committed. Pre-existing edits in other spec documents remain outside these commits.
 
 ## Phase 1 — Extract and export authored assets
 
@@ -118,20 +119,35 @@ Build one pure geometry transformation path before exposing editing and persiste
 Consumes: `buildAuthoredSpec(asset: AuthoredAsset, tuning: ModuleTuning): Spec`, `loadAuthoredCatalog(): AuthoredCatalog`, `ModuleSettings` and `CourseAssemblyOptions`.
 Produces: existing `BoardSpec` from `src/course/types.ts`; `parseModuleSettings(value: unknown): ModuleSettings`; `loadSavedModuleSettings(): ModuleSettings`; `validateCourseSettings(settings: ModuleSettings): void`; `CourseAssemblyOptions.settings?: ModuleSettings`; `buildBoard(specs: readonly Spec[]): BoardSpec`.
 
-Fresh review: not required
+Fresh review: required — the combined mesh deformation, repetition and placement diff warrants an independent geometry/ownership review.
 
-- [ ] In `src/assets/buildAuthoredSpec.ts`, preserve/deform optional recovery boxes alongside authored geometry and keep `RegisteredModule.course.defaults` as the Course defaults source; reject unsupported deformation rather than changing recovery semantics.
-- [ ] Create `src/assets/tuning/{chute,pinField,staircase,whoops}.ts` and extend `src/assets/buildAuthoredSpec.ts` with every agreed control; transform saved rest parts and collider frames together, preserve baseline identity, and use explicit authored repeat/deformation bindings per PLAN.md → "Shared tuning contract".
-- [ ] Create `src/assets/settings.ts` with strict parsing, saved defaults and existing ranges extended to include current Course settings; create `src/assets/validateCourseSettings.ts` to reject unusable dimensions/connections through the actual Assembler without running a race simulation.
-- [ ] Update `src/course/{assembleCourse,board,courseModules,occupancy}.ts` to derive Board dimensions from configured Specs, preserve seeded inventory ordering and regenerate placement, Cells, connectors, checkpoints and routes for shared settings; eliminate hidden Course-specific parameter overrides for authored assets.
-- [ ] Preserve compatibility for existing `BOARD`/`assembleCourse(seed)` consumers while introducing `buildBoard(specs)` and optional settings; ensure settings validation does not recursively call itself through assembly.
-- [ ] Update `src/assets/authoredRegistry.ts`, `src/validator/{validateModule,validateCourse}.ts` and `src/showcase/registry.ts` so the same asset-derived Spec and settings reach isolated and complete-Course consumers.
-- [ ] Extend `src/assets/buildAuthoredSpec.test.ts` for representative geometry/collider/anchor alignment across all four adapters and adapt `src/course/{assembleCourse,board,occupancy}.test.ts` for changed dimensions and rejected overlaps; do not add statistical acceptance sweeps.
+- [x] In `src/assets/buildAuthoredSpec.ts`, preserve/deform optional recovery boxes alongside authored geometry and keep `RegisteredModule.course.defaults` as the Course defaults source; reject unsupported deformation rather than changing recovery semantics.
+- [x] Create `src/assets/tuning/{chute,pinField,staircase,whoops}.ts` and extend `src/assets/buildAuthoredSpec.ts` with every agreed control; transform saved rest parts and collider frames together, preserve baseline identity, and use explicit authored repeat/deformation bindings per PLAN.md → "Shared tuning contract".
+- [x] Create `src/assets/settings.ts` with strict parsing, saved defaults and existing ranges extended to include current Course settings; create `src/assets/validateCourseSettings.ts` to reject unusable dimensions/connections through the actual Assembler without running a race simulation.
+- [x] Update `src/course/{assembleCourse,board,courseModules,occupancy}.ts` to derive Board dimensions from configured Specs, preserve seeded inventory ordering and regenerate placement, Cells, connectors, checkpoints and routes for shared settings; eliminate hidden Course-specific parameter overrides for authored assets.
+- [x] Preserve compatibility for existing `BOARD`/`assembleCourse(seed)` consumers while introducing `buildBoard(specs)` and optional settings; ensure settings validation does not recursively call itself through assembly.
+- [x] Update `src/assets/authoredRegistry.ts`, `src/validator/{validateModule,validateCourse}.ts` and `src/showcase/registry.ts` so the same asset-derived Spec and settings reach isolated and complete-Course consumers.
+- [x] Extend `src/assets/buildAuthoredSpec.test.ts` for representative geometry/collider/anchor alignment across all four adapters and adapt `src/course/{assembleCourse,board,occupancy}.test.ts` for changed dimensions and rejected overlaps; do not add statistical acceptance sweeps.
+
+- [x] (amended 2026-09-08) Add `src/assets/tuning/transfer.ts` and extend `src/assets/render/AuthoredVisuals.tsx` plus `src/modules/types.ts` to render transformed saved mesh geometry with explicit replacement ownership; verify cleanup in `src/assets/render/AuthoredVisuals.test.tsx`.
+- [x] (amended 2026-09-08) Add `src/assets/settings.test.ts` for strict controls, saved settings isolation and Assembler preflight rejection.
+
+- [x] (amended 2026-09-08) Route `src/showcase/Showcase.tsx` through the authored entry exported by `src/showcase/registry.ts`.
+
+- [x] (amended 2026-09-08) Preserve GLB attributes for affine tuning in `src/assets/tuning/transfer.ts`, `src/modules/types.ts` and `src/assets/render/AuthoredVisuals.tsx`; clone/deform cached geometry and dispose only the clone. Retain the structured Whoops strip path for topology changes.
+- [x] (amended 2026-09-08) Document shared tuning APIs, geometry-only validation and supported authored structure in `docs/blender-authoring.md`.
+
+- [x] (amended 2026-09-08) Correct `src/assets/tuning/{transfer,chute,pinField,staircase,whoops}.ts` after fresh review: retain the saved Staircase terminal marker through repetition changes and apply shared control transforms to route/Anchor offsets. Add saved-marker and geometry alignment regressions to `src/assets/buildAuthoredSpec.test.ts`.
+- [x] (amended 2026-09-08) Rerun the complete Phase 3 gate and one fresh re-review after the two marker corrections. TypeScript and all actual related tests passed (25 files, 122 tests; 37.37 seconds); re-review found no remaining actionable findings.
 
 **Phase gate (hard):**
 
-- [ ] `./node_modules/.bin/tsc -b`
-- [ ] `./node_modules/.bin/vitest related --run <changed-source-files>` — resolve arguments from the actual phase diff.
+- [x] `./node_modules/.bin/tsc -b` — passed 2026-09-08
+- [x] `./node_modules/.bin/vitest related --run <changed-source-files>` — actual 25-file source diff; passed 2026-09-08: 25 files, 115 tests (46.12 seconds).
+
+**Completion checkpoint:**
+
+- [x] Resolve the required fresh review, commit the verified Phase 3 changes in logical groups and check that every new file appears in branch commits. Both findings are corrected; re-review is clear. All nine new files appear in the two implementation commits; this completion record is the remaining phase-owned change.
 
 **Review checklist (user, at PR review):**
 

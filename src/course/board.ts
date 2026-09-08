@@ -1,18 +1,25 @@
 import { ALL_MODULES } from "../modules/registry";
-import type { Role, Spec } from "../modules/types";
+import type { Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Vector3 } from "../race/types";
-import { ARC, COURSE_OBSTACLE_INVENTORY, enumerateRoleSelections, type RoleSelection } from "./arc";
+import { ARC } from "./arc";
 import { CONNECTOR_EDGE_CLEARANCE, HAIRPIN_REACH_PER_DROP } from "./connectors";
-import { COURSE_MODULES, courseModulesByRole, courseParamValues } from "./courseModules";
+import { courseParamValues } from "./courseModules";
 import { buildFinishSpec, buildStartSpec } from "./startFinish";
 import type { BoardSpec } from "./types";
 
 const SLOT_COLUMNS = 8;
 const SLOT_ROWS = 3;
-const CONNECTOR_MARGIN_CELLS = 2;
+const connectorMargin = 2 * SCALE.cellPitch;
 const SAME_ROW_CONNECTOR_DROP = SCALE.cellPitch / 2;
-const ROLES: readonly Role[] = ["accel", "scatter", "shuffle", "sort"];
+
+function roundUpToCell(value: number): number {
+  // Blender saves float32 frames; sub-micrometer roundoff must not add a whole Cell.
+  return Math.ceil(value / SCALE.cellPitch - 1e-5) * SCALE.cellPitch;
+}
+function vector(x: number, y: number, z: number): Vector3 {
+  return Object.freeze([x, y, z]);
+}
 
 interface ProjectedSize {
   readonly travel: number;
@@ -23,8 +30,6 @@ interface ProjectedSize {
   readonly exitDrop: number;
 }
 
-const projectedSizeCache = new Map<string, ProjectedSize>();
-
 function finiteSpan(min: number, max: number, moduleId: string, axis: string): number {
   if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) {
     throw new Error(`Module ${moduleId} has invalid default ${axis} bounds`);
@@ -34,6 +39,8 @@ function finiteSpan(min: number, max: number, moduleId: string, axis: string): n
 
 function projectedSpecSize(spec: Spec, id: string): ProjectedSize {
   const { min, max } = spec.footprint.bounds;
+  if (![...spec.footprint.entry.position, ...spec.footprint.exit.position].every(Number.isFinite))
+    throw new Error(`Module ${id} has non-finite Anchors`);
   return Object.freeze({
     travel: finiteSpan(min[2], max[2], id, "travel"),
     vertical: finiteSpan(min[1], max[1], id, "vertical"),
@@ -44,136 +51,73 @@ function projectedSpecSize(spec: Spec, id: string): ProjectedSize {
   });
 }
 
-function projectedDefaultSize(moduleId: string): ProjectedSize {
-  const cached = projectedSizeCache.get(moduleId);
-  if (cached) {
-    return cached;
-  }
-  const module = ALL_MODULES.find((candidate) => candidate.id === moduleId);
-  if (!module) {
-    throw new Error(`Unknown Module ${moduleId}`);
-  }
-
-  const size = projectedSpecSize(module.buildSpec(courseParamValues(module)), module.id);
-  projectedSizeCache.set(moduleId, size);
-  return size;
-}
-
-function roundUpToCell(value: number): number {
-  return Math.ceil(value / SCALE.cellPitch) * SCALE.cellPitch;
-}
-
-function vector(x: number, y: number, z: number): Vector3 {
-  return Object.freeze([x, y, z]);
-}
-
-const roleMaxima = new Map<Role, ProjectedSize>();
-for (const role of ROLES) {
-  const modules = courseModulesByRole(role);
-  if (modules.length === 0) {
-    throw new Error(`Role ${role} has no registered Module`);
-  }
-
-  roleMaxima.set(
-    role,
-    Object.freeze({
-      travel: Math.max(...modules.map((module) => projectedDefaultSize(module.id).travel)),
-      vertical: Math.max(...modules.map((module) => projectedDefaultSize(module.id).vertical)),
-      depth: Math.max(...modules.map((module) => projectedDefaultSize(module.id).depth)),
-      minYFromEntry: Math.min(
-        ...modules.map((module) => projectedDefaultSize(module.id).minYFromEntry),
-      ),
-      maxYFromEntry: Math.max(
-        ...modules.map((module) => projectedDefaultSize(module.id).maxYFromEntry),
-      ),
-      exitDrop: Math.max(...modules.map((module) => projectedDefaultSize(module.id).exitDrop)),
-    }),
+/** Specs follow the Arc's slot order, including Start and Finish. */
+export function buildBoard(specs: readonly Spec[]): BoardSpec {
+  if (specs.length !== ARC.length)
+    throw new Error(`Board needs ${ARC.length} configured Slot Specs`);
+  const sizes = specs.map((spec, index) => projectedSpecSize(spec, `slot-${index}`));
+  const modules = sizes.filter((_, i) => ARC[i].kind === "module");
+  const obstacles = sizes.filter(
+    (_, i) => ARC[i].kind === "module" && ARC[i].fixedModuleId !== "chute",
   );
-}
-
-const startSize = projectedSpecSize(buildStartSpec(), "Start");
-const finishSize = projectedSpecSize(buildFinishSpec(), "Finish");
-const obstacleSizes = [...new Set(COURSE_OBSTACLE_INVENTORY)].map(projectedDefaultSize);
-const obstacleMaximum: ProjectedSize = Object.freeze({
-  travel: Math.max(...obstacleSizes.map(({ travel }) => travel)),
-  vertical: Math.max(...obstacleSizes.map(({ vertical }) => vertical)),
-  depth: Math.max(...obstacleSizes.map(({ depth }) => depth)),
-  minYFromEntry: Math.min(...obstacleSizes.map(({ minYFromEntry }) => minYFromEntry)),
-  maxYFromEntry: Math.max(...obstacleSizes.map(({ maxYFromEntry }) => maxYFromEntry)),
-  exitDrop: Math.max(...obstacleSizes.map(({ exitDrop }) => exitDrop)),
-});
-
-function slotSize(slot: (typeof ARC)[number], selection: RoleSelection): ProjectedSize {
-  if (slot.kind !== "module") {
-    return slot.kind === "start" ? startSize : finishSize;
-  }
-  if (slot.fixedModuleId !== "chute") {
-    return obstacleMaximum;
-  }
-  return projectedDefaultSize(slot.fixedModuleId ?? selection[slot.role]);
-}
-
-function maximumRowSpan(): number {
-  let maximum = 0;
-  for (const selection of enumerateRoleSelections()) {
-    for (let row = 0; row < SLOT_ROWS; row += 1) {
-      let entryY = 0;
-      let minY = Infinity;
-      let maxY = -Infinity;
-      for (const slot of ARC.filter((candidate) => candidate.row === row)) {
-        const size = slotSize(slot, selection);
-        minY = Math.min(minY, entryY + size.minYFromEntry);
-        maxY = Math.max(maxY, entryY + size.maxYFromEntry);
-        entryY -= size.exitDrop + SAME_ROW_CONNECTOR_DROP;
-      }
-      maximum = Math.max(maximum, maxY - minY);
+  const obstacleMaximum: ProjectedSize = {
+    travel: Math.max(...obstacles.map((size) => size.travel)),
+    vertical: Math.max(...obstacles.map((size) => size.vertical)),
+    depth: Math.max(...obstacles.map((size) => size.depth)),
+    minYFromEntry: Math.min(...obstacles.map((size) => size.minYFromEntry)),
+    maxYFromEntry: Math.max(...obstacles.map((size) => size.maxYFromEntry)),
+    exitDrop: Math.max(...obstacles.map((size) => size.exitDrop)),
+  };
+  let rowSpan = 0;
+  for (let row = 0; row < SLOT_ROWS; row++) {
+    let entryY = 0,
+      minY = Infinity,
+      maxY = -Infinity;
+    for (const slot of ARC.filter((item) => item.row === row)) {
+      const size =
+        slot.kind === "module" && slot.fixedModuleId !== "chute"
+          ? obstacleMaximum
+          : sizes[slot.slotIndex];
+      minY = Math.min(minY, entryY + size.minYFromEntry);
+      maxY = Math.max(maxY, entryY + size.maxYFromEntry);
+      entryY -= size.exitDrop + SAME_ROW_CONNECTOR_DROP;
     }
+    rowSpan = Math.max(rowSpan, maxY - minY);
   }
-  return maximum;
+  const bayWidth =
+    roundUpToCell(Math.max(...modules.map((size) => size.travel))) + connectorMargin * 2;
+  const bayHeight = roundUpToCell(rowSpan) + connectorMargin * 2;
+  const maximumDrop = Math.max(...sizes.map((size) => size.exitDrop));
+  const edgeMargin = roundUpToCell(
+    CONNECTOR_EDGE_CLEARANCE +
+      HAIRPIN_REACH_PER_DROP * bayHeight * 2 +
+      maximumDrop +
+      bayHeight / 2 +
+      SCALE.marbleRadius * 2,
+  );
+  const width = SLOT_COLUMNS * bayWidth + edgeMargin * 2;
+  const height = SLOT_ROWS * bayHeight + edgeMargin * 2;
+  const depth = roundUpToCell(Math.max(...modules.map((size) => size.depth))) + edgeMargin * 2;
+  return Object.freeze({
+    columns: SLOT_COLUMNS,
+    rows: SLOT_ROWS,
+    cellPitch: SCALE.cellPitch,
+    bayWidth,
+    bayHeight,
+    edgeMargin,
+    bounds: Object.freeze({
+      min: vector(-width / 2, -height / 2, -depth / 2),
+      max: vector(width / 2, height / 2, depth / 2),
+    }),
+  });
 }
 
-const connectorMargin = CONNECTOR_MARGIN_CELLS * SCALE.cellPitch;
-const bayWidth =
-  roundUpToCell(Math.max(...ROLES.map((role) => roleMaxima.get(role)!.travel))) +
-  connectorMargin * 2;
-const bayHeight = roundUpToCell(maximumRowSpan()) + connectorMargin * 2;
-const maximumIncomingEnergyHeight = Math.max(
-  startSize.exitDrop,
-  ...ROLES.map((role) => roleMaxima.get(role)!.exitDrop),
-);
-// A speed-derived rail can project its full height beyond the hairpin
-// centreline when the sloped channel rotates its local up axis.
-const edgeMargin = roundUpToCell(
-  CONNECTOR_EDGE_CLEARANCE +
-    HAIRPIN_REACH_PER_DROP * bayHeight * 2 +
-    maximumIncomingEnergyHeight +
-    bayHeight / 2 +
-    SCALE.marbleRadius * 2,
-);
-const boardWidth = SLOT_COLUMNS * bayWidth + edgeMargin * 2;
-const boardHeight = SLOT_ROWS * bayHeight + edgeMargin * 2;
-const boardDepth =
-  roundUpToCell(Math.max(...ROLES.map((role) => roleMaxima.get(role)!.depth))) + edgeMargin * 2;
-
-for (const module of COURSE_MODULES) {
-  const size = projectedDefaultSize(module.id);
-  if (
-    size.travel > bayWidth - connectorMargin * 2 ||
-    size.vertical > bayHeight - connectorMargin * 2
-  ) {
-    throw new Error(`Module ${module.id} (${module.role}) default bounds do not fit its Board bay`);
-  }
-}
-
-export const BOARD: BoardSpec = Object.freeze({
-  columns: SLOT_COLUMNS,
-  rows: SLOT_ROWS,
-  cellPitch: SCALE.cellPitch,
-  bayWidth,
-  bayHeight,
-  edgeMargin,
-  bounds: Object.freeze({
-    min: vector(-boardWidth / 2, -boardHeight / 2, -boardDepth / 2),
-    max: vector(boardWidth / 2, boardHeight / 2, boardDepth / 2),
+/** Compatibility Board for callers using the original Course defaults. */
+export const BOARD = buildBoard(
+  ARC.map((slot) => {
+    if (slot.kind !== "module") return slot.kind === "start" ? buildStartSpec() : buildFinishSpec();
+    const module = ALL_MODULES.find((entry) => entry.id === slot.fixedModuleId);
+    if (!module) throw new Error(`Unknown Module ${slot.fixedModuleId}`);
+    return module.buildSpec(courseParamValues(module));
   }),
-});
+);

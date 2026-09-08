@@ -69,3 +69,16 @@ describe("rasterizeFootprintCells", () => {
     expect(seam).not.toContainEqual({ column: 2, row: 0 });
   });
 });
+
+it("uses configured Board dimensions and rejects inverted Board bounds", () => {
+  const source = footprint({ min: [0.1, 0.1, 0], max: [0.2, 0.2, 0] });
+  const larger = { ...BOARD, bounds: { min: [0, 0, -1] as const, max: [0.5, 0.4, 1] as const } };
+  const cells = rasterizeFootprintCells(source, larger);
+  expect(cells.map((cell) => cell.row)).toContain(3);
+  expect(() =>
+    rasterizeFootprintCells(source, {
+      ...larger,
+      bounds: { min: larger.bounds.max, max: larger.bounds.min },
+    }),
+  ).toThrow("positive dimensions");
+});

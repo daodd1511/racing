@@ -32,3 +32,41 @@ describe("BOARD", () => {
     expect(vertical).toBeLessThan(BOARD.bayHeight);
   });
 });
+
+it("derives Board dimensions from configured Specs and rejects incomplete/invalid input", async () => {
+  const { ARC } = await import("./arc");
+  const { buildBoard } = await import("./board");
+  const { courseParamValues } = await import("./courseModules");
+  const { buildStartSpec, buildFinishSpec } = await import("./startFinish");
+  const specs = ARC.map((slot) => {
+    if (slot.kind !== "module") return slot.kind === "start" ? buildStartSpec() : buildFinishSpec();
+    const module = ALL_MODULES.find((entry) => entry.id === slot.fixedModuleId)!;
+    return module.buildSpec(courseParamValues(module));
+  });
+  expect(buildBoard(specs)).toEqual(BOARD);
+  const wider = specs.map((spec) => ({
+    ...spec,
+    footprint: {
+      ...spec.footprint,
+      bounds: {
+        ...spec.footprint.bounds,
+        max: [
+          spec.footprint.bounds.max[0],
+          spec.footprint.bounds.max[1],
+          spec.footprint.bounds.max[2] + 1,
+        ] as const,
+      },
+    },
+  }));
+  expect(buildBoard(wider).bayWidth).toBeGreaterThan(BOARD.bayWidth);
+  expect(() => buildBoard([])).toThrow("Slot Specs");
+  const invalid = [...specs];
+  invalid[1] = {
+    ...specs[1],
+    footprint: {
+      ...specs[1].footprint,
+      entry: { ...specs[1].footprint.entry, position: [0, Number.NaN, 0] },
+    },
+  };
+  expect(() => buildBoard(invalid)).toThrow("non-finite Anchors");
+});

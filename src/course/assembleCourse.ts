@@ -3,13 +3,15 @@ import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 import { authoredModule } from "../assets/authoredRegistry";
 import { loadAuthoredAsset } from "../assets/catalog";
 import { buildAuthoredSpec } from "../assets/buildAuthoredSpec";
+import { loadSavedModuleSettings, parseModuleSettings } from "../assets/settings";
+import type { ModuleSettings } from "../assets/types";
 import type { ParamValues } from "../modules/params";
 import { ALL_MODULES } from "../modules/registry";
 import type { Anchor, Cell, ColliderSpec, Role, Spec } from "../modules/types";
 import { SCALE } from "../race/scale";
 import type { Quaternion, Vector3 } from "../race/types";
 import { randomizedArc, selectRoleModules, type RoleSelection } from "./arc";
-import { BOARD } from "./board";
+import { BOARD, buildBoard } from "./board";
 import { buildCourseConnector } from "./connectors";
 import { courseParamValues } from "./courseModules";
 import {
@@ -21,6 +23,7 @@ import { buildFinishSpec, buildStartSpec } from "./startFinish";
 import { transformSpec } from "./transformSpec";
 import type {
   ArcSlot,
+  BoardSpec,
   Course,
   CourseCheckpoint,
   CourseConnector,
@@ -30,6 +33,7 @@ import type {
 
 export interface CourseAssemblyOptions {
   readonly source?: "legacy" | "authored";
+  readonly settings?: ModuleSettings;
 }
 
 const SLOT_PADDING = SCALE.cellPitch * 2;
@@ -87,19 +91,19 @@ function localSpecForSlot(
   if (!module || module.role !== slot.role) {
     throw new Error(`Module ${moduleId} does not satisfy Slot ${slot.slotIndex} Role ${slot.role}`);
   }
-  const params = courseParamValues(module);
+  const params = courseParamValues(module, options.settings);
   return { slot, localSpec: module.buildSpec(params), moduleId, role: module.role, params };
 }
 
-function horizontalPlacement(slot: ArcSlot, localSpec: Spec): CoursePlacement {
+function horizontalPlacement(slot: ArcSlot, localSpec: Spec, board: BoardSpec): CoursePlacement {
   const rotation = yaw(slot.direction);
   const rotated = transformSpec(
     localSpec,
     { position: [0, 0, 0], rotation },
     `probe-${slot.slotIndex}`,
   );
-  const bayMin = BOARD.bounds.min[0] + BOARD.edgeMargin + slot.column * BOARD.bayWidth;
-  const bayMax = bayMin + BOARD.bayWidth;
+  const bayMin = board.bounds.min[0] + board.edgeMargin + slot.column * board.bayWidth;
+  const bayMax = bayMin + board.bayWidth;
   const x =
     slot.direction === "right"
       ? bayMin + SLOT_PADDING - rotated.footprint.bounds.min[0]
@@ -109,20 +113,18 @@ function horizontalPlacement(slot: ArcSlot, localSpec: Spec): CoursePlacement {
 }
 
 function placeRows(
-  seed: number,
-  selection: RoleSelection,
-  options: CourseAssemblyOptions,
+  drafts: readonly Omit<SlotDraft, "placement">[],
+  board: BoardSpec,
 ): readonly PlacedSlot[] {
   const placed: PlacedSlot[] = [];
-  const arc = randomizedArc(seed);
 
-  for (let row = 0; row < BOARD.rows; row += 1) {
+  for (let row = 0; row < board.rows; row += 1) {
     const rowDrafts: SlotDraft[] = [];
     let previousExitY: number | undefined;
 
-    for (const slot of arc.filter((candidate) => candidate.row === row)) {
-      const draft = localSpecForSlot(slot, selection, options);
-      const horizontal = horizontalPlacement(slot, draft.localSpec);
+    for (const draft of drafts.filter((candidate) => candidate.slot.row === row)) {
+      const { slot } = draft;
+      const horizontal = horizontalPlacement(slot, draft.localSpec, board);
       const rotated = transformSpec(
         draft.localSpec,
         horizontal,
@@ -148,11 +150,11 @@ function placeRows(
     );
     const unionMin = Math.min(...provisional.map(({ footprint }) => footprint.bounds.min[1]));
     const unionMax = Math.max(...provisional.map(({ footprint }) => footprint.bounds.max[1]));
-    const rowTop = BOARD.bounds.max[1] - BOARD.edgeMargin - row * BOARD.bayHeight;
-    const rowBottom = rowTop - BOARD.bayHeight;
-    if (unionMax - unionMin > BOARD.bayHeight - SLOT_PADDING * 2 + EPSILON) {
+    const rowTop = board.bounds.max[1] - board.edgeMargin - row * board.bayHeight;
+    const rowBottom = rowTop - board.bayHeight;
+    if (unionMax - unionMin > board.bayHeight - SLOT_PADDING * 2 + EPSILON) {
       throw new Error(
-        `Course row ${row} does not fit its Board bays: span=${unionMax - unionMin}, usable=${BOARD.bayHeight - SLOT_PADDING * 2}`,
+        `Course row ${row} does not fit its Board bays: span=${unionMax - unionMin}, usable=${board.bayHeight - SLOT_PADDING * 2}`,
       );
     }
     const rowShift = (rowTop + rowBottom) / 2 - (unionMin + unionMax) / 2;
@@ -167,7 +169,7 @@ function placeRows(
         ],
       };
       const transformed = transformSpec(draft.localSpec, placement, `slot-${draft.slot.slotIndex}`);
-      const cells = rasterizeFootprintCells(transformed.footprint, BOARD);
+      const cells = rasterizeFootprintCells(transformed.footprint, board);
       placed.push({
         ...draft,
         placement,
@@ -188,7 +190,7 @@ function estimateIncomingSpeed(spec: Spec): number {
   return Math.sqrt(2 * Math.hypot(...SCALE.gravity) * drop);
 }
 
-function connectorWithCells(spec: Spec, id: string): Spec {
+function connectorWithCells(spec: Spec, id: string, board: BoardSpec): Spec {
   try {
     const occupancyColliders: readonly ColliderSpec[] = spec.colliders.every(
       ({ shape }) => shape.kind === "cuboid",
@@ -207,7 +209,7 @@ function connectorWithCells(spec: Spec, id: string): Spec {
               ]
             : [],
         );
-    const cells = rasterizeCuboidCells(occupancyColliders, spec.footprint, BOARD);
+    const cells = rasterizeCuboidCells(occupancyColliders, spec.footprint, board);
     return { ...spec, footprint: { ...spec.footprint, cells } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -215,7 +217,10 @@ function connectorWithCells(spec: Spec, id: string): Spec {
   }
 }
 
-function buildConnectors(slots: readonly PlacedSlot[]): readonly CourseConnector[] {
+function buildConnectors(
+  slots: readonly PlacedSlot[],
+  board: BoardSpec,
+): readonly CourseConnector[] {
   return slots.slice(0, -1).map((from, index) => {
     const to = slots[index + 1];
     const connector = buildCourseConnector({
@@ -227,7 +232,7 @@ function buildConnectors(slots: readonly PlacedSlot[]): readonly CourseConnector
       incomingSpeed: estimateIncomingSpeed(from.spec),
       speedGovernor: from.slot.row !== to.slot.row,
     });
-    return { ...connector, spec: connectorWithCells(connector.spec, connector.id) };
+    return { ...connector, spec: connectorWithCells(connector.spec, connector.id, board) };
   });
 }
 
@@ -235,9 +240,9 @@ function cellKey(cell: Cell): string {
   return `${cell.row}:${cell.column}`;
 }
 
-function anchorSeamCells(anchor: Anchor): ReadonlySet<string> {
+function anchorSeamCells(anchor: Anchor, board: BoardSpec): ReadonlySet<string> {
   return new Set(
-    rasterizeAnchorSeamCells(anchor, BOARD, SCALE.marbleRadius, SCALE.marbleRadius * 2).map(
+    rasterizeAnchorSeamCells(anchor, board, SCALE.marbleRadius, SCALE.marbleRadius * 2).map(
       cellKey,
     ),
   );
@@ -280,14 +285,14 @@ function assertUniqueIds(elements: readonly CourseElement[]): void {
   }
 }
 
-function assertModuleFitsBay(slot: PlacedSlot): void {
+function assertModuleFitsBay(slot: PlacedSlot, board: BoardSpec): void {
   if (slot.slot.kind !== "module") {
     return;
   }
-  const bayMinX = BOARD.bounds.min[0] + BOARD.edgeMargin + slot.slot.column * BOARD.bayWidth;
-  const bayMaxX = bayMinX + BOARD.bayWidth;
-  const bayMaxY = BOARD.bounds.max[1] - BOARD.edgeMargin - slot.slot.row * BOARD.bayHeight;
-  const bayMinY = bayMaxY - BOARD.bayHeight;
+  const bayMinX = board.bounds.min[0] + board.edgeMargin + slot.slot.column * board.bayWidth;
+  const bayMaxX = bayMinX + board.bayWidth;
+  const bayMaxY = board.bounds.max[1] - board.edgeMargin - slot.slot.row * board.bayHeight;
+  const bayMinY = bayMaxY - board.bayHeight;
   const bounds = slot.spec.footprint.bounds;
   if (
     bounds.min[0] < bayMinX - EPSILON ||
@@ -301,7 +306,7 @@ function assertModuleFitsBay(slot: PlacedSlot): void {
   }
 }
 
-function assertCellOverlap(elements: readonly CourseElement[]): void {
+function assertCellOverlap(elements: readonly CourseElement[], board: BoardSpec): void {
   for (let leftIndex = 0; leftIndex < elements.length; leftIndex += 1) {
     const left = elements[leftIndex];
     const leftCells = new Set(left.spec.footprint.cells.map(cellKey));
@@ -311,7 +316,7 @@ function assertCellOverlap(elements: readonly CourseElement[]): void {
       if (overlap.length === 0) {
         continue;
       }
-      const seam = anchorSeamCells(left.spec.footprint.exit);
+      const seam = anchorSeamCells(left.spec.footprint.exit, board);
       const sameSlotNeighborhood = right.fromSlotIndex <= left.toSlotIndex;
       const consecutiveHasSeam =
         rightIndex !== leftIndex + 1 || overlap.some((key) => seam.has(key));
@@ -369,8 +374,19 @@ export function assembleCourseFromRoleSelection(
   selection: RoleSelection,
   options: CourseAssemblyOptions = {},
 ): Course {
-  const slots = placeRows(seed, selection, options);
-  const connectors = buildConnectors(slots);
+  if (options.settings && options.source === "legacy")
+    throw new Error("Shared Module settings require authored assets");
+  const source = options.source ?? (options.settings ? "authored" : "legacy");
+  const settings =
+    source === "authored"
+      ? parseModuleSettings(options.settings ?? loadSavedModuleSettings())
+      : undefined;
+  const drafts = randomizedArc(seed).map((slot) =>
+    localSpecForSlot(slot, selection, { source, settings }),
+  );
+  const board = source === "authored" ? buildBoard(drafts.map((draft) => draft.localSpec)) : BOARD;
+  const slots = placeRows(drafts, board);
+  const connectors = buildConnectors(slots, board);
   const elements = interleaveElements(slots, connectors);
 
   elements.forEach((element, index) => {
@@ -379,9 +395,9 @@ export function assembleCourseFromRoleSelection(
       assertConnected(elements[index - 1], element);
     }
   });
-  slots.forEach(assertModuleFitsBay);
+  slots.forEach((slot) => assertModuleFitsBay(slot, board));
   assertUniqueIds(elements);
-  assertCellOverlap(elements);
+  assertCellOverlap(elements, board);
 
   const route: Vector3[] = [];
   const checkpoints: CourseCheckpoint[] = [];
@@ -418,7 +434,7 @@ export function assembleCourseFromRoleSelection(
 
   return deepFreeze({
     seed,
-    board: BOARD,
+    board,
     modules,
     connectors,
     route,

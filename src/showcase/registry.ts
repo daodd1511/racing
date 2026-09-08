@@ -9,3 +9,6 @@ import { ALL_MODULES, type RegisteredModule } from "../modules/registry";
 export type ShowcaseEntry = RegisteredModule;
 
 export const MODULES: readonly ShowcaseEntry[] = ALL_MODULES;
+
+/** The authored comparison and headless Validator share this configured Module entry. */
+export { authoredModule } from "../assets/authoredRegistry";

@@ -5,7 +5,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { AssetComparison, type ComparisonSource } from "../dev/AssetComparison";
 import { useAuthoredAssets } from "../assets/render/useAuthoredAssets";
-import { authoredModule } from "../assets/authoredRegistry";
 import { courseParamValues } from "../course/courseModules";
 import { ModuleColliders } from "../modules/render/ModuleColliders";
 import { INITIAL_KINEMATIC_CLOCK, KINEMATIC_FIXED_STEP_SECONDS } from "../modules/kinematics";
@@ -16,7 +15,7 @@ import { Feeder, type FeedMode } from "./Feeder";
 import { KinematicClock } from "./KinematicClock";
 import { EMPTY_LIVE_METRICS, MetricsReadout, type LiveMetricsState } from "./MetricsReadout";
 import { defaultParamValues, ParamPanel, type ParamValues } from "./ParamPanel";
-import { MODULES, type ShowcaseEntry } from "./registry";
+import { MODULES, authoredModule, type ShowcaseEntry } from "./registry";
 
 const FEED_MODES: readonly FeedMode[] = ["continuous", "burst15", "single"];
 

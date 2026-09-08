@@ -41,7 +41,7 @@ Unpublished staging directories remain available for diagnosis and are ignored b
   position, rotation and half-extents. Baseline Specs do not acquire recovery boxes.
 - `controls`: named binding objects carry the target part, supported region and
   repeat index where applicable. Preserve those bindings when editing the model.
-  Later runtime adapters consume the exported rest mesh and these bindings.
+  Runtime adapters consume the exported rest mesh and these bindings.
 
 JSON uses meters in the existing game frame: X lateral, Y up, Z longitudinal;
 quaternions use XYZW. Blender stores the equivalent frame as `(x, -z, y)` with
@@ -91,5 +91,34 @@ existing Showcase controls. Changing sources restarts the Showcase physics world
 Authored meshes share immutable cached geometry and materials. Course placement
 and gate motion still come from the same plain-data Spec used by physics.
 The marble visual uses the captured mesh while the game retains its spherical
-collider, radius and Roster stripe identities. Parameter deformation follows in
-Phase 3; non-baseline authored values currently fail explicitly.
+collider, radius and Roster stripe identities.
+
+## Apply shared settings in code
+
+`loadSavedModuleSettings()` reads `src/config/module-settings.json` into an independent,
+validated settings object. Pass settings to `assembleCourse(seed, { settings })` to build
+all authored instances from those values. `assembleCourse(seed)` retains the original
+path during comparison; `{ source: "authored" }` uses the saved settings.
+
+Use `parseModuleSettings(value)` to check the complete control schema, and
+`validateCourseSettings(settings)` for a geometry-only Assembler preflight. Assembly also
+checks each requested seed's placements and connections. Neither function runs a race or
+writes settings. Development apply/save controls arrive in Phase 4.
+
+Tuning transforms saved parts relative to their captured control frames. Baseline values
+return the unchanged saved geometry. Chute supports length, width and grade; Pin field
+supports its existing post dimensions, row count and spacing; Staircase supports tread,
+riser and repetition controls; Whoops supports its sampled wave controls. Ranges retain
+existing limits and include the captured Course values. Pin field rejects combinations
+whose four posts and required rail gaps do not fit.
+
+Affine visual transforms clone GLB geometry, preserving mesh attributes and shared
+materials. Whoops resamples its explicitly bound two-vertex floor strip and retains saved
+offsets; preserve that strip's vertex order and triangle topology when editing it.
+Unsupported primitive shear or nonuniform round-collider scaling reports an error.
+Recovery boxes support Chute's affine frame transformation. Other Modules reject changed
+tuning when recovery boxes lack explicit region bindings; baseline recovery remains intact.
+
+`validateAuthoredModule(id, options, settings)` and the optional assembly settings on
+Course validation use the same authored Specs as rendering. These are simulation APIs;
+use the geometry-only preflight when validating an edit before starting a race.

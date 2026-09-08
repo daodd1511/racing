@@ -30,7 +30,7 @@ export interface SettingsSnapshot {
   readonly settings: ModuleSettings;
 }
 export interface SaveSettingsRequest {
-  readonly revision: string;
+  readonly expectedRevision: string;
   readonly settings: ModuleSettings;
 }
 

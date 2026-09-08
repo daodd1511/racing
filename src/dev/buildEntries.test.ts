@@ -24,3 +24,18 @@ describe("Vite entry pages", () => {
     expect(readEntry("course.html")).toContain('src="/src/dev/coursePreview.tsx"');
   });
 });
+
+it("removes the tuning editor imports from production viewer transforms", async () => {
+  const { transformWithOxc, minify } = await import("vite");
+  for (const path of ["src/dev/coursePreview.tsx", "src/showcase/Showcase.tsx"]) {
+    const source = readFileSync(resolve(process.cwd(), path), "utf8");
+    const transformed = await transformWithOxc(source, path, {
+      define: { "import.meta.env.DEV": "false" },
+    });
+    const output = await minify(path.replace(".tsx", ".js"), transformed.code, { compress: true });
+    expect(output.code).not.toContain('import("./ModuleTuningPanel")');
+    expect(output.code).not.toContain('import("../dev/ModuleTuningPanel")');
+    expect(output.code).not.toContain("moduleSettingsClient");
+    expect(output.code).not.toContain("/__dev/module-settings");
+  }
+});

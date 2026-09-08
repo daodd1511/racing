@@ -1,3 +1,4 @@
+import { moduleSettingsPlugin } from "./scripts/dev/moduleSettingsPlugin.ts";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +11,7 @@ export default defineConfig({
   // repository subpath (https://<owner>.github.io/<repo>/) without hardcoding
   // the repository name here.
   base: "./",
-  plugins: [react()],
+  plugins: [react(), moduleSettingsPlugin()],
   build: {
     outDir: "dist",
     emptyOutDir: true,

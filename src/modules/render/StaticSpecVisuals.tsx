@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 
+import { AuthoredVisuals } from "../../assets/render/AuthoredVisuals";
 import type { Spec } from "../types";
 import { mergeStaticVisualsByMaterial } from "./visualGeometry";
 
@@ -10,13 +11,22 @@ export function StaticSpecVisuals({ specs }: { readonly specs: readonly Spec[] }
     return () => batches.forEach(({ geometry }) => geometry.dispose());
   }, [batches]);
 
-  return batches.map(({ geometry, material }) => (
-    <mesh key={geometry.uuid} geometry={geometry}>
-      <meshStandardMaterial
-        color={material.color}
-        metalness={material.metalness}
-        roughness={material.roughness}
+  return (
+    <>
+      <AuthoredVisuals
+        visuals={specs.flatMap((spec) =>
+          spec.visuals.filter((visual) => visual.authored !== undefined),
+        )}
       />
-    </mesh>
-  ));
+      {batches.map(({ geometry, material }) => (
+        <mesh key={geometry.uuid} geometry={geometry}>
+          <meshStandardMaterial
+            color={material.color}
+            metalness={material.metalness}
+            roughness={material.roughness}
+          />
+        </mesh>
+      ))}
+    </>
+  );
 }

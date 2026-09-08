@@ -42,6 +42,7 @@ export function mergeStaticVisualsByMaterial(specs: readonly Spec[]): readonly S
   >();
   for (const spec of specs) {
     for (const visual of spec.visuals) {
+      if (visual.authored) continue;
       const key = materialKey(visual.material);
       const group = visualsByMaterial.get(key);
       if (group === undefined) {

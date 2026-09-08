@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { loadAuthoredAsset } from "../assets/catalog";
+import { buildAuthoredSpec } from "../assets/buildAuthoredSpec";
 import { chute } from "../modules/chute";
 import type { Quaternion, Vector3 } from "../race/types";
 import { transformSpec } from "./transformSpec";
@@ -58,4 +60,21 @@ it("places recovery boxes independently of geometry and preserves the source", (
   );
   expect(placed.recoveryBoxes![0].halfExtents).toEqual([0.4, 0.2, 0.7]);
   expect(source.recoveryBoxes[0].position).toEqual([0, 0, 1]);
+});
+
+it("places authored mesh frames without changing GLB node or local bindings", () => {
+  const source = buildAuthoredSpec(loadAuthoredAsset("chute"));
+  const position: Vector3 = [1, 2, 3];
+  const placed = transformSpec(source, { position, rotation: YAW_RIGHT }, "authored");
+  placed.visuals.forEach((visual, index) => {
+    const local = source.visuals[index];
+    expect(visual.id).toBe(`authored:${local.id}`);
+    expect(visual.authored).toBe(local.authored);
+    expectVectorClose(visual.position, [
+      position[0] + local.position[2],
+      position[1] + local.position[1],
+      position[2] - local.position[0],
+    ]);
+    expect(visual.shape).toBe(local.shape);
+  });
 });

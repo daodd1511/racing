@@ -131,6 +131,7 @@ function transformVisual(
 ): VisualSpec {
   return {
     ...visual,
+    // The GLB node and local deformation bindings remain asset-local; only the Spec frame moves.
     id: namespacedId(idPrefix, visual.id),
     position: transformPoint(visual.position, placement, rotation),
     rotation: transformRotation(visual.rotation, rotation),

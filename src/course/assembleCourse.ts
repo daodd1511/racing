@@ -1,5 +1,8 @@
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
+import { authoredModule } from "../assets/authoredRegistry";
+import { loadAuthoredAsset } from "../assets/catalog";
+import { buildAuthoredSpec } from "../assets/buildAuthoredSpec";
 import type { ParamValues } from "../modules/params";
 import { ALL_MODULES } from "../modules/registry";
 import type { Anchor, Cell, ColliderSpec, Role, Spec } from "../modules/types";
@@ -24,6 +27,10 @@ import type {
   CoursePlacement,
   PlacedModule,
 } from "./types";
+
+export interface CourseAssemblyOptions {
+  readonly source?: "legacy" | "authored";
+}
 
 const SLOT_PADDING = SCALE.cellPitch * 2;
 const SAME_ROW_CONNECTOR_DROP = SCALE.cellPitch / 2;
@@ -55,16 +62,28 @@ function yaw(direction: ArcSlot["direction"]): Quaternion {
   return [rotation.x, rotation.y, rotation.z, rotation.w];
 }
 
-function localSpecForSlot(slot: ArcSlot, selection: RoleSelection): Omit<SlotDraft, "placement"> {
+function localSpecForSlot(
+  slot: ArcSlot,
+  selection: RoleSelection,
+  options: CourseAssemblyOptions,
+): Omit<SlotDraft, "placement"> {
   if (slot.kind !== "module") {
     return {
       slot,
-      localSpec: slot.kind === "start" ? buildStartSpec() : buildFinishSpec(),
+      localSpec:
+        options.source === "authored"
+          ? buildAuthoredSpec(loadAuthoredAsset(slot.kind))
+          : slot.kind === "start"
+            ? buildStartSpec()
+            : buildFinishSpec(),
     };
   }
 
   const moduleId = slot.fixedModuleId ?? selection[slot.role];
-  const module = ALL_MODULES.find(({ id }) => id === moduleId);
+  const module =
+    options.source === "authored"
+      ? authoredModule(moduleId)
+      : ALL_MODULES.find(({ id }) => id === moduleId);
   if (!module || module.role !== slot.role) {
     throw new Error(`Module ${moduleId} does not satisfy Slot ${slot.slotIndex} Role ${slot.role}`);
   }
@@ -89,7 +108,11 @@ function horizontalPlacement(slot: ArcSlot, localSpec: Spec): CoursePlacement {
   return { position: [x, 0, z], rotation };
 }
 
-function placeRows(seed: number, selection: RoleSelection): readonly PlacedSlot[] {
+function placeRows(
+  seed: number,
+  selection: RoleSelection,
+  options: CourseAssemblyOptions,
+): readonly PlacedSlot[] {
   const placed: PlacedSlot[] = [];
   const arc = randomizedArc(seed);
 
@@ -98,7 +121,7 @@ function placeRows(seed: number, selection: RoleSelection): readonly PlacedSlot[
     let previousExitY: number | undefined;
 
     for (const slot of arc.filter((candidate) => candidate.row === row)) {
-      const draft = localSpecForSlot(slot, selection);
+      const draft = localSpecForSlot(slot, selection, options);
       const horizontal = horizontalPlacement(slot, draft.localSpec);
       const rotated = transformSpec(
         draft.localSpec,
@@ -341,8 +364,12 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-export function assembleCourseFromRoleSelection(seed: number, selection: RoleSelection): Course {
-  const slots = placeRows(seed, selection);
+export function assembleCourseFromRoleSelection(
+  seed: number,
+  selection: RoleSelection,
+  options: CourseAssemblyOptions = {},
+): Course {
+  const slots = placeRows(seed, selection, options);
   const connectors = buildConnectors(slots);
   const elements = interleaveElements(slots, connectors);
 
@@ -403,6 +430,6 @@ export function assembleCourseFromRoleSelection(seed: number, selection: RoleSel
   });
 }
 
-export function assembleCourse(seed: number): Course {
-  return assembleCourseFromRoleSelection(seed, selectRoleModules(seed));
+export function assembleCourse(seed: number, options: CourseAssemblyOptions = {}): Course {
+  return assembleCourseFromRoleSelection(seed, selectRoleModules(seed), options);
 }

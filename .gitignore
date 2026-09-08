@@ -23,3 +23,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Unpublished Blender export staging
+src/assets/authored/.staging-*
+src/assets/authored/.export.lock
+src/assets/authored/.catalog-*.json

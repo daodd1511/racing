@@ -2,7 +2,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { Quaternion as ThreeQuaternion, Vector3 as ThreeVector3 } from "three";
 
 import type { Course } from "../course/types";
-import type { ColliderSpec } from "../modules/types";
+import type { ColliderSpec, RecoveryBox } from "../modules/types";
 import { stepCourse } from "../course/stepCourse";
 import { applyStep } from "../validator/applyStep";
 import { buildCourseWorld, type BuiltCourseWorld } from "../validator/buildCourseWorld";
@@ -17,6 +17,7 @@ import {
   type MarbleRouteProjection,
   type RaceProgressState,
 } from "./progress";
+import { containsRecoveryPoint } from "./recoveryAreas";
 import { SCALE } from "./scale";
 import { assignStartPositions } from "./startAssignment";
 import type { Quaternion, Vector3 } from "./types";
@@ -169,6 +170,7 @@ export interface CourseRaceRuntimeOptions {
 /** Shared fixed-step live runtime. `RAPIER.init()` must complete before constructing it. */
 export class CourseRaceRuntime {
   readonly #course: Course;
+  readonly #recoveryBoxesByCheckpoint = new Map<number, readonly RecoveryBox[]>();
   readonly #built: BuiltCourseWorld;
   readonly #finishSensor: ColliderSpec & {
     readonly shape: { readonly kind: "cuboid"; readonly halfExtents: Vector3 };
@@ -187,6 +189,15 @@ export class CourseRaceRuntime {
     const assignments = assignStartPositions(request.seed, request.roster.length);
     this.#collectContactEvents = options.collectContactEvents ?? true;
     this.#course = course;
+    for (const module of course.modules) {
+      if (!module.spec.recoveryBoxes?.length) continue;
+      const checkpointIndex = course.checkpoints.findIndex(
+        ({ slotIndex }) => slotIndex === module.slotIndex,
+      );
+      if (checkpointIndex < 0)
+        throw new Error(`Module ${module.moduleId} has recovery boxes but no exit checkpoint`);
+      this.#recoveryBoxesByCheckpoint.set(checkpointIndex, module.spec.recoveryBoxes);
+    }
     this.#progress = createRaceProgress(request, course);
     this.#built = buildCourseWorld(course, assignments, this.#collectContactEvents);
     const finishSensor = course.finish.colliders.find(
@@ -314,9 +325,16 @@ export class CourseRaceRuntime {
       let position: Vector3 = [translation.x, translation.y, translation.z];
       let projection = projectMarbleOntoCourse(this.#progress, marbleIndex, position);
       const heightAboveRoute = position[1] - projection.point[1];
+      // A checkpoint is at the Module exit; the next checkpoint identifies
+      // the Module with positive-length overlap in the active route interval.
+      const boxes = this.#recoveryBoxesByCheckpoint.get(
+        this.#progress.passedCheckpoints[marbleIndex] + 1,
+      );
+      const insideArea = boxes !== undefined && containsRecoveryPoint(boxes, position);
       const recovered =
-        projection.distanceSquared > recoveryDistanceSquared ||
-        heightAboveRoute < -BELOW_TRACK_RECOVERY_DISTANCE;
+        !insideArea &&
+        (projection.distanceSquared > recoveryDistanceSquared ||
+          heightAboveRoute < -BELOW_TRACK_RECOVERY_DISTANCE);
 
       if (recovered) {
         const safe = this.#lastSafeTransforms.get(marbleIndex)!;

@@ -39,3 +39,23 @@ describe("transformSpec", () => {
     ).toThrow(/non-zero/);
   });
 });
+
+it("places recovery boxes independently of geometry and preserves the source", () => {
+  const source = {
+    ...chute.buildSpec({ length: 0.6, grade: 0.25, width: 0.5 }),
+    recoveryBoxes: [
+      {
+        position: [0, 0, 1] as const,
+        rotation: [0, 0, 0, 1] as const,
+        halfExtents: [0.4, 0.2, 0.7] as const,
+      },
+    ],
+  };
+  const placed = transformSpec(source, { position: [1, 2, 3], rotation: YAW_RIGHT }, "area");
+  expectVectorClose(placed.recoveryBoxes![0].position, [2, 2, 3]);
+  placed.recoveryBoxes![0].rotation.forEach((value, axis) =>
+    expect(value).toBeCloseTo(YAW_RIGHT[axis], 10),
+  );
+  expect(placed.recoveryBoxes![0].halfExtents).toEqual([0.4, 0.2, 0.7]);
+  expect(source.recoveryBoxes[0].position).toEqual([0, 0, 1]);
+});

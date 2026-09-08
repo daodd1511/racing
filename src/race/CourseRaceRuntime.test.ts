@@ -95,3 +95,55 @@ it("retains unread step snapshots after later steps and world disposal", () => {
   expect(retained.snapshot).toEqual(expected);
   expect(retained.snapshot).toBe(retained.snapshot);
 });
+
+it("uses only the active Module recovery area and resumes recovery after leaving it", () => {
+  const base = courseWithoutTrack(assembleCourse(11));
+  const request = { seed: 11, roster: ["A"], selectionMode: "last" as const };
+  const probe = new CourseRaceRuntime(base, request);
+  const initial = probe.currentSnapshot.marbleTransforms[0].position;
+  probe.dispose();
+  const withArea = (slotIndex: number, halfHeight: number): Course => ({
+    ...base,
+    modules: [
+      {
+        ...base.modules[0],
+        slotIndex,
+        spec: {
+          ...base.modules[0].spec,
+          recoveryBoxes: [
+            {
+              position: initial,
+              rotation: [0, 0, 0, 1],
+              halfExtents: [2, halfHeight, 2],
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const active = new CourseRaceRuntime(withArea(base.checkpoints[0].slotIndex, 2), request);
+  const unrelated = new CourseRaceRuntime(withArea(base.checkpoints[3].slotIndex, 2), request);
+  const limited = new CourseRaceRuntime(withArea(base.checkpoints[0].slotIndex, 0.5), request);
+  let activeRecoveries = 0;
+  let unrelatedRecoveries = 0;
+  let limitedRecovery: CourseRaceStep | undefined;
+  try {
+    for (let index = 1; index <= 30; index++) {
+      activeRecoveries += active.step(index / 60).recoveredMarbleIndices.length;
+      unrelatedRecoveries += unrelated.step(index / 60).recoveredMarbleIndices.length;
+      const step = limited.step(index / 60);
+      if (step.recoveredMarbleIndices.length && !limitedRecovery) limitedRecovery = step;
+    }
+    expect(activeRecoveries).toBe(0);
+    expect(active.currentSnapshot.marbleTransforms[0].position[1]).toBeLessThan(initial[1] - 0.5);
+    expect(unrelatedRecoveries).toBeGreaterThan(0);
+    expect(limitedRecovery).toBeDefined();
+    expect(limitedRecovery!.snapshot.marbleTransforms[0].position[1]).toBeGreaterThan(
+      initial[1] - 0.1,
+    );
+  } finally {
+    active.dispose();
+    unrelated.dispose();
+    limited.dispose();
+  }
+});

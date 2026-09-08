@@ -83,3 +83,5 @@ work by about 87%. Physics timing varied, although physics code/settings were
 unchanged. These are sequential local measurements, not a controlled benchmark
 suite or a claim about browser FPS. Both comparisons remain documented so the
 unread-snapshot case is not confused with typical displayed frames.
+
+A subsequent unchanged serial gate run passed all 34 tests in eight files (74.74 s total), plus typecheck. The prior timeouts did not reproduce; no test or timeout was weakened. Phase 1 verification debt is cleared.

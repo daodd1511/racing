@@ -7,12 +7,12 @@ Probe: `gh stack view --json` returned exit 6 because `main` belongs to multiple
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Simulation bookkeeping: in-progress
+- Current phase: 1 — done
+- Phase 1 — Simulation bookkeeping: done
 - Phase 2 — Direct rendering updates: pending
 - Phase 3 — Module integration and recovery areas: pending
-- Verification debt: phase 1 gate remains failing — four existing Course validation cases timed out at 15 seconds in the serial related-test run; typecheck passed. No test limits changed.
-- Commit checkpoint: automatic approval review rejected committing without separate explicit user approval; all phase changes remain uncommitted.
+- Verification debt: none — serial Phase 1 gate rerun passed all 34 tests and typecheck.
+- Commit checkpoint: user explicitly authorized all commits and Phase 2; Phase 1 work committed.
 
 ## Phase 1 — Simulation bookkeeping
 
@@ -36,7 +36,7 @@ Fresh review: not required
 **Phase gate (hard):**
 
 - [x] Run `./node_modules/.bin/tsc -b` from the repository root.
-- [ ] Run `./node_modules/.bin/vitest related --run --maxWorkers=1 <changed-source-files>` (amended 2026-09-08: serial execution after concurrent simulation timeouts; same dependency closure) with the real phase diff supplying arguments; for a test-only change, include its production subject so reverse dependencies are covered.
+- [x] Run `./node_modules/.bin/vitest related --run --maxWorkers=1 <changed-source-files>` (amended 2026-09-08: serial execution after concurrent simulation timeouts; same dependency closure) with the real phase diff supplying arguments; for a test-only change, include its production subject so reverse dependencies are covered.
 
 **Review checklist (user, at PR review):**
 

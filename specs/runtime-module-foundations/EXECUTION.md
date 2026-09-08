@@ -7,11 +7,11 @@ Probe: `gh stack view --json` returned exit 6 because `main` belongs to multiple
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done
 - Phase 1 — Simulation bookkeeping: done
-- Phase 2 — Direct rendering updates: in-progress
+- Phase 2 — Direct rendering updates: done
 - Phase 3 — Module integration and recovery areas: pending
-- Verification debt: none — serial Phase 1 gate rerun passed all 34 tests and typecheck.
+- Verification debt: none — Phase 1 passed 34 related tests; Phase 2 passed 29 related tests; both passed project typecheck.
 - Commit checkpoint: user explicitly authorized all commits and Phase 2; Phase 1 work committed.
 
 ## Phase 1 — Simulation bookkeeping
@@ -61,7 +61,7 @@ Fresh review: not required
 - [x] In `src/course/render/CourseScene.tsx`, update marble meshes, labels and moving gate visuals from the same current snapshot; ensure physics publication precedes visual consumers without taking over R3F rendering.
 - [x] Retain current damping constants in `src/course/render/CourseScene.tsx` and `src/race/DecisiveCamera.tsx` for this phase; record any confirmed smoothing delay in PERFORMANCE.md as an explicit follow-up rather than mixing an unmeasured camera redesign into the channel change.
 - [x] Extend `src/race/CoursePhysics.test.tsx`, `src/course/render/CourseScene.test.tsx` and `src/race/DecisiveCamera.test.tsx` for ref-driven movement and restart/terminal lifecycle; add `src/race/LiveRace.test.tsx` to verify snapshot publication does not rerender children and outcome publication still does.
-- [ ] Repeat browser observations and measurements in `specs/runtime-module-foundations/PERFORMANCE.md`, confirming labels, camera, gate, throttled telemetry and external callbacks still follow the race.
+- [x] Repeat browser observations and measurements in `specs/runtime-module-foundations/PERFORMANCE.md`, confirming labels, camera, gate, throttled telemetry and external callbacks still follow the race.
 
 - [x] (amended 2026-09-08) Extend `SpecVisuals.readTransforms` in `src/modules/render/ModuleColliders.tsx` for frame-driven gate motion; update `src/ui/BroadcastRace.test.tsx` for the frame-ref child contract and throttle harness telemetry in `src/dev/coursePreview.tsx`.
 

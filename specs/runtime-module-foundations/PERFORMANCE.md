@@ -71,12 +71,12 @@ harness read every returned snapshot inside the timed step. Baseline sources
 came from main via a temporary Vite transform; current sources ran next.
 Second-run results (1,800 steps each, zero recoveries):
 
-| Work | Before | After |
-| --- | ---: | ---: |
+| Work               |   Before |    After |
+| ------------------ | -------: | -------: |
 | Total step average | 4.210 ms | 2.619 ms |
-| Physics average | 2.183 ms | 2.365 ms |
+| Physics average    | 2.183 ms | 2.365 ms |
 | Other runtime work | 2.027 ms | 0.254 ms |
-| Total step p95 | 8.508 ms | 6.251 ms |
+| Total step p95     | 8.508 ms | 6.251 ms |
 
 This sample reduced total step CPU time by about 38%, and surrounding runtime
 work by about 87%. Physics timing varied, although physics code/settings were
@@ -85,3 +85,30 @@ suite or a claim about browser FPS. Both comparisons remain documented so the
 unread-snapshot case is not confused with typical displayed frames.
 
 A subsequent unchanged serial gate run passed all 34 tests in eight files (74.74 s total), plus typecheck. The prior timeouts did not reproduce; no test or timeout was weakened. Phase 1 verification debt is cleared.
+
+## Phase 2 — direct rendering updates
+
+The live scene, gate and camera consume RaceFrameRef directly. Physics publishes
+at frame priority -2 before ordinary visual callbacks; camera damping constants
+and the physics timestep are unchanged. The harness now throttles telemetry to
+roughly 10 Hz, matching the production telemetry pattern.
+
+Measured regression evidence: publishing a snapshot caused zero additional
+LiveRace child renders in the new test; publishing an outcome did cause a render.
+Other focused checks cover Close up movement without a rerender, resetting the
+camera to staging, reading updated gate motion, old-channel cleanup and retained
+external callbacks. The phase gate passed 29 tests across seven related files
+plus project typecheck. An initial failure was an outdated BroadcastRace test
+mock using snapshot props; its consumers now use the frame-ref contract.
+
+The same development browser harness (seed 7, 15 marbles, Last) displayed staged
+marbles and the gate in Close up, advanced to 25.38 simulated seconds, switched
+to Broadcast at 44.12 seconds, and restarted in Close up at 0.38 seconds. The
+minimap and decisive-marble text continued updating. Production labels still use
+the same mesh-following group; their visual review remains on the user checklist.
+
+No browser FPS, React profiler capture or renderer counters became available;
+there is no measured percentage speedup for phase 2. Phase 1 headless results are
+unchanged evidence, not a measurement of this rendering change. Full-race feel,
+labels and close-following delay remain explicit user review items. No smoothing
+fix or elimination of perceived lag is claimed.
